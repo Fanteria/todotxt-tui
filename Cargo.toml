@@ -1,0 +1,11 @@
+[package]
+name = "todo-tui"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tui = "0.19"
+crossterm = "0.25"
+todo-txt = "3.0.1"
