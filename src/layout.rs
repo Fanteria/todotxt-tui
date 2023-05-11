@@ -4,7 +4,7 @@ use std::{
     ops::{Deref, DerefMut},
     rc::Rc,
     rc::Weak,
-    vec::Vec,
+    vec::Vec, borrow::Borrow,
 };
 use tui::{
     backend::Backend,
@@ -13,7 +13,6 @@ use tui::{
     Frame,
 };
 
-#[allow(dead_code)]
 pub enum LayoutItem {
     Layout(LayoutBox),
     Widget(Widget),
@@ -22,6 +21,7 @@ pub enum LayoutItem {
 pub struct LayoutBox {
     pub chindrens: RefCell<Vec<Rc<RefCell<LayoutItem>>>>,
     pub layout: layout::Layout,
+    pub direction: Direction,
     pub parent: RefCell<Weak<RefCell<LayoutItem>>>,
 }
 
@@ -29,11 +29,13 @@ impl LayoutBox {
     pub fn new(
         chindrens: RefCell<Vec<Rc<RefCell<LayoutItem>>>>,
         layout: layout::Layout,
+        direction: Direction,
         parent: RefCell<Weak<RefCell<LayoutItem>>>,
     ) -> LayoutBox {
         LayoutBox {
             chindrens,
             layout,
+            direction,
             parent,
         }
     }
@@ -56,27 +58,30 @@ impl Layout {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref());
         let body_chunks = body_layout.split(main_chunks[1]);
 
-        let make_widget = |chunk, widget_type| {
+        let make_widget = |chunk, widget_type, title| {
             Rc::new(RefCell::new(LayoutItem::Widget(Widget::new(
                 widget_type,
                 chunk,
                 RefCell::new(Weak::new()),
+                title,
             ))))
         };
-        let input_widget = make_widget(main_chunks[0], WidgetType::Input);
-        let list_widget = make_widget(body_chunks[0], WidgetType::List);
-        let done_widget = make_widget(body_chunks[1], WidgetType::Done);
+        let input_widget = make_widget(main_chunks[0], WidgetType::Input, "Input");
+        let list_widget = make_widget(body_chunks[0], WidgetType::List, "List");
+        let done_widget = make_widget(body_chunks[1], WidgetType::Done, "Done");
 
-        let make_layout = |vec, layout| {
+        let make_layout = |vec, layout, direction| {
             Rc::new(RefCell::new(LayoutItem::Layout(LayoutBox::new(
                 RefCell::new(vec),
                 layout,
+                direction,
                 RefCell::new(Weak::new()),
             ))))
         };
         let body_layout_box = make_layout(
             vec![Rc::clone(&list_widget), Rc::clone(&done_widget)],
             body_layout,
+            Direction::Horizontal,
         );
 
         let register_child = |widget: Rc<RefCell<LayoutItem>>,
@@ -96,6 +101,7 @@ impl Layout {
         let main_layout_box = make_layout(
             vec![Rc::clone(&input_widget), Rc::clone(&body_layout_box)],
             main_layout,
+            Direction::Vertical,
         );
         register_child(input_widget, &main_layout_box);
         register_child(body_layout_box, &main_layout_box);
@@ -106,42 +112,93 @@ impl Layout {
         }
     }
 
+    pub fn left(&self) -> Option<Rc<RefCell<LayoutItem>>> {
+        let item = match self.find_actual() {
+            Some(s) => s,
+            None => return None,
+        };
+        let reference = item.as_ref().borrow();
+        let parent = match reference.deref() {
+            LayoutItem::Widget(widget) => &widget.parent,
+            LayoutItem::Layout(_) => return None,
+        };
+        let reference = parent.borrow();
+        let reference = reference.upgrade().unwrap();
+        let reference = reference.as_ref().borrow();
+        let direction = match reference.deref() {
+            LayoutItem::Widget(_) => return None,
+            LayoutItem::Layout(layout) => &layout.direction,
+        };
+        match direction {
+            Direction::Vertical => {},
+            Direction::Horizontal => {},
+        }
+
+        None
+    }
+
+    fn find_actual(&self) -> Option<Rc<RefCell<LayoutItem>>> {
+        if let LayoutItem::Layout(layout) = self.layout.as_ref().borrow().deref() {
+            return Layout::find_recursive(layout, &self.active);
+        };
+        None
+    }
+
+    fn find_recursive(layout: &LayoutBox, actual: &WidgetType) -> Option<Rc<RefCell<LayoutItem>>> {
+        for l in layout.chindrens.borrow().deref() {
+            match l.as_ref().borrow().deref() {
+                LayoutItem::Widget(widget) => {
+                    if widget.widget_type == *actual {
+                        return Some(Rc::clone(l));
+                    }
+                }
+                LayoutItem::Layout(layout) => {
+                    let result = Layout::find_recursive(layout, actual);
+                    if result.is_some() {
+                        return result;
+                    }
+                }
+            }
+        }
+        None
+    }
+
     pub fn update_chunk(&mut self, chunk: Rect) {
-        update_chunks(&mut self.layout.as_ref().borrow_mut().deref_mut(), chunk);
+        Layout::update_chunks(&mut self.layout.as_ref().borrow_mut().deref_mut(), chunk);
+    }
+
+    fn update_chunks(layout: &mut LayoutItem, chunk: Rect) {
+        match layout {
+            LayoutItem::Widget(widget) => widget.chunk = chunk,
+            LayoutItem::Layout(layout_box) => {
+                let chunks = layout_box.layout.split(chunk);
+                for (chunk, item) in chunks
+                    .iter()
+                    .zip(layout_box.chindrens.borrow_mut().iter_mut())
+                {
+                    Layout::update_chunks(item.as_ref().borrow_mut().deref_mut(), *chunk);
+                }
+            }
+        }
     }
 
     pub fn render<B>(&self, f: &mut Frame<B>)
     where
         B: Backend,
     {
-        render_layout_item(&self.layout.as_ref().borrow().deref(), &self.active, f)
+        Layout::render_layout_item(&self.layout.as_ref().borrow().deref(), &self.active, f)
     }
-}
 
-fn update_chunks(layout: &mut LayoutItem, chunk: Rect) {
-    match layout {
-        LayoutItem::Widget(widget) => widget.chunk = chunk,
-        LayoutItem::Layout(layout_box) => {
-            let chunks = layout_box.layout.split(chunk);
-            for (chunk, item) in chunks
-                .iter()
-                .zip(layout_box.chindrens.borrow_mut().iter_mut())
-            {
-                update_chunks(item.as_ref().borrow_mut().deref_mut(), *chunk);
-            }
-        }
-    }
-}
-
-fn render_layout_item<B>(layout: &LayoutItem, active: &WidgetType, f: &mut Frame<B>)
-where
-    B: Backend,
-{
-    match layout {
-        LayoutItem::Widget(widget) => widget.draw(f, active),
-        LayoutItem::Layout(layout_box) => {
-            for l in layout_box.chindrens.borrow().deref() {
-                render_layout_item(l.as_ref().borrow().deref(), active, f);
+    fn render_layout_item<B>(layout: &LayoutItem, active: &WidgetType, f: &mut Frame<B>)
+    where
+        B: Backend,
+    {
+        match layout {
+            LayoutItem::Widget(widget) => widget.draw(f, active),
+            LayoutItem::Layout(layout_box) => {
+                for l in layout_box.chindrens.borrow().deref() {
+                    Layout::render_layout_item(l.as_ref().borrow().deref(), active, f);
+                }
             }
         }
     }
