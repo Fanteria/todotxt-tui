@@ -1,5 +1,3 @@
-use crate::layout::LayoutItem;
-use std::{cell::RefCell, rc::Weak};
 use tui::{
     backend::Backend,
     layout::Rect,
@@ -19,23 +17,23 @@ pub enum WidgetType {
 pub struct Widget {
     pub widget_type: WidgetType,
     pub chunk: Rect,
-    pub parent: RefCell<Weak<RefCell<LayoutItem>>>,
     pub title: String,
 }
 
 impl Widget {
     pub fn new(
         widget_type: WidgetType,
-        chunk: Rect,
-        parent: RefCell<Weak<RefCell<LayoutItem>>>,
         title: &str,
     ) -> Widget {
         Widget {
             widget_type,
-            chunk,
-            parent,
+            chunk: Rect{width: 0, height: 0, x: 0, y: 0},
             title: title.to_string(),
         }
+    }
+
+    pub fn update_chunk(&mut self, chunk: Rect) {
+        self.chunk =chunk;
     }
 
     pub fn draw<B>(&self, f: &mut Frame<B>, active: &WidgetType)

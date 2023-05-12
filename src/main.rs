@@ -1,5 +1,5 @@
 mod layout;
-mod widget;
+mod error;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -41,7 +41,7 @@ async fn draw_ui() -> Result<(), io::Error> {
     loop {
         match event::read()? {
             Event::Resize(width, height) => {
-                layout.update_chunk(Rect::new(0, 0, width, height));
+                layout.update_chunks(Rect::new(0, 0, width, height));
             }
             Event::Key(event) => match event.code {
                 KeyCode::Char('q') => {
