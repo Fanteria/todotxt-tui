@@ -1,26 +1,30 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use super::widget::Widget;
 
 pub enum Item {
-    Container(Container),
+    Container(Rc<RefCell<Container>>),
     Widget(WidgetHolder),
 }
 
 pub enum InitItem {
-    Container(Container),
+    Container(Rc<RefCell<Container>>),
     Widget(Widget),
 }
 
 pub struct WidgetHolder {
     pub widget: Widget,
-    pub parent: *const Container,
+    pub parent: Rc<RefCell<Container>>,
 }
 
 pub struct Container {
     pub items: Vec<Item>,
     pub layout: Layout,
     pub direction: Direction,
-    pub parent: Option<*const Container>,
+    pub parent: Option<Rc<RefCell<Container>>>,
+    pub act_index: usize,
 }
 
 impl Container {
@@ -28,34 +32,33 @@ impl Container {
         items: Vec<InitItem>,
         constraints: Vec<Constraint>,
         direction: Direction,
-        parent: Option<*const Container>,
-    ) -> Container {
-        let mut container = Container {
+        parent: Option<Rc<RefCell<Container>>>,
+    ) -> Rc<RefCell<Container>> {
+        let container = Rc::new(RefCell::new(Container {
             items: Vec::new(),
             layout: Layout::default()
                 .direction(direction.clone())
                 .constraints(constraints),
             direction,
             parent,
-        };
+            act_index: 0,
+        }));
 
-        let mut items_vec = Vec::new();
         for item in items {
             match item {
                 InitItem::Widget(widget) => {
-                    items_vec.push(Item::Widget(WidgetHolder {
+                    container.as_ref().borrow_mut().items.push(Item::Widget(WidgetHolder {
                         widget,
-                        parent: &container,
+                        parent: Rc::clone(&container),
                     }));
                 }
-                InitItem::Container(mut cont) => {
-                    cont.parent = Some(&container);
-                    items_vec.push(Item::Container(cont))
+                InitItem::Container(cont) => {
+                    cont.borrow_mut().parent = Some(Rc::clone(&container));
+                    container.borrow_mut().items.push(Item::Container(cont))
                 }
             }
         }
 
-        container.items = items_vec;
         container
     }
 
@@ -65,9 +68,14 @@ impl Container {
             match item {
                 Item::Widget(holder) => holder.widget.update_chunk(chunks[i]),
                 Item::Container(container) => {
-                    container.update_chunks(chunks[i])
+                    container.borrow_mut().update_chunks(chunks[i])
                 }
             }
         }
     }
+
+    // pub fn next_item(&mut self) {
+    //     self.act_index
+    //
+    // }
 }

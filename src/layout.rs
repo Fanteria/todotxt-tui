@@ -1,6 +1,10 @@
 mod container;
 mod widget;
 
+use std::borrow::Borrow;
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use self::container::InitItem;
 use self::container::Item;
 use container::Container;
@@ -12,7 +16,7 @@ use tui::{
 use widget::{Widget, WidgetType};
 
 pub struct Layout {
-    layout: Container,
+    layout: Rc<RefCell<Container>>,
     active: WidgetType,
 }
 
@@ -22,7 +26,7 @@ impl Layout {
         let list_widget = Widget::new(WidgetType::List, "List");
         let done_widget = Widget::new(WidgetType::Done, "Done");
 
-        let mut main_cont = Container::new(
+        let main_cont = Container::new(
             vec![
                 InitItem::Widget(input_widget),
                 InitItem::Container(Container::new(
@@ -36,7 +40,7 @@ impl Layout {
             Direction::Vertical,
             None,
         );
-        main_cont.update_chunks(chunk);
+        main_cont.borrow_mut().update_chunks(chunk);
 
         Layout {
             layout: main_cont,
@@ -44,34 +48,47 @@ impl Layout {
         }
     }
 
-    // fn find_actual(&self) -> Option<Rc<RefCell<LayoutItem>>> {
-    //     if let LayoutItem::Layout(layout) = self.layout.as_ref().borrow().deref() {
-    //         return Layout::find_recursive(layout, &self.active);
+    // pub fn left(&self) {
+    //     let act = Layout::find_recursive(&self.layout, &self.active);
+    //     let parent = match act {
+    //         Some(i) => i.parent,
+    //         None => return,
     //     };
-    //     None
+    //     if parent.is_null() {
+    //         return;
+    //     } else {
+    //         // let a = *parent;
+    //     }
+    //     // let parent = act.parent;
     // }
-    //
-    // fn find_recursive(layout: &LayoutBox, actual: &WidgetType) -> Option<Rc<RefCell<LayoutItem>>> {
-    //     for l in layout.chindrens.borrow().deref() {
-    //         match l.as_ref().borrow().deref() {
-    //             LayoutItem::Widget(widget) => {
-    //                 if widget.widget_type == *actual {
-    //                     return Some(Rc::clone(l));
+
+    // fn find_actual<'a>(&'a self) -> Option<&'a Widget> {
+    //     Layout::find_recursive(&self.layout, &self.active)
+    // }
+
+    // fn find_recursive<'a>(
+    //     container: &'a Rc<RefCell<Container>>,
+    //     active: &WidgetType,
+    // ) -> Option<&'a WidgetHolder> {
+    //     for item in container.as_ref().borrow().items.iter() {
+    //         match item {
+    //             Item::Widget(widget) => {
+    //                 if widget.widget.widget_type == *active {
+    //                     return Some(&widget);
+    //                 } else {
+    //                     continue;
     //                 }
     //             }
-    //             LayoutItem::Layout(layout) => {
-    //                 let result = Layout::find_recursive(layout, actual);
-    //                 if result.is_some() {
-    //                     return result;
-    //                 }
+    //             Item::Container(cont) => {
+    //                 return Layout::find_recursive(&cont, active);
     //             }
     //         }
     //     }
-    //     None
+    //     return None;
     // }
 
     pub fn update_chunks(&mut self, chunk: Rect) {
-        self.layout.update_chunks(chunk);
+        self.layout.borrow_mut().update_chunks(chunk);
     }
 
     pub fn render<B>(&self, f: &mut Frame<B>)
@@ -81,15 +98,15 @@ impl Layout {
         Layout::render_layout_item(&self.layout, &self.active, f)
     }
 
-    fn render_layout_item<B>(layout: &Container, active: &WidgetType, f: &mut Frame<B>)
+    fn render_layout_item<B>(layout: &Rc<RefCell<Container>>, active: &WidgetType, f: &mut Frame<B>)
     where
         B: Backend,
     {
-        for item in &layout.items {
+        for item in layout.as_ref().borrow().items.iter() {
             match item {
                 Item::Widget(holder) => holder.widget.draw(f, active),
                 Item::Container(container) => {
-                    Layout::render_layout_item(container, active, f);
+                    Layout::render_layout_item(container.borrow(), active, f);
                 }
             }
         }
