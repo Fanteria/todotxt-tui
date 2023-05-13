@@ -74,8 +74,24 @@ impl Container {
         }
     }
 
-    // pub fn next_item(&mut self) {
-    //     self.act_index
-    //
-    // }
+    pub fn actual_item(&self) -> &Item{
+        &self.items[self.act_index]
+    }
+
+    pub fn next_item(&mut self) -> Option<&Item> {
+        if self.items.len() >= self.act_index {
+            return None;
+        }
+        self.act_index += 1;
+        Some(&self.items[self.act_index])
+    }
+
+    pub fn previous_item(&mut self) -> Option<&Item> {
+        if self.act_index <= 0 {
+            return None;
+        }
+        self.act_index -= 1;
+        Some(&self.items[self.act_index])
+    }
+
 }

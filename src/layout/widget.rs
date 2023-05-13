@@ -36,7 +36,7 @@ impl Widget {
         self.chunk =chunk;
     }
 
-    pub fn draw<B>(&self, f: &mut Frame<B>, active: &WidgetType)
+    pub fn draw<B>(&self, f: &mut Frame<B>, active: bool)
     where
         B: Backend,
     {
@@ -45,7 +45,7 @@ impl Widget {
                 .borders(Borders::ALL)
                 .title(self.title.clone())
                 .border_type(BorderType::Rounded);
-            if *active == self.widget_type {
+            if active {
                 block = block.border_style(Style::default().fg(Color::Red));
             }
             block
