@@ -98,10 +98,10 @@ impl Container {
     }
 
     pub fn next_item(&mut self) -> Option<&Item> {
-        if self.items.len() >= self.act_index {
+        self.act_index += 1;
+        if self.items.len() <= self.act_index {
             return None;
         }
-        self.act_index += 1;
         Some(&self.items[self.act_index])
     }
 

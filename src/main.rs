@@ -39,6 +39,7 @@ async fn draw_ui() -> Result<(), io::Error> {
 
     // main loop
     loop {
+
         match event::read()? {
             Event::Resize(width, height) => {
                 layout.update_chunks(Rect::new(0, 0, width, height));
@@ -48,21 +49,21 @@ async fn draw_ui() -> Result<(), io::Error> {
                     break;
                 }
                 KeyCode::Char('l') => {
-                    terminal.draw(|f| match layout.right(f) {
+                    match layout.right() {
                         Ok(_) => {}
                         Err(e) => {
                             println!("Error {}", e);
                         }
-                    })?;
+                    };
                 }
                 _ => {}
             },
             _ => {}
         }
 
-        // terminal.draw(|f| {
-        //     layout.render(f);
-        // })?;
+    terminal.draw(|f| {
+        layout.render(f);
+    })?;
     }
 
     // restore terminal

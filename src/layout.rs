@@ -60,13 +60,11 @@ impl Layout {
         }
     }
 
-    pub fn right<B>(&mut self, f: &mut Frame<B>) -> Result<(), ErrorToDo>
-    where
-        B: Backend,
-    {
+    pub fn right(&mut self) -> Result<(), ErrorToDo> {
         let mut actual = self.actual.as_ref().borrow_mut();
+        let item = actual.next_item();
         // println!("move right: {:?}", actual.actual_widget()?.widget_type);
-        actual.actual_widget()?.draw(f, false);
+        // actual.actual_widget()?.draw(f, false);
         // if actual.direction == Direction::Horizontal {
         // println!("Horizontal");
         //     actual.actual_widget()?.draw(f, false);
