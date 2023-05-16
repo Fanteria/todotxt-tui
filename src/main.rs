@@ -1,5 +1,5 @@
-mod layout;
 mod error;
+mod layout;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -47,14 +47,22 @@ async fn draw_ui() -> Result<(), io::Error> {
                 KeyCode::Char('q') => {
                     break;
                 }
+                KeyCode::Char('l') => {
+                    terminal.draw(|f| match layout.right(f) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("Error {}", e);
+                        }
+                    })?;
+                }
                 _ => {}
             },
             _ => {}
         }
 
-        terminal.draw(|f| {
-            layout.render(f);
-        })?;
+        // terminal.draw(|f| {
+        //     layout.render(f);
+        // })?;
     }
 
     // restore terminal

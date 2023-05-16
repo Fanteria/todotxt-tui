@@ -1,8 +1,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use tui::layout::{Constraint, Direction, Layout, Rect};
-use super::widget::Widget;
+use crate::error::{ErrorToDo, ErrorType};
+
+use super::widget::{Widget, WidgetType};
+use tui::{
+    backend::Backend,
+    layout::{Constraint, Direction, Layout, Rect},
+    Frame,
+};
 
 pub enum Item {
     Container(Rc<RefCell<Container>>),
@@ -27,6 +33,7 @@ pub struct Container {
     pub act_index: usize,
 }
 
+#[allow(dead_code)]
 impl Container {
     pub fn new(
         items: Vec<InitItem>,
@@ -47,10 +54,14 @@ impl Container {
         for item in items {
             match item {
                 InitItem::Widget(widget) => {
-                    container.as_ref().borrow_mut().items.push(Item::Widget(WidgetHolder {
-                        widget,
-                        parent: Rc::clone(&container),
-                    }));
+                    container
+                        .as_ref()
+                        .borrow_mut()
+                        .items
+                        .push(Item::Widget(WidgetHolder {
+                            widget,
+                            parent: Rc::clone(&container),
+                        }));
                 }
                 InitItem::Container(cont) => {
                     cont.borrow_mut().parent = Some(Rc::clone(&container));
@@ -67,15 +78,23 @@ impl Container {
         for (i, item) in self.items.iter_mut().enumerate() {
             match item {
                 Item::Widget(holder) => holder.widget.update_chunk(chunks[i]),
-                Item::Container(container) => {
-                    container.borrow_mut().update_chunks(chunks[i])
-                }
+                Item::Container(container) => container.borrow_mut().update_chunks(chunks[i]),
             }
         }
     }
 
-    pub fn actual_item(&self) -> &Item{
+    pub fn actual_item(&self) -> &Item {
         &self.items[self.act_index]
+    }
+
+    pub fn actual_widget(&self) -> Result<&Widget, ErrorToDo> {
+        match self.actual_item() {
+            Item::Widget(widget) => Ok(&widget.widget),
+            Item::Container(_) => Err(ErrorToDo::new(
+                ErrorType::ActualIsNotWidget,
+                "Actual items is not widget.",
+            )),
+        }
     }
 
     pub fn next_item(&mut self) -> Option<&Item> {
@@ -94,4 +113,46 @@ impl Container {
         Some(&self.items[self.act_index])
     }
 
+    pub fn select_widget(
+        container: &Rc<RefCell<Container>>,
+        widget_type: &WidgetType,
+    ) -> Result<Rc<RefCell<Container>>, ErrorToDo> {
+        let mut borrowed = container.borrow_mut();
+        // let index: usize;
+        for (index, item) in borrowed.items.iter_mut().enumerate() {
+            // borrowed.act_index = index;
+            match item {
+                Item::Widget(holder) => {
+                    if holder.widget.widget_type == *widget_type {
+                        // container.borrow_mut().act_index = index;
+                        return Ok(Rc::clone(container));
+                    }
+                }
+                Item::Container(container) => {
+                    // container.borrow_mut().act_index = index;
+                    let cont =  Container::select_widget(container, widget_type);
+                    if cont.is_ok() {
+                        borrowed.act_index = index;
+                        return cont;
+                    }
+                }
+            }
+        }
+        Err(ErrorToDo::new(
+            ErrorType::WidgetDoesNotExist,
+            "Selected widgent is not in layout",
+        ))
+    }
+
+    pub fn render_recursive<B>(&self, f: &mut Frame<B>)
+    where
+        B: Backend,
+    {
+        for (index, item) in self.items.iter().enumerate() {
+            match item {
+                Item::Widget(holder) => holder.widget.draw(f, self.act_index == index),
+                Item::Container(container) => container.borrow().render_recursive(f),
+            }
+        }
+    }
 }

@@ -1,12 +1,12 @@
 mod container;
 mod widget;
 
-use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use self::container::InitItem;
-use self::container::Item;
+use crate::error::{ErrorToDo, ErrorType};
+
+use self::container::{InitItem, Item};
 use container::Container;
 use tui::{
     backend::Backend,
@@ -15,12 +15,14 @@ use tui::{
 };
 use widget::{Widget, WidgetType};
 
+#[allow(dead_code)]
 pub struct Layout {
     root: Rc<RefCell<Container>>,
     active: WidgetType,
     actual: Rc<RefCell<Container>>,
 }
 
+#[allow(dead_code)]
 impl Layout {
     pub fn new(chunk: Rect) -> Layout {
         let input_widget = Widget::new(WidgetType::Input, "Input");
@@ -41,8 +43,8 @@ impl Layout {
             Direction::Vertical,
             None,
         );
+        let actual = Container::select_widget(&root, &WidgetType::List).unwrap(); // TODO
         root.borrow_mut().update_chunks(chunk);
-        let actual = Rc::clone(&root);
 
         Layout {
             root,
@@ -52,52 +54,38 @@ impl Layout {
     }
 
     pub fn left(&self) {
-       let actual = self.actual.as_ref().borrow() ;
+        let actual = self.actual.as_ref().borrow();
         if actual.direction == Direction::Horizontal {
-            let x = actual.actual_item();
+            // let x = actual.actual_item();
         }
-    
-
     }
 
-    // pub fn left(&self) {
-    //     let act = Layout::find_recursive(&self.layout, &self.active);
-    //     let parent = match act {
-    //         Some(i) => i.parent,
-    //         None => return,
-    //     };
-    //     if parent.is_null() {
-    //         return;
-    //     } else {
-    //         // let a = *parent;
-    //     }
-    //     // let parent = act.parent;
-    // }
+    pub fn right<B>(&mut self, f: &mut Frame<B>) -> Result<(), ErrorToDo>
+    where
+        B: Backend,
+    {
+        let mut actual = self.actual.as_ref().borrow_mut();
+        // println!("move right: {:?}", actual.actual_widget()?.widget_type);
+        actual.actual_widget()?.draw(f, false);
+        // if actual.direction == Direction::Horizontal {
+        // println!("Horizontal");
+        //     actual.actual_widget()?.draw(f, false);
+        //     let next_item = actual.next_item();
+        //     match next_item {
+        //         Some(item) => match item {
+        //             Item::Widget(holder) => holder.widget.draw(f, true),
+        //             Item::Container(_) => {} // TODO
+        //         },
+        //         None => {}
+        //     }
+        // }
+        Ok(())
+    }
 
-    // fn find_actual<'a>(&'a self) -> Option<&'a Widget> {
-    //     Layout::find_recursive(&self.layout, &self.active)
-    // }
-
-    // fn find_recursive<'a>(
-    //     container: &'a Rc<RefCell<Container>>,
-    //     active: &WidgetType,
-    // ) -> Option<&'a WidgetHolder> {
-    //     for item in container.as_ref().borrow().items.iter() {
-    //         match item {
-    //             Item::Widget(widget) => {
-    //                 if widget.widget.widget_type == *active {
-    //                     return Some(&widget);
-    //                 } else {
-    //                     continue;
-    //                 }
-    //             }
-    //             Item::Container(cont) => {
-    //                 return Layout::find_recursive(&cont, active);
-    //             }
-    //         }
-    //     }
-    //     return None;
-    // }
+    pub fn select_widget(&mut self, widget_type: &WidgetType) -> Result<(), ErrorToDo> {
+        self.actual = Container::select_widget(&self.root, widget_type)?;
+        Ok(())
+    }
 
     pub fn update_chunks(&mut self, chunk: Rect) {
         self.root.borrow_mut().update_chunks(chunk);
@@ -107,20 +95,6 @@ impl Layout {
     where
         B: Backend,
     {
-        Layout::render_layout_item(&self.root, &self.active, f)
-    }
-
-    fn render_layout_item<B>(layout: &Rc<RefCell<Container>>, active: &WidgetType, f: &mut Frame<B>)
-    where
-        B: Backend,
-    {
-        for item in layout.as_ref().borrow().items.iter() {
-            match item {
-                Item::Widget(holder) => holder.widget.draw(f, active),
-                Item::Container(container) => {
-                    Layout::render_layout_item(container.borrow(), active, f);
-                }
-            }
-        }
+        self.root.as_ref().borrow().render_recursive(f);
     }
 }

@@ -7,7 +7,7 @@ use tui::{
     Frame,
 };
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum WidgetType {
     Input,
     List,
@@ -33,7 +33,7 @@ impl Widget {
     }
 
     pub fn update_chunk(&mut self, chunk: Rect) {
-        self.chunk =chunk;
+        self.chunk = chunk;
     }
 
     pub fn draw<B>(&self, f: &mut Frame<B>, active: bool)
