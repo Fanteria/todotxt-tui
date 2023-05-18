@@ -31,6 +31,7 @@ pub struct Container {
     pub direction: Direction,
     pub parent: Option<Rc<RefCell<Container>>>,
     pub act_index: usize,
+    pub active: bool,
 }
 
 #[allow(dead_code)]
@@ -49,6 +50,7 @@ impl Container {
             direction,
             parent,
             act_index: 0,
+            active: false,
         }));
 
         for item in items {
@@ -97,12 +99,21 @@ impl Container {
         }
     }
 
-    pub fn next_item(&mut self) -> Option<&Item> {
+    pub fn update_actual(item: &Item) -> Option<&Item> {
+        match item {
+            Item::Widget(_) => return Some(item),
+            Item::Container(_) => return None,
+        }
+    }
+
+    pub fn next_item(container: &Rc<RefCell<Container>>) -> Rc<RefCell<Container>> {
         self.act_index += 1;
         if self.items.len() <= self.act_index {
             return None;
         }
-        Some(&self.items[self.act_index])
+        return Container::update_actual(&self.)
+
+        // Some(&self.items[self.act_index])
     }
 
     pub fn previous_item(&mut self) -> Option<&Item> {
@@ -118,20 +129,18 @@ impl Container {
         widget_type: &WidgetType,
     ) -> Result<Rc<RefCell<Container>>, ErrorToDo> {
         let mut borrowed = container.borrow_mut();
-        // let index: usize;
-        for (index, item) in borrowed.items.iter_mut().enumerate() {
-            // borrowed.act_index = index;
+        for (index, item) in borrowed.items.iter().enumerate() {
             match item {
                 Item::Widget(holder) => {
                     if holder.widget.widget_type == *widget_type {
-                        // container.borrow_mut().act_index = index;
+                        borrowed.active = true;
                         return Ok(Rc::clone(container));
                     }
                 }
                 Item::Container(container) => {
-                    // container.borrow_mut().act_index = index;
-                    let cont =  Container::select_widget(container, widget_type);
+                    let cont = Container::select_widget(container, widget_type);
                     if cont.is_ok() {
+                        borrowed.active = true;
                         borrowed.act_index = index;
                         return cont;
                     }
@@ -150,7 +159,9 @@ impl Container {
     {
         for (index, item) in self.items.iter().enumerate() {
             match item {
-                Item::Widget(holder) => holder.widget.draw(f, self.act_index == index),
+                Item::Widget(holder) => holder
+                    .widget
+                    .draw(f, self.active && self.act_index == index),
                 Item::Container(container) => container.borrow().render_recursive(f),
             }
         }

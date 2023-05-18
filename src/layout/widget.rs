@@ -12,6 +12,7 @@ pub enum WidgetType {
     Input,
     List,
     Done,
+    Categories,
 }
 
 pub struct Widget {
@@ -62,6 +63,9 @@ impl Widget {
                 f.render_widget(get_block(), self.chunk);
             }
             WidgetType::Done => {
+                f.render_widget(get_block(), self.chunk);
+            }
+            WidgetType::Categories => {
                 f.render_widget(get_block(), self.chunk);
             }
         }

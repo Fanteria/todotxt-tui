@@ -4,9 +4,9 @@ mod widget;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::error::{ErrorToDo, ErrorType};
+use crate::error::ErrorToDo;
 
-use self::container::{InitItem, Item};
+use self::container::InitItem;
 use container::Container;
 use tui::{
     backend::Backend,
@@ -28,12 +28,24 @@ impl Layout {
         let input_widget = Widget::new(WidgetType::Input, "Input");
         let list_widget = Widget::new(WidgetType::List, "List");
         let done_widget = Widget::new(WidgetType::Done, "Done");
+        let categories_widget = Widget::new(WidgetType::Categories, "Categories");
 
         let root = Container::new(
             vec![
                 InitItem::Widget(input_widget),
                 InitItem::Container(Container::new(
-                    vec![InitItem::Widget(list_widget), InitItem::Widget(done_widget)],
+                    vec![
+                        InitItem::Widget(list_widget),
+                        InitItem::Container(Container::new(
+                            vec![
+                                InitItem::Widget(done_widget),
+                                InitItem::Widget(categories_widget),
+                            ],
+                            vec![Constraint::Percentage(50), Constraint::Percentage(50)],
+                            Direction::Vertical,
+                            None,
+                        )),
+                    ],
                     vec![Constraint::Percentage(50), Constraint::Percentage(50)],
                     Direction::Horizontal,
                     None,
@@ -54,30 +66,31 @@ impl Layout {
     }
 
     pub fn left(&self) {
-        let actual = self.actual.as_ref().borrow();
+        let mut actual = self.actual.as_ref().borrow_mut();
         if actual.direction == Direction::Horizontal {
-            // let x = actual.actual_item();
+            let item = actual.previous_item();
         }
     }
 
-    pub fn right(&mut self) -> Result<(), ErrorToDo> {
+    pub fn right(&mut self) {
         let mut actual = self.actual.as_ref().borrow_mut();
-        let item = actual.next_item();
-        // println!("move right: {:?}", actual.actual_widget()?.widget_type);
-        // actual.actual_widget()?.draw(f, false);
-        // if actual.direction == Direction::Horizontal {
-        // println!("Horizontal");
-        //     actual.actual_widget()?.draw(f, false);
-        //     let next_item = actual.next_item();
-        //     match next_item {
-        //         Some(item) => match item {
-        //             Item::Widget(holder) => holder.widget.draw(f, true),
-        //             Item::Container(_) => {} // TODO
-        //         },
-        //         None => {}
-        //     }
-        // }
-        Ok(())
+        if actual.direction == Direction::Horizontal {
+            let item = actual.next_item();
+        }
+    }
+
+    pub fn up(&mut self) {
+        let mut actual = self.actual.as_ref().borrow_mut();
+        if actual.direction == Direction::Vertical {
+            let item = actual.previous_item();
+        }
+    }
+
+    pub fn down(&mut self) {
+        let mut actual = self.actual.as_ref().borrow_mut();
+        if actual.direction == Direction::Vertical {
+            let item = actual.next_item();
+        }
     }
 
     pub fn select_widget(&mut self, widget_type: &WidgetType) -> Result<(), ErrorToDo> {
