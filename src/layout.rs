@@ -65,34 +65,33 @@ impl Layout {
         }
     }
 
-    pub fn left(&self) {
-        // let mut actual = self.actual.as_ref().borrow_mut();
-        // if actual.direction == Direction::Horizontal {
-        //     let item = actual.previous_item();
-        // }
-    }
-
-    pub fn right(&mut self) {
-        if self.actual.borrow().direction == Direction::Horizontal {
-            match Container::next_item(&self.root) {
+    pub fn move_focus(
+        &mut self,
+        direction: Direction,
+        f: fn(&Rc<RefCell<Container>>) -> Option<Rc<RefCell<Container>>>,
+    ) {
+        if self.actual.borrow().direction == direction {
+            match f(&self.actual) {
                 Some(actual) => self.actual = actual,
                 None => {}
             }
         }
     }
 
+    pub fn left(&mut self) {
+        self.move_focus(Direction::Horizontal, Container::previous_item);
+    }
+
+    pub fn right(&mut self) {
+        self.move_focus(Direction::Horizontal, Container::next_item);
+    }
+
     pub fn up(&mut self) {
-        // let mut actual = self.actual.as_ref().borrow_mut();
-        // if actual.direction == Direction::Vertical {
-        //     let item = actual.previous_item();
-        // }
+        self.move_focus(Direction::Vertical, Container::previous_item);
     }
 
     pub fn down(&mut self) {
-        // let mut actual = self.actual.as_ref().borrow_mut();
-        // if actual.direction == Direction::Vertical {
-        //     let item = Container::next_item(&self.root);
-        // }
+        self.move_focus(Direction::Vertical, Container::next_item);
     }
 
     pub fn select_widget(&mut self, widget_type: &WidgetType) -> Result<(), ErrorToDo> {

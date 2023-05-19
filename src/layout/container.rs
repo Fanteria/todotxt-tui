@@ -10,26 +10,28 @@ use tui::{
     Frame,
 };
 
+type RcCon = Rc<RefCell<Container>>;
+
 pub enum Item {
-    Container(Rc<RefCell<Container>>),
+    Container(RcCon),
     Widget(WidgetHolder),
 }
 
 pub enum InitItem {
-    Container(Rc<RefCell<Container>>),
+    Container(RcCon),
     Widget(Widget),
 }
 
 pub struct WidgetHolder {
     pub widget: Widget,
-    pub parent: Rc<RefCell<Container>>,
+    pub parent: RcCon,
 }
 
 pub struct Container {
     pub items: Vec<Item>,
     pub layout: Layout,
     pub direction: Direction,
-    pub parent: Option<Rc<RefCell<Container>>>,
+    pub parent: Option<RcCon>,
     pub act_index: usize,
     pub active: bool,
 }
@@ -40,8 +42,8 @@ impl Container {
         items: Vec<InitItem>,
         constraints: Vec<Constraint>,
         direction: Direction,
-        parent: Option<Rc<RefCell<Container>>>,
-    ) -> Rc<RefCell<Container>> {
+        parent: Option<RcCon>,
+    ) -> RcCon {
         let container = Rc::new(RefCell::new(Container {
             items: Vec::new(),
             layout: Layout::default()
@@ -89,50 +91,40 @@ impl Container {
         &self.items[self.act_index]
     }
 
-    pub fn actual_widget(&self) -> Result<&Widget, ErrorToDo> {
-        match self.actual_item() {
-            Item::Widget(widget) => Ok(&widget.widget),
-            Item::Container(_) => Err(ErrorToDo::new(
-                ErrorType::ActualIsNotWidget,
-                "Actual items is not widget.",
-            )),
+    pub fn update_actual(container: &RcCon) -> RcCon {
+        let mut borrow = container.borrow_mut();
+        match borrow.actual_item() {
+            Item::Widget(_) => {
+                borrow.active = true;
+                return Rc::clone(container);
+            }
+            Item::Container(cont) => return Container::update_actual(cont),
         }
     }
 
-    pub fn update_actual(item: &Item) -> Option<&Item> {
-        match item {
-            Item::Widget(_) => return Some(item),
-            Item::Container(_) => return None,
+    pub fn next_item(container: &RcCon) -> Option<RcCon> {
+        {
+            let mut borrow = container.borrow_mut();
+            borrow.act_index += 1;
+            borrow.active = false;
+            if borrow.items.len() <= borrow.act_index {
+                return None;
+            }
         }
+        Some(Container::update_actual(container))
     }
 
-    pub fn next_item(container: &Rc<RefCell<Container>>) -> Option<Rc<RefCell<Container>>> {
-        container.borrow_mut().act_index += 1;
-        let borrowed = container.borrow();
-        if borrowed.items.len() <= borrowed.act_index {
-            return None;
+    pub fn previous_item(container: &RcCon) -> Option<RcCon> {
+        {
+            if container.borrow().act_index <= 0 {
+                return None;
+            }
         }
-        // match borrowed.items[borrowed.act_index] {
-        //     Item::Widget(_) => {}
-        //     Item::Container(_) => {}
-        // }
-        return Some(Rc::clone(container));
-
-        // Some(&self.items[self.act_index])
+        container.borrow_mut().act_index -= 1;
+        Some(Container::update_actual(container))
     }
 
-    pub fn previous_item(&mut self) -> Option<&Item> {
-        if self.act_index <= 0 {
-            return None;
-        }
-        self.act_index -= 1;
-        Some(&self.items[self.act_index])
-    }
-
-    pub fn select_widget(
-        container: &Rc<RefCell<Container>>,
-        widget_type: &WidgetType,
-    ) -> Result<Rc<RefCell<Container>>, ErrorToDo> {
+    pub fn select_widget(container: &RcCon, widget_type: &WidgetType) -> Result<RcCon, ErrorToDo> {
         let mut borrowed = container.borrow_mut();
         for (index, item) in borrowed.items.iter().enumerate() {
             match item {
