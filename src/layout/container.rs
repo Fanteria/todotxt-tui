@@ -106,12 +106,17 @@ impl Container {
         }
     }
 
-    pub fn next_item(container: &Rc<RefCell<Container>>) -> Rc<RefCell<Container>> {
-        self.act_index += 1;
-        if self.items.len() <= self.act_index {
+    pub fn next_item(container: &Rc<RefCell<Container>>) -> Option<Rc<RefCell<Container>>> {
+        container.borrow_mut().act_index += 1;
+        let borrowed = container.borrow();
+        if borrowed.items.len() <= borrowed.act_index {
             return None;
         }
-        return Container::update_actual(&self.)
+        // match borrowed.items[borrowed.act_index] {
+        //     Item::Widget(_) => {}
+        //     Item::Container(_) => {}
+        // }
+        return Some(Rc::clone(container));
 
         // Some(&self.items[self.act_index])
     }

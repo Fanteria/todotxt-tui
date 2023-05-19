@@ -66,31 +66,33 @@ impl Layout {
     }
 
     pub fn left(&self) {
-        let mut actual = self.actual.as_ref().borrow_mut();
-        if actual.direction == Direction::Horizontal {
-            let item = actual.previous_item();
-        }
+        // let mut actual = self.actual.as_ref().borrow_mut();
+        // if actual.direction == Direction::Horizontal {
+        //     let item = actual.previous_item();
+        // }
     }
 
     pub fn right(&mut self) {
-        let mut actual = self.actual.as_ref().borrow_mut();
-        if actual.direction == Direction::Horizontal {
-            let item = actual.next_item();
+        if self.actual.borrow().direction == Direction::Horizontal {
+            match Container::next_item(&self.root) {
+                Some(actual) => self.actual = actual,
+                None => {}
+            }
         }
     }
 
     pub fn up(&mut self) {
-        let mut actual = self.actual.as_ref().borrow_mut();
-        if actual.direction == Direction::Vertical {
-            let item = actual.previous_item();
-        }
+        // let mut actual = self.actual.as_ref().borrow_mut();
+        // if actual.direction == Direction::Vertical {
+        //     let item = actual.previous_item();
+        // }
     }
 
     pub fn down(&mut self) {
-        let mut actual = self.actual.as_ref().borrow_mut();
-        if actual.direction == Direction::Vertical {
-            let item = actual.next_item();
-        }
+        // let mut actual = self.actual.as_ref().borrow_mut();
+        // if actual.direction == Direction::Vertical {
+        //     let item = Container::next_item(&self.root);
+        // }
     }
 
     pub fn select_widget(&mut self, widget_type: &WidgetType) -> Result<(), ErrorToDo> {
