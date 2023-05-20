@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
 use crate::error::{ErrorToDo, ErrorType};
@@ -14,7 +14,7 @@ type RcCon = Rc<RefCell<Container>>;
 
 pub enum Item {
     Container(RcCon),
-    Widget(WidgetHolder),
+    Widget(Holder),
 }
 
 pub enum InitItem {
@@ -22,7 +22,7 @@ pub enum InitItem {
     Widget(Widget),
 }
 
-pub struct WidgetHolder {
+pub struct Holder {
     pub widget: Widget,
     pub parent: RcCon,
 }
@@ -62,7 +62,7 @@ impl Container {
                         .as_ref()
                         .borrow_mut()
                         .items
-                        .push(Item::Widget(WidgetHolder {
+                        .push(Item::Widget(Holder {
                             widget,
                             parent: Rc::clone(&container),
                         }));
@@ -102,26 +102,28 @@ impl Container {
         }
     }
 
-    pub fn next_item(container: &RcCon) -> Option<RcCon> {
-        {
-            let mut borrow = container.borrow_mut();
-            borrow.act_index += 1;
-            borrow.active = false;
-            if borrow.items.len() <= borrow.act_index {
-                return None;
-            }
+    pub fn change_item(
+        container: &RcCon,
+        condition: fn(&Container) -> bool,
+        change: fn(&mut Container),
+    ) -> Option<RcCon> {
+        if condition(&container.borrow()) {
+            return None;
         }
+        change(&mut container.borrow_mut());
         Some(Container::update_actual(container))
     }
 
-    pub fn previous_item(container: &RcCon) -> Option<RcCon> {
-        {
-            if container.borrow().act_index <= 0 {
-                return None;
-            }
-        }
-        container.borrow_mut().act_index -= 1;
-        Some(Container::update_actual(container))
+    pub fn next_item(container: RcCon) -> Option<RcCon> {
+        Container::change_item(
+            &container,
+            |c| c.act_index + 1 >= c.items.len(),
+            |c| c.act_index += 1,
+        )
+    }
+
+    pub fn previous_item(container: RcCon) -> Option<RcCon> {
+        Container::change_item(&container, |c| c.act_index <= 0, |c| c.act_index -= 1)
     }
 
     pub fn select_widget(container: &RcCon, widget_type: &WidgetType) -> Result<RcCon, ErrorToDo> {

@@ -1,28 +1,24 @@
 mod container;
 mod widget;
-
+use self::container::InitItem;
+use crate::error::ErrorToDo;
+use container::Container;
 use std::cell::RefCell;
 use std::rc::Rc;
-
-use crate::error::ErrorToDo;
-
-use self::container::InitItem;
-use container::Container;
 use tui::{
     backend::Backend,
-    layout::{Constraint, Direction, Rect},
+    layout::{Constraint, Direction, Direction::Horizontal, Direction::Vertical, Rect},
     Frame,
 };
 use widget::{Widget, WidgetType};
 
-#[allow(dead_code)]
+type RcCon = Rc<RefCell<Container>>;
+
 pub struct Layout {
     root: Rc<RefCell<Container>>,
-    active: WidgetType,
     actual: Rc<RefCell<Container>>,
 }
 
-#[allow(dead_code)]
 impl Layout {
     pub fn new(chunk: Rect) -> Layout {
         let input_widget = Widget::new(WidgetType::Input, "Input");
@@ -42,58 +38,81 @@ impl Layout {
                                 InitItem::Widget(categories_widget),
                             ],
                             vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-                            Direction::Vertical,
+                            Vertical,
                             None,
                         )),
                     ],
                     vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-                    Direction::Horizontal,
+                    Horizontal,
                     None,
                 )),
             ],
             vec![Constraint::Length(3), Constraint::Percentage(30)],
-            Direction::Vertical,
+            Vertical,
             None,
         );
         let actual = Container::select_widget(&root, &WidgetType::List).unwrap(); // TODO
         root.borrow_mut().update_chunks(chunk);
 
-        Layout {
-            root,
-            active: WidgetType::List,
-            actual,
-        }
+        Layout { root, actual }
     }
 
     pub fn move_focus(
-        &mut self,
+        container: RcCon,
         direction: Direction,
-        f: fn(&Rc<RefCell<Container>>) -> Option<Rc<RefCell<Container>>>,
-    ) {
-        if self.actual.borrow().direction == direction {
-            match f(&self.actual) {
-                Some(actual) => self.actual = actual,
-                None => {}
-            }
+        f: fn(RcCon) -> Option<RcCon>,
+    ) -> RcCon {
+        if container.borrow().direction == direction {
+            return match f(container.clone()) {
+                Some(actual) => actual,
+                None => {
+                    {
+                        container.borrow_mut().active = false;
+                    }
+                    match &container.borrow().parent {
+                        Some(parent) => {
+                            // container.borrow_mut().active = false;
+                            Layout::move_focus(parent.clone(), direction, f)
+                        }
+                        None => container.clone(),
+                    }
+                    //Rc::clone(&container)}, //TODO wrong
+                }
+            };
         }
+        let mut c = container.borrow_mut();
+        return match &c.parent {
+            Some(parent) => {
+                let ret = Layout::move_focus(parent.clone(), direction, f);
+                c.active = false;
+                ret
+            }
+            None => container.clone(),
+        };
     }
 
     pub fn left(&mut self) {
-        self.move_focus(Direction::Horizontal, Container::previous_item);
+        self.actual = Layout::move_focus(
+            Rc::clone(&self.actual),
+            Horizontal,
+            Container::previous_item,
+        );
     }
 
     pub fn right(&mut self) {
-        self.move_focus(Direction::Horizontal, Container::next_item);
+        self.actual = Layout::move_focus(Rc::clone(&self.actual), Horizontal, Container::next_item);
     }
 
     pub fn up(&mut self) {
-        self.move_focus(Direction::Vertical, Container::previous_item);
+        self.actual =
+            Layout::move_focus(Rc::clone(&self.actual), Vertical, Container::previous_item);
     }
 
     pub fn down(&mut self) {
-        self.move_focus(Direction::Vertical, Container::next_item);
+        self.actual = Layout::move_focus(Rc::clone(&self.actual), Vertical, Container::next_item);
     }
 
+    #[allow(dead_code)]
     pub fn select_widget(&mut self, widget_type: &WidgetType) -> Result<(), ErrorToDo> {
         self.actual = Container::select_widget(&self.root, widget_type)?;
         Ok(())
