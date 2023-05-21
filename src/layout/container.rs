@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::error::{ErrorToDo, ErrorType};
@@ -58,14 +58,10 @@ impl Container {
         for item in items {
             match item {
                 InitItem::Widget(widget) => {
-                    container
-                        .as_ref()
-                        .borrow_mut()
-                        .items
-                        .push(Item::Widget(Holder {
-                            widget,
-                            parent: Rc::clone(&container),
-                        }));
+                    container.borrow_mut().items.push(Item::Widget(Holder {
+                        widget,
+                        parent: Rc::clone(&container),
+                    }));
                 }
                 InitItem::Container(cont) => {
                     cont.borrow_mut().parent = Some(Rc::clone(&container));
@@ -91,7 +87,7 @@ impl Container {
         &self.items[self.act_index]
     }
 
-    pub fn update_actual(container: &RcCon) -> RcCon {
+    fn update_actual(container: &RcCon) -> RcCon {
         let mut borrow = container.borrow_mut();
         match borrow.actual_item() {
             Item::Widget(_) => {
@@ -102,7 +98,7 @@ impl Container {
         }
     }
 
-    pub fn change_item(
+    fn change_item(
         container: &RcCon,
         condition: fn(&Container) -> bool,
         change: fn(&mut Container),
@@ -126,18 +122,19 @@ impl Container {
         Container::change_item(&container, |c| c.act_index <= 0, |c| c.act_index -= 1)
     }
 
-    pub fn select_widget(container: &RcCon, widget_type: &WidgetType) -> Result<RcCon, ErrorToDo> {
+    pub fn select_widget(container: RcCon, widget_type: WidgetType) -> Result<RcCon, ErrorToDo> {
         let mut borrowed = container.borrow_mut();
         for (index, item) in borrowed.items.iter().enumerate() {
             match item {
                 Item::Widget(holder) => {
-                    if holder.widget.widget_type == *widget_type {
+                    if holder.widget.widget_type == widget_type {
                         borrowed.active = true;
-                        return Ok(Rc::clone(container));
+                        borrowed.act_index = index;
+                        return Ok(container.clone());
                     }
                 }
                 Item::Container(container) => {
-                    let cont = Container::select_widget(container, widget_type);
+                    let cont = Container::select_widget(container.clone(), widget_type);
                     if cont.is_ok() {
                         borrowed.active = true;
                         borrowed.act_index = index;
@@ -164,5 +161,128 @@ impl Container {
                 Item::Container(container) => container.borrow().render_recursive(f),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tui::layout::Direction::{Horizontal, Vertical};
+    use WidgetType::*;
+
+    fn create_testing_container() -> RcCon {
+        let input_widget = Widget::new(WidgetType::Input, "Input");
+        let list_widget = Widget::new(WidgetType::List, "List");
+        let done_widget = Widget::new(WidgetType::Done, "Done");
+        let project_widget = Widget::new(WidgetType::Project, "Project");
+        let cnt = Container::new(
+            vec![
+                InitItem::Widget(input_widget),
+                InitItem::Container(Container::new(
+                    vec![
+                        InitItem::Widget(list_widget),
+                        InitItem::Container(Container::new(
+                            vec![
+                                InitItem::Widget(done_widget),
+                                InitItem::Widget(project_widget),
+                            ],
+                            vec![Constraint::Percentage(50), Constraint::Percentage(50)],
+                            Vertical,
+                            None,
+                        )),
+                    ],
+                    vec![Constraint::Percentage(50), Constraint::Percentage(50)],
+                    Horizontal,
+                    None,
+                )),
+            ],
+            vec![Constraint::Length(3), Constraint::Percentage(30)],
+            Vertical,
+            None,
+        );
+        cnt
+    }
+
+    fn check_active(container: &RcCon, widget_type: WidgetType) {
+        match container.borrow().actual_item() {
+            Item::Widget(widget) => {
+                if widget.widget.widget_type != widget_type {
+                    panic!(
+                        "Active widget must be {:?} not {:?}.",
+                        widget_type, widget.widget.widget_type
+                    )
+                }
+            }
+            Item::Container(_) => panic!("Actual item must be widget not container."),
+        }
+    }
+
+    #[test]
+    fn test_selecting_widget() {
+        let c = create_testing_container();
+        let check = |widget_type| match &Container::select_widget(c.clone(), widget_type) {
+            Ok(c) => {
+                check_active(c, widget_type);
+                Ok(())
+            }
+            Err(_) => Err("Widget is not in container"),
+        };
+
+        check(Input).unwrap();
+        check(List).unwrap();
+        check(Done).unwrap();
+        check(Project).unwrap();
+        assert!(
+            check(Context).is_err(),
+            "Widget with type Context is not in container."
+        );
+    }
+
+    #[test]
+    fn test_next_item() -> Result<(), ErrorToDo> {
+        let c = create_testing_container();
+
+        // Test next widget in child container.
+        let actual = Container::select_widget(c.clone(), List)?;
+        let next = Container::next_item(actual.clone()).unwrap();
+        check_active(&next, Done);
+
+        // Test next widget in same container.
+        let actual = Container::select_widget(c.clone(), Done)?;
+        let next = Container::next_item(actual.clone()).unwrap();
+        check_active(&next, Project);
+
+        // Test next in container have not default value
+        let actual = Container::select_widget(c.clone(), List)?;
+        let next = Container::next_item(actual.clone()).unwrap();
+        check_active(&next, Project);
+
+        // Test return value if there is no next item
+        assert!(Container::next_item(actual.clone()).is_none());
+        assert!(Container::next_item(actual.clone()).is_none());
+        assert!(Container::next_item(actual.clone()).is_none());
+        assert_eq!(actual.borrow().act_index, 1);
+        check_active(&next, Project);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_previous_item() -> Result<(), ErrorToDo> {
+        let c = create_testing_container();
+
+        // Test previous widget in same container.
+        let actual = Container::select_widget(c.clone(), Project)?;
+        let prev = Container::previous_item(actual.clone()).unwrap();
+        check_active(&prev, Done);
+
+        // Test return value if there is no previous item
+        assert!(Container::previous_item(prev.clone()).is_none());
+        assert!(Container::previous_item(prev.clone()).is_none());
+        assert!(Container::previous_item(prev.clone()).is_none());
+        assert_eq!(prev.borrow().act_index, 0);
+        check_active(&prev, Done);
+
+        Ok(())
     }
 }

@@ -12,6 +12,7 @@ use crossterm::{
 use layout::Layout;
 use std::io;
 use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
+use crate::layout::widget::WidgetType;
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -32,7 +33,7 @@ async fn draw_ui() -> Result<(), io::Error> {
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
-    let mut layout = Layout::new(terminal.size()?);
+    let mut layout = Layout::new(terminal.size()?, WidgetType::List);
     terminal.draw(|f| {
         layout.render(f);
     })?;

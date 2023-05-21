@@ -7,12 +7,14 @@ use tui::{
     Frame,
 };
 
-#[derive(PartialEq, Debug)]
+#[allow(dead_code)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum WidgetType {
     Input,
     List,
     Done,
-    Categories,
+    Project,
+    Context,
 }
 
 pub struct Widget {
@@ -65,7 +67,10 @@ impl Widget {
             WidgetType::Done => {
                 f.render_widget(get_block(), self.chunk);
             }
-            WidgetType::Categories => {
+            WidgetType::Project => {
+                f.render_widget(get_block(), self.chunk);
+            }
+            WidgetType::Context => {
                 f.render_widget(get_block(), self.chunk);
             }
         }
