@@ -18,8 +18,8 @@ pub enum Item {
 }
 
 pub enum InitItem {
-    Container(RcCon),
-    Widget(Widget),
+    InitContainer(RcCon),
+    InitWidget(Widget),
 }
 
 pub struct Holder {
@@ -57,13 +57,13 @@ impl Container {
 
         for item in items {
             match item {
-                InitItem::Widget(widget) => {
+                InitItem::InitWidget(widget) => {
                     container.borrow_mut().items.push(Item::Widget(Holder {
                         widget,
                         parent: Rc::clone(&container),
                     }));
                 }
-                InitItem::Container(cont) => {
+                InitItem::InitContainer(cont) => {
                     cont.borrow_mut().parent = Some(Rc::clone(&container));
                     container.borrow_mut().items.push(Item::Container(cont))
                 }
@@ -177,14 +177,14 @@ mod tests {
         let project_widget = Widget::new(WidgetType::Project, "Project");
         let cnt = Container::new(
             vec![
-                InitItem::Widget(input_widget),
-                InitItem::Container(Container::new(
+                InitItem::InitWidget(input_widget),
+                InitItem::InitContainer(Container::new(
                     vec![
-                        InitItem::Widget(list_widget),
-                        InitItem::Container(Container::new(
+                        InitItem::InitWidget(list_widget),
+                        InitItem::InitContainer(Container::new(
                             vec![
-                                InitItem::Widget(done_widget),
-                                InitItem::Widget(project_widget),
+                                InitItem::InitWidget(done_widget),
+                                InitItem::InitWidget(project_widget),
                             ],
                             vec![Constraint::Percentage(50), Constraint::Percentage(50)],
                             Vertical,

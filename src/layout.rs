@@ -29,14 +29,14 @@ impl Layout {
 
         let root = Container::new(
             vec![
-                InitItem::Widget(input_widget),
-                InitItem::Container(Container::new(
+                InitItem::InitWidget(input_widget),
+                InitItem::InitContainer(Container::new(
                     vec![
-                        InitItem::Widget(list_widget),
-                        InitItem::Container(Container::new(
+                        InitItem::InitWidget(list_widget),
+                        InitItem::InitContainer(Container::new(
                             vec![
-                                InitItem::Widget(done_widget),
-                                InitItem::Widget(categories_widget),
+                                InitItem::InitWidget(done_widget),
+                                InitItem::InitWidget(categories_widget),
                             ],
                             vec![Constraint::Percentage(50), Constraint::Percentage(50)],
                             Vertical,
@@ -65,6 +65,13 @@ impl Layout {
     ) -> Option<RcCon> {
         let move_to_parent = || {
             let mut c = container.borrow_mut();
+            // c.parent.as_ref().and_then(|parent| {
+            //     Layout::move_focus(parent.clone(), direction, f).map(|ret| {
+            //         c.active = false;
+            //         ret
+            //     })
+            // })
+
             if let Some(parent) = &c.parent {
                 return Layout::move_focus(parent.clone(), direction, f).map(|ret| {
                     c.active = false;
