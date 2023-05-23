@@ -1,5 +1,6 @@
 mod error;
 mod layout;
+mod config;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},

@@ -1,3 +1,4 @@
+use serde::{Serialize, Deserialize};
 use tui::{
     backend::Backend,
     layout::Rect,
@@ -8,7 +9,7 @@ use tui::{
 };
 
 #[allow(dead_code)]
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum WidgetType {
     Input,
     List,
