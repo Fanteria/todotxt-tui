@@ -1,8 +1,8 @@
+use crate::CONFIG;
 use serde::{Serialize, Deserialize};
 use tui::{
     backend::Backend,
     layout::Rect,
-    style::Color,
     style::Style,
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
@@ -50,7 +50,7 @@ impl Widget {
                 .title(self.title.clone())
                 .border_type(BorderType::Rounded);
             if active {
-                block = block.border_style(Style::default().fg(Color::Red));
+                block = block.border_style(Style::default().fg(CONFIG.active_color));
             }
             block
         };

@@ -13,10 +13,16 @@ use crossterm::{
 use layout::Layout;
 use std::io;
 use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
-use crate::layout::widget::WidgetType;
+use lazy_static::lazy_static;
+use crate::config::Config;
+
+lazy_static! {
+    static ref CONFIG: Config = Config::load_config();
+}
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
+    
     draw_ui().await?;
 
     Ok(())
@@ -34,7 +40,7 @@ async fn draw_ui() -> Result<(), io::Error> {
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
-    let mut layout = Layout::new(terminal.size()?, WidgetType::List);
+    let mut layout = Layout::new(terminal.size()?, CONFIG.init_widget);
     terminal.draw(|f| {
         layout.render(f);
     })?;
