@@ -17,7 +17,7 @@ use lazy_static::lazy_static;
 use crate::config::Config;
 
 lazy_static! {
-    static ref CONFIG: Config = Config::load_config();
+    static ref CONFIG: Config = Config::load_default();
 }
 
 #[tokio::main]
@@ -35,7 +35,7 @@ async fn draw_ui() -> Result<(), io::Error> {
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
 
     let mut backend = CrosstermBackend::new(io::stdout());
-    backend.execute(SetTitle("Title"))?; // TODO set window title
+    backend.execute(SetTitle(CONFIG.window_title.clone()))?;
 
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
