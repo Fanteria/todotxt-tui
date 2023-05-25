@@ -17,3 +17,6 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+# temporary testing files
+resources/test/tmp
