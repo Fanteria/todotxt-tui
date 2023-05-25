@@ -97,10 +97,17 @@ mod tests {
     use tui::style::Color;
 
     fn test_path(filename: &str) -> String {
-        String::from(env!("CARGO_MANIFEST_DIR")) + "/resources/test/" + filename + ".conf"
+        String::from(env!("CARGO_MANIFEST_DIR"))
+            + "/resources/test/tmp/"
+            + "config_test/"
+            + filename
+            + ".conf"
     }
 
     fn write_to_test_file(filename: &str, content: &str) -> Result<()> {
+        if Path::new(&test_path(filename)).exists() {
+            fs::remove_file(test_path(filename))?;
+        }
         let path_string = test_path(filename);
         let path = Path::new(&path_string);
         let prefix = path.parent().unwrap();
@@ -140,7 +147,8 @@ mod tests {
 
     #[test]
     fn test_load() -> Result<()> {
-        write_to_test_file("test_load",
+        write_to_test_file(
+            "test_load",
             r#"
         active_color = "Blue"
         window_title = "Title"
@@ -156,15 +164,22 @@ mod tests {
 
     #[test]
     fn test_default() -> Result<()> {
-        write_to_test_file("test_default",
+        write_to_test_file(
+            "test_default",
             r#"
 
         "#,
         )?;
-        assert_eq!(Config::load_config(&test_path("test_default")), Config::default());
+        assert_eq!(
+            Config::load_config(&test_path("test_default")),
+            Config::default()
+        );
 
         fs::remove_file(test_path("test_default"))?;
-        assert_eq!(Config::load_config(&test_path("test_default")), Config::default());
+        assert_eq!(
+            Config::load_config(&test_path("test_default")),
+            Config::default()
+        );
 
         Ok(())
     }
