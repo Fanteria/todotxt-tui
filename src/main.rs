@@ -1,6 +1,7 @@
 mod error;
 mod layout;
 mod config;
+mod todo;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -55,10 +56,10 @@ async fn draw_ui() -> Result<(), io::Error> {
                 KeyCode::Char('q') => {
                     break;
                 }
-                KeyCode::Char('l') => layout.right(),
-                KeyCode::Char('h') => layout.left(),
-                KeyCode::Char('k') => layout.up(),
-                KeyCode::Char('j') => layout.down(),
+                KeyCode::Char('L') => layout.right(),
+                KeyCode::Char('H') => layout.left(),
+                KeyCode::Char('K') => layout.up(),
+                KeyCode::Char('J') => layout.down(),
                 _ => {}
             },
             _ => {}

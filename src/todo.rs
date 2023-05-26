@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -35,6 +36,72 @@ impl ToDo {
         }
 
         Ok(ToDo { pending, done })
+    }
+
+    fn get_btree(tasks: &Vec<Task>, f: fn(&Task) -> &Vec<String>) -> BTreeSet<String> {
+        let mut btree = BTreeSet::new();
+        tasks.iter().for_each(|task| {
+            f(task).iter().for_each(|project| {
+                btree.insert(project.clone());
+            })
+        });
+        btree
+    }
+
+    pub fn get_projects(tasks: &Vec<Task>) -> BTreeSet<String> {
+        Self::get_btree(tasks, |t| &t.projects)
+    }
+
+    pub fn get_contexts(tasks: &Vec<Task>) -> BTreeSet<String> {
+        Self::get_btree(tasks, |t| &t.contexts)
+    }
+
+    pub fn get_hashtags(tasks: &Vec<Task>) -> BTreeSet<String> {
+        Self::get_btree(tasks, |t| &t.hashtags)
+    }
+
+    fn get_tasks<'a>(tasks: &'a Vec<Task>, name: &str, f: fn(&Task) -> &Vec<String>) -> Vec<&'a Task> {
+        tasks
+            .iter()
+            .filter(|task| f(task).contains(&String::from(name)))
+            .collect()
+    }
+
+    fn get_tasks1<'a>(tasks: &'a Vec<Task>, name: &str) -> Vec<&'a Task> {
+        tasks
+            .iter()
+            .filter(|task| task.projects.contains(&String::from(name)))
+            .collect()
+    }
+
+    fn get_tasks2<'a>(tasks: &'a Vec<Task>, name: &str) -> Vec<&'a Task> {
+        let mut ret: Vec<&'a Task> = Vec::new();
+        let mut contains = false;
+        for task in tasks {
+            for project in &task.projects {
+                if project == &String::from(name) {
+                    contains = true;
+                    break;
+                }
+            }
+            if contains {
+                ret.push(task);
+                contains = false;
+            }
+        }
+        ret
+    }
+
+    pub fn get_project_tasks<'a>(tasks: &'a Vec<Task>, name: &str) -> Vec<&'a Task> {
+        Self::get_tasks(tasks, name, |t| &t.projects)
+    }
+
+    pub fn get_contexts_tasks<'a>(tasks: &'a Vec<Task>, name: &str) -> Vec<&'a Task> {
+        Self::get_tasks(tasks, name, |t| &t.contexts)
+    }
+
+    fn get_hashtags_tasks<'a>(tasks: &'a Vec<Task>, name: &str) -> Vec<&'a Task> {
+        Self::get_tasks(tasks, name, |t| &t.hashtags)
     }
 }
 
