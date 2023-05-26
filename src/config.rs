@@ -1,9 +1,10 @@
 use crate::layout::widget::WidgetType;
 use serde::{Deserialize, Serialize};
 use std::env::{var, VarError};
-use std::error::Error;
-use std::fs;
+use std::fs::File;
+use std::io::Read;
 use tui::style::Color;
+use std::error::Error;
 
 const CONFIG_NAME: &str = "todo-tui.conf";
 
@@ -52,18 +53,21 @@ impl Config {
     }
 
     pub fn load_default() -> Self {
-        if let Ok(path) = &Self::default_path() {
-            return Self::load_config(path);
-        }
-        Self::default()
+        let load = || -> Result<Self, Box<dyn Error>>{
+            Ok(Self::load_config(File::open(Self::default_path()?)?))
+        };
+        load().unwrap_or(Self::default())
     }
 
-    pub fn load_config(path: &str) -> Self {
-        let read_from_file = |path: &str| -> Result<Self, Box<dyn Error>> {
-            let ret: Self = toml::from_str(&fs::read_to_string(path)?)?;
-            Ok(ret)
-        };
-        read_from_file(path).unwrap_or(Self::default())
+    pub fn load_config<R>(mut reader: R) -> Self
+    where
+        R: Read,
+    {
+        let mut buf = String::default();
+        if let Err(_) = reader.read_to_string(&mut buf) {
+            return Self::default();
+        }
+        toml::from_str(buf.as_str()).unwrap_or(Self::default())
     }
 
     pub fn default_path() -> Result<String, VarError> {
@@ -89,38 +93,8 @@ impl Config {
 mod tests {
     use super::Config;
     use crate::layout::widget::WidgetType;
-    use std::fs;
-    use std::fs::OpenOptions;
     use std::io::Result;
-    use std::io::Write;
-    use std::path::Path;
     use tui::style::Color;
-
-    fn test_path(filename: &str) -> String {
-        String::from(env!("CARGO_MANIFEST_DIR"))
-            + "/resources/test/tmp/"
-            + "config_test/"
-            + filename
-            + ".conf"
-    }
-
-    fn write_to_test_file(filename: &str, content: &str) -> Result<()> {
-        if Path::new(&test_path(filename)).exists() {
-            fs::remove_file(test_path(filename))?;
-        }
-        let path_string = test_path(filename);
-        let path = Path::new(&path_string);
-        let prefix = path.parent().unwrap();
-        std::fs::create_dir_all(prefix).unwrap();
-
-        let mut f = OpenOptions::new()
-            .write(true)
-            .append(false)
-            .create(true)
-            .open(path_string)?;
-        f.write(content.as_bytes())?;
-        Ok(())
-    }
 
     #[test]
     fn test_deserialization() {
@@ -147,15 +121,12 @@ mod tests {
 
     #[test]
     fn test_load() -> Result<()> {
-        write_to_test_file(
-            "test_load",
-            r#"
+        let s = r#"
         active_color = "Blue"
         window_title = "Title"
-        "#,
-        )?;
+        "#;
 
-        let c = Config::load_config(&test_path("test_load"));
+        let c = Config::load_config(s.as_bytes());
         assert_eq!(c.active_color, Color::Blue);
         assert_eq!(c.init_widget, WidgetType::List);
         assert_eq!(c.window_title, "Title");
@@ -164,20 +135,8 @@ mod tests {
 
     #[test]
     fn test_default() -> Result<()> {
-        write_to_test_file(
-            "test_default",
-            r#"
-
-        "#,
-        )?;
         assert_eq!(
-            Config::load_config(&test_path("test_default")),
-            Config::default()
-        );
-
-        fs::remove_file(test_path("test_default"))?;
-        assert_eq!(
-            Config::load_config(&test_path("test_default")),
+            Config::load_config("".as_bytes()),
             Config::default()
         );
 

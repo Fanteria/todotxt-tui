@@ -1,8 +1,6 @@
 use std::collections::BTreeSet;
 use std::error::Error;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::io::{BufRead, BufReader, Read};
 use std::str::FromStr;
 use todo_txt::Task;
 
@@ -14,14 +12,13 @@ struct ToDo {
 
 #[allow(dead_code)]
 impl ToDo {
-    pub fn load<P>(file_path: P) -> Result<ToDo, Box<dyn Error>>
+    pub fn load<R>(reader: R) -> Result<ToDo, Box<dyn Error>>
     where
-        P: AsRef<Path>,
+        R: Read,
     {
         let mut pending = Vec::new();
         let mut done = Vec::new();
-
-        for line in BufReader::new(File::open(file_path)?).lines() {
+        for line in BufReader::new(reader).lines() {
             let line = line?;
             let line = line.trim();
             if line.is_empty() {
@@ -60,7 +57,11 @@ impl ToDo {
         Self::get_btree(tasks, |t| &t.hashtags)
     }
 
-    fn get_tasks<'a>(tasks: &'a Vec<Task>, name: &str, f: fn(&Task) -> &Vec<String>) -> Vec<&'a Task> {
+    fn get_tasks<'a>(
+        tasks: &'a Vec<Task>,
+        name: &str,
+        f: fn(&Task) -> &Vec<String>,
+    ) -> Vec<&'a Task> {
         tasks
             .iter()
             .filter(|task| f(task).contains(&String::from(name)))
@@ -109,49 +110,16 @@ impl ToDo {
 mod tests {
     use super::ToDo;
     use std::error::Error;
-    use std::fs;
-    use std::fs::OpenOptions;
-    use std::io::{Result as ioResult, Write};
-    use std::path::Path;
-
-    fn test_path(filename: &str) -> String {
-        String::from(env!("CARGO_MANIFEST_DIR"))
-            + "/resources/test/tmp/"
-            + "todo_test/"
-            + filename
-            + ".conf"
-    }
-
-    fn write_to_test_file(filename: &str, content: &str) -> ioResult<()> {
-        if Path::new(&test_path(filename)).exists() {
-            fs::remove_file(test_path(filename))?;
-        }
-        let path_string = test_path(filename);
-        let path = Path::new(&path_string);
-        let prefix = path.parent().unwrap();
-        std::fs::create_dir_all(prefix).unwrap();
-
-        let mut f = OpenOptions::new()
-            .write(true)
-            .append(false)
-            .create(true)
-            .open(path_string)?;
-        f.write(content.as_bytes())?;
-        Ok(())
-    }
 
     #[test]
     fn test_load() -> Result<(), Box<dyn Error>> {
-        write_to_test_file(
-            "test_load",
+        let todo = ToDo::load(
             r#"
         x (A) 2023-05-21 2023-04-30 measure space for +project1 @context1 #hashtag1 due:2023-06-30
                          2023-04-30 measure space for +project2 @context2           due:2023-06-30
           (C) 2023-04-30 measure space for +project3 @context3           due:2023-06-30
-        "#,
+        "#.as_bytes(),
         )?;
-
-        let todo = ToDo::load(test_path("test_load"))?;
 
         assert_eq!(todo.done.len(), 1);
         assert_eq!(todo.pending.len(), 2);
@@ -186,6 +154,16 @@ mod tests {
         assert_eq!(todo.pending[1].projects.len(), 1);
         assert_eq!(todo.pending[1].hashtags.len(), 0);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_categeries_list() -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
+
+    #[test]
+    fn test_tasks_in_categerie() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 }
