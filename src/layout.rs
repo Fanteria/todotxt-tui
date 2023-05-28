@@ -2,7 +2,7 @@ pub mod container;
 pub mod widget;
 
 use self::container::InitItem;
-use crate::error::ErrorToDo;
+use crate::{error::ErrorToDo, todo::ToDo};
 use container::Container;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,11 +21,11 @@ pub struct Layout {
 }
 
 impl Layout {
-    pub fn new(chunk: Rect, actual: WidgetType) -> Layout {
-        let input_widget = Widget::new(WidgetType::Input, "Input");
-        let list_widget = Widget::new(WidgetType::List, "List");
-        let done_widget = Widget::new(WidgetType::Done, "Done");
-        let categories_widget = Widget::new(WidgetType::Project, "Projects");
+    pub fn new(chunk: Rect, actual: WidgetType, data: Rc<ToDo>) -> Layout {
+        let input_widget = Widget::new(WidgetType::Input, "Input", data.clone());
+        let list_widget = Widget::new(WidgetType::List, "List", data.clone());
+        let done_widget = Widget::new(WidgetType::Done, "Done", data.clone());
+        let categories_widget = Widget::new(WidgetType::Project, "Projects", data.clone());
 
         let root = Container::new(
             vec![

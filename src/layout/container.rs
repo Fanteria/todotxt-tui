@@ -166,15 +166,18 @@ impl Container {
 
 #[cfg(test)]
 mod tests {
+    use crate::todo::ToDo;
+
     use super::*;
     use tui::layout::Direction::{Horizontal, Vertical};
     use WidgetType::*;
 
     fn create_testing_container() -> RcCon {
-        let input_widget = Widget::new(WidgetType::Input, "Input");
-        let list_widget = Widget::new(WidgetType::List, "List");
-        let done_widget = Widget::new(WidgetType::Done, "Done");
-        let project_widget = Widget::new(WidgetType::Project, "Project");
+        let todo = Rc::new(ToDo::new(false));
+        let input_widget = Widget::new(WidgetType::Input, "Input", todo.clone());
+        let list_widget = Widget::new(WidgetType::List, "List", todo.clone());
+        let done_widget = Widget::new(WidgetType::Done, "Done", todo.clone());
+        let project_widget = Widget::new(WidgetType::Project, "Project", todo.clone());
         let cnt = Container::new(
             vec![
                 InitItem::InitWidget(input_widget),

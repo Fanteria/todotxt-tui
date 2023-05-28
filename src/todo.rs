@@ -15,6 +15,14 @@ pub struct ToDo {
 
 #[allow(dead_code)]
 impl ToDo {
+    pub fn new(use_done: bool) -> Self {
+        Self {
+            pending: TaskList(Vec::new()),
+            done: TaskList(Vec::new()),
+            use_done,
+        }
+    }
+
     pub fn load<R: Read>(reader: R, use_done: bool) -> Result<ToDo, Box<dyn Error>> {
         let mut pending = Vec::new();
         let mut done = Vec::new();
@@ -146,6 +154,7 @@ impl ToDo {
     }
 }
 
+#[derive(Clone)]
 pub struct TaskList(pub Vec<Task>);
 
 impl<'a> Into<Vec<ListItem<'a>>> for TaskList {
@@ -161,7 +170,10 @@ pub struct CategoryList(pub BTreeSet<String>);
 
 impl<'a> Into<Vec<ListItem<'a>>> for CategoryList {
     fn into(self) -> Vec<ListItem<'a>> {
-        self.0.iter().map(|category| ListItem::new(category.clone())).collect()
+        self.0
+            .iter()
+            .map(|category| ListItem::new(category.clone()))
+            .collect()
     }
 }
 
@@ -229,9 +241,18 @@ mod tests {
         };
 
         let mut todo = ToDo::load(TESTING_STRING.as_bytes(), false)?;
-        assert_eq!(todo.get_projects().0, create_btree(&["project2", "project3"]));
-        assert_eq!(todo.get_contexts().0, create_btree(&["context2", "context3"]));
-        assert_eq!(todo.get_hashtags().0, create_btree(&["hashtag1", "hashtag2"]));
+        assert_eq!(
+            todo.get_projects().0,
+            create_btree(&["project2", "project3"])
+        );
+        assert_eq!(
+            todo.get_contexts().0,
+            create_btree(&["context2", "context3"])
+        );
+        assert_eq!(
+            todo.get_hashtags().0,
+            create_btree(&["hashtag1", "hashtag2"])
+        );
 
         todo.use_done = true;
         assert_eq!(
@@ -242,7 +263,10 @@ mod tests {
             todo.get_contexts().0,
             create_btree(&["context1", "context2", "context3"])
         );
-        assert_eq!(todo.get_hashtags().0, create_btree(&["hashtag1", "hashtag2"]));
+        assert_eq!(
+            todo.get_hashtags().0,
+            create_btree(&["hashtag1", "hashtag2"])
+        );
 
         Ok(())
     }

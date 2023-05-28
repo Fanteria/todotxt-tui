@@ -8,7 +8,7 @@ use tui::{
     Frame,
 };
 use crate::todo::ToDo;
-use std::fs::File;
+use std::rc::Rc;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
@@ -24,10 +24,11 @@ pub struct Widget {
     pub widget_type: WidgetType,
     pub chunk: Rect,
     pub title: String,
+    pub data: Rc<ToDo>,
 }
 
 impl Widget {
-    pub fn new(widget_type: WidgetType, title: &str) -> Widget {
+    pub fn new(widget_type: WidgetType, title: &str, data: Rc<ToDo>) -> Widget {
         Widget {
             widget_type,
             chunk: Rect {
@@ -37,6 +38,7 @@ impl Widget {
                 y: 0,
             },
             title: title.to_string(),
+            data,
         }
     }
 
@@ -64,24 +66,21 @@ impl Widget {
                 f.render_widget(Paragraph::new("Some text").block(get_block()), self.chunk);
             }
             WidgetType::List => {
-                let todo = ToDo::load(File::open(CONFIG.todo_path.clone()).unwrap(), false).unwrap();
-                let list = List::new(todo.pending)
+                let list = List::new(self.data.pending.clone())
                     .block(get_block())
                     .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
                     .highlight_symbol(">>");
                 f.render_widget(list, self.chunk);
             }
             WidgetType::Done => {
-                let todo = ToDo::load(File::open(CONFIG.todo_path.clone()).unwrap(), false).unwrap();
-                let list = List::new(todo.done)
+                let list = List::new(self.data.done.clone())
                     .block(get_block())
                     .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
                     .highlight_symbol(">>");
                 f.render_widget(list, self.chunk);
             }
             WidgetType::Project => {
-                let todo = ToDo::load(File::open(CONFIG.todo_path.clone()).unwrap(), false).unwrap();
-                let list = List::new(todo.get_projects())
+                let list = List::new(self.data.get_projects())
                     .block(get_block())
                     .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
                     .highlight_symbol(">>");

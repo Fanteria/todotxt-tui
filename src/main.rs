@@ -18,21 +18,23 @@ use lazy_static::lazy_static;
 use crate::config::Config;
 use crate::todo::ToDo;
 use std::fs::File;
+use std::rc::Rc;
+use std::error::Error;
 
 lazy_static! {
     static ref CONFIG: Config = Config::load_default();
 }
 
 #[tokio::main]
-async fn main() -> Result<(), io::Error> {
-    let _todo = ToDo::load(File::open(CONFIG.todo_path.clone())?, false);
+async fn main() -> Result<(), Box<dyn Error>> {
+    let todo = Rc::new(ToDo::load(File::open(CONFIG.todo_path.clone())?, false)?);
     
-    draw_ui().await?;
+    draw_ui(todo).await?;
 
     Ok(())
 }
 
-async fn draw_ui() -> Result<(), io::Error> {
+async fn draw_ui(data: Rc<ToDo>) -> Result<(), io::Error> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -44,7 +46,7 @@ async fn draw_ui() -> Result<(), io::Error> {
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
-    let mut layout = Layout::new(terminal.size()?, CONFIG.init_widget);
+    let mut layout = Layout::new(terminal.size()?, CONFIG.init_widget, data);
     terminal.draw(|f| {
         layout.render(f);
     })?;
