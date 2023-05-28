@@ -1,10 +1,10 @@
 use crate::layout::widget::WidgetType;
 use serde::{Deserialize, Serialize};
 use std::env::{var, VarError};
+use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 use tui::style::Color;
-use std::error::Error;
 
 const CONFIG_NAME: &str = "todo-tui.conf";
 
@@ -41,6 +41,9 @@ pub struct Config {
     pub init_widget: WidgetType,
     #[serde(default = "Config::default_window_title")]
     pub window_title: String,
+    #[serde(default = "Config::default_todo_path")]
+    pub todo_path: String,
+    pub archive_path: Option<String>,
 }
 
 impl Config {
@@ -49,11 +52,13 @@ impl Config {
             init_widget: Self::default_widget_type(),
             active_color: Self::default_color(),
             window_title: Self::default_window_title(),
+            todo_path: Self::default_todo_path(),
+            archive_path: None,
         }
     }
 
     pub fn load_default() -> Self {
-        let load = || -> Result<Self, Box<dyn Error>>{
+        let load = || -> Result<Self, Box<dyn Error>> {
             Ok(Self::load_config(File::open(Self::default_path()?)?))
         };
         load().unwrap_or(Self::default())
@@ -68,6 +73,10 @@ impl Config {
             return Self::default();
         }
         toml::from_str(buf.as_str()).unwrap_or(Self::default())
+    }
+
+    fn default_todo_path() -> String {
+        var("HOME").unwrap_or(String::from("~")) + "todo.txt"
     }
 
     pub fn default_path() -> Result<String, VarError> {
@@ -124,21 +133,23 @@ mod tests {
         let s = r#"
         active_color = "Blue"
         window_title = "Title"
+        todo_path = "path to todo file"
         "#;
 
         let c = Config::load_config(s.as_bytes());
         assert_eq!(c.active_color, Color::Blue);
         assert_eq!(c.init_widget, WidgetType::List);
         assert_eq!(c.window_title, "Title");
+        assert_eq!(c.todo_path, "path to todo file");
+        assert_eq!(c.archive_path, None);
+
+        println!("{:#?}", c);
         Ok(())
     }
 
     #[test]
     fn test_default() -> Result<()> {
-        assert_eq!(
-            Config::load_config("".as_bytes()),
-            Config::default()
-        );
+        assert_eq!(Config::load_config("".as_bytes()), Config::default());
 
         Ok(())
     }

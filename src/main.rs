@@ -16,6 +16,8 @@ use std::io;
 use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
 use lazy_static::lazy_static;
 use crate::config::Config;
+use crate::todo::ToDo;
+use std::fs::File;
 
 lazy_static! {
     static ref CONFIG: Config = Config::load_default();
@@ -23,6 +25,7 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
+    let todo = ToDo::load(File::open(CONFIG.todo_path.clone())?, false);
     
     draw_ui().await?;
 
