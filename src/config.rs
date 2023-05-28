@@ -76,7 +76,7 @@ impl Config {
     }
 
     fn default_todo_path() -> String {
-        var("HOME").unwrap_or(String::from("~")) + "todo.txt"
+        var("HOME").unwrap_or(String::from("~")) + "/todo.txt"
     }
 
     pub fn default_path() -> Result<String, VarError> {
