@@ -25,7 +25,7 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
-    let todo = ToDo::load(File::open(CONFIG.todo_path.clone())?, false);
+    let _todo = ToDo::load(File::open(CONFIG.todo_path.clone())?, false);
     
     draw_ui().await?;
 

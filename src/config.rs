@@ -143,7 +143,6 @@ mod tests {
         assert_eq!(c.todo_path, "path to todo file");
         assert_eq!(c.archive_path, None);
 
-        println!("{:#?}", c);
         Ok(())
     }
 

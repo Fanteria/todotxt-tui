@@ -1,6 +1,6 @@
-use std::collections::BTreeSet;
+use std::collections::btree_set::BTreeSet;
 use std::error::Error;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Read, Result as ioResult, Write};
 use std::str::FromStr;
 use todo_txt::Task;
 
@@ -13,10 +13,7 @@ pub struct ToDo {
 
 #[allow(dead_code)]
 impl ToDo {
-    pub fn load<R>(reader: R, use_done: bool) -> Result<ToDo, Box<dyn Error>>
-    where
-        R: Read,
-    {
+    pub fn load<R: Read>(reader: R, use_done: bool) -> Result<ToDo, Box<dyn Error>> {
         let mut pending = Vec::new();
         let mut done = Vec::new();
         for line in BufReader::new(reader).lines() {
@@ -121,6 +118,34 @@ impl ToDo {
         self.get_tasks_done_switch(name, |t| &t.hashtags)
     }
 
+    fn write_tasks<W: Write>(tasks: &Vec<Task>, writer: &mut W) -> ioResult<()> {
+        for task in tasks {
+            writer.write((task.to_string() + "\n").as_bytes())?;
+        }
+        Ok(())
+    }
+
+    pub fn write_done_tasks<W>(&self, writer: &mut W) -> ioResult<()>
+    where
+        W: Write,
+    {
+        Self::write_tasks(&self.done, writer)
+    }
+
+    pub fn write_pending_tasks<W>(&self, writer: &mut W) -> ioResult<()>
+    where
+        W: Write,
+    {
+        Self::write_tasks(&self.pending, writer)
+    }
+
+    pub fn write_all_tasks<W>(&self, writer: &mut W) -> ioResult<()>
+    where
+        W: Write,
+    {
+        self.write_done_tasks(writer)?;
+        self.write_pending_tasks(writer)
+    }
 }
 
 #[cfg(test)]
@@ -226,6 +251,52 @@ mod tests {
         assert_eq!(todo.get_context_tasks("context3").len(), 3);
         assert_eq!(todo.get_hashtag_tasks("hashtag1").len(), 2);
         assert_eq!(todo.get_hashtag_tasks("hashtag2").len(), 2);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_tasks() -> Result<(), Box<dyn Error>> {
+        let todo = ToDo::load(TESTING_STRING.as_bytes(), false)?;
+        let mut buf: Vec<u8> = Vec::new();
+
+        let mut test_function =
+            |function: fn(&ToDo, &mut Vec<_>) -> ioResult<()>, f: fn(&String) -> bool, message| {
+                // run function
+
+                function(&todo, &mut buf).unwrap();
+                // get testing data
+                let expected = TESTING_STRING
+                    .trim()
+                    .lines()
+                    .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
+                    .filter(|line| f(line))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+                    + "\n";
+                assert_eq!(
+                    expected.as_bytes(),
+                    buf,
+                    // if test failed print data in string not in byte array
+                    "\n-----{}-----\nGET:\n{}\n----------------\nEXPECTED:\n{}\n", 
+                    message,
+                    String::from_utf8(buf.clone()).unwrap(),
+                    expected.clone()
+                );
+                buf.clear();
+            };
+
+        test_function(
+            ToDo::write_done_tasks,
+            |f| f.starts_with("x "),
+            "Pending check is wrong",
+        );
+
+        test_function(
+            ToDo::write_pending_tasks,
+            |f| !f.starts_with("x "),
+            "Pending check is wrong",
+        );
 
         Ok(())
     }
