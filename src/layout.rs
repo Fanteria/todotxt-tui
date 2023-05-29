@@ -1,17 +1,19 @@
 pub mod container;
 pub mod widget;
 
-use self::container::InitItem;
+use self::{
+    container::{Container, InitItem, Item},
+    widget::{Widget, WidgetType},
+};
 use crate::{error::ErrorToDo, todo::ToDo};
-use container::Container;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Direction::Horizontal, Direction::Vertical, Rect},
+    // widgets::Widget,
     Frame,
 };
-use widget::{Widget, WidgetType};
 
 type RcCon = Rc<RefCell<Container>>;
 
@@ -65,13 +67,6 @@ impl Layout {
     ) -> Option<RcCon> {
         let move_to_parent = || {
             let mut c = container.borrow_mut();
-            // c.parent.as_ref().and_then(|parent| {
-            //     Layout::move_focus(parent.clone(), direction, f).map(|ret| {
-            //         c.active = false;
-            //         ret
-            //     })
-            // })
-
             if let Some(parent) = &c.parent {
                 return Layout::move_focus(parent.clone(), direction, f).map(|ret| {
                     c.active = false;
@@ -124,6 +119,13 @@ impl Layout {
     pub fn select_widget(&mut self, widget_type: WidgetType) -> Result<(), ErrorToDo> {
         self.actual = Container::select_widget(self.root.clone(), widget_type)?;
         Ok(())
+    }
+
+    pub fn active_widget(&self) -> Option<&Widget> {
+        match self.actual.borrow().actual_item() {
+            Item::Widget(_) => None,
+            Item::Container(_) => None,
+        }
     }
 
     pub fn update_chunks(&mut self, chunk: Rect) {

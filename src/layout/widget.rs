@@ -1,14 +1,15 @@
+use crate::todo::ToDo;
 use crate::CONFIG;
+use crossterm::event::KeyEvent;
 use serde::{Deserialize, Serialize};
+use std::rc::Rc;
 use tui::{
     backend::Backend,
     layout::Rect,
     style::{Modifier, Style},
-    widgets::{Block, BorderType, Borders, List, Paragraph},
+    widgets::{Block, BorderType, Borders, List, Paragraph, ListState},
     Frame,
 };
-use crate::todo::ToDo;
-use std::rc::Rc;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
@@ -46,10 +47,9 @@ impl Widget {
         self.chunk = chunk;
     }
 
-    pub fn draw<B>(&self, f: &mut Frame<B>, active: bool)
-    where
-        B: Backend,
-    {
+    pub fn handle_key(&self, event: &KeyEvent) {}
+
+    pub fn draw<B: Backend>(&self, f: &mut Frame<B>, active: bool) {
         let get_block = || {
             let mut block = Block::default()
                 .borders(Borders::ALL)
@@ -60,6 +60,9 @@ impl Widget {
             }
             block
         };
+        let mut list_state = ListState::default();
+        list_state.select(Some(0));
+        list_state.select(list_state.selected().and_then(|i| Some(i + 1)));
 
         match self.widget_type {
             WidgetType::Input => {
@@ -70,7 +73,7 @@ impl Widget {
                     .block(get_block())
                     .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
                     .highlight_symbol(">>");
-                f.render_widget(list, self.chunk);
+                f.render_stateful_widget(list, self.chunk, &mut list_state);
             }
             WidgetType::Done => {
                 let list = List::new(self.data.done.clone())

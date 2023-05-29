@@ -1,8 +1,10 @@
+mod config;
 mod error;
 mod layout;
-mod config;
 mod todo;
 
+use crate::config::Config;
+use crate::todo::ToDo;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -12,14 +14,12 @@ use crossterm::{
     ExecutableCommand,
 };
 use layout::Layout;
-use std::io;
-use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
 use lazy_static::lazy_static;
-use crate::config::Config;
-use crate::todo::ToDo;
-use std::fs::File;
-use std::rc::Rc;
 use std::error::Error;
+use std::fs::File;
+use std::io;
+use std::rc::Rc;
+use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
 
 lazy_static! {
     static ref CONFIG: Config = Config::load_default();
@@ -28,7 +28,7 @@ lazy_static! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let todo = Rc::new(ToDo::load(File::open(CONFIG.todo_path.clone())?, false)?);
-    
+
     draw_ui(todo).await?;
 
     Ok(())
@@ -65,7 +65,11 @@ async fn draw_ui(data: Rc<ToDo>) -> Result<(), io::Error> {
                 KeyCode::Char('H') => layout.left(),
                 KeyCode::Char('K') => layout.up(),
                 KeyCode::Char('J') => layout.down(),
-                _ => {}
+                _ => {
+                    if let Some(widget) = layout.active_widget() {
+                        widget.handle_key(&event);
+                    }
+                }
             },
             _ => {}
         }
