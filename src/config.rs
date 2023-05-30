@@ -1,4 +1,4 @@
-use crate::layout::widget::WidgetType;
+use crate::layout::widget_type::WidgetType;
 use serde::{Deserialize, Serialize};
 use std::env::{var, VarError};
 use std::error::Error;
@@ -100,10 +100,8 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use super::Config;
-    use crate::layout::widget::WidgetType;
+    use super::*;
     use std::io::Result;
-    use tui::style::Color;
 
     #[test]
     fn test_deserialization() {

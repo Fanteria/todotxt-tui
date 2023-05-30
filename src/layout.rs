@@ -1,9 +1,12 @@
 pub mod container;
 pub mod widget;
+pub mod widget_type;
+mod widget_state;
 
 use self::{
     container::{Container, InitItem, Item},
-    widget::{Widget, WidgetType},
+    widget::Widget,
+    widget_type::WidgetType,
 };
 use crate::{error::ErrorToDo, todo::ToDo};
 use std::cell::RefCell;
@@ -121,7 +124,7 @@ impl Layout {
         Ok(())
     }
 
-    pub fn active_widget(&self) -> Option<&Widget> {
+    pub fn active_widget(&self) -> Option<&mut Widget> {
         match self.actual.borrow().actual_item() {
             Item::Widget(_) => None,
             Item::Container(_) => None,

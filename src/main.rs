@@ -21,6 +21,10 @@ use std::io;
 use std::rc::Rc;
 use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
 
+
+#[macro_use]
+extern crate enum_dispatch;
+
 lazy_static! {
     static ref CONFIG: Config = Config::load_default();
 }
