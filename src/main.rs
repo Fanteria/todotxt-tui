@@ -21,7 +21,6 @@ use std::io;
 use std::rc::Rc;
 use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
 
-
 #[macro_use]
 extern crate enum_dispatch;
 
@@ -72,6 +71,7 @@ async fn draw_ui(data: Rc<ToDo>) -> Result<(), io::Error> {
                 _ => {
                     if let Some(widget) = layout.active_widget() {
                         widget.handle_key(&event);
+                        println!("THIS IS NOT PRINTED");
                     }
                 }
             },

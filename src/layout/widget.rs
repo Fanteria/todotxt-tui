@@ -1,17 +1,10 @@
+use super::widget_state::State;
 use super::widget_state::WidgetState;
 use super::widget_type::WidgetType;
-use super::widget_state::State;
 use crate::todo::ToDo;
-use crate::CONFIG;
 use crossterm::event::KeyEvent;
 use std::rc::Rc;
-use tui::{
-    backend::Backend,
-    layout::Rect,
-    style::{Modifier, Style},
-    widgets::{Block, BorderType, Borders, List, Paragraph, ListState},
-    Frame,
-};
+use tui::{backend::Backend, layout::Rect, Frame};
 
 pub struct Widget {
     pub widget_type: WidgetType,
@@ -32,7 +25,7 @@ impl Widget {
                 y: 0,
             },
             title: title.to_string(),
-            data,
+            data: data.clone(),
             state: WidgetState::new(&widget_type),
         }
     }
@@ -46,7 +39,8 @@ impl Widget {
     }
 
     pub fn draw<B: Backend>(&self, f: &mut Frame<B>, active: bool) {
-        self.state.render(f, active, "A", self.chunk);
+        self.state
+            .render(f, active, &self.title, self.data.as_ref(), self.chunk);
         // let get_block = || {
         //     let mut block = Block::default()
         //         .borders(Borders::ALL)

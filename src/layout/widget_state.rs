@@ -1,5 +1,8 @@
 use super::widget_type::WidgetType;
-use crate::CONFIG;
+use crate::{
+    todo::{TaskList, ToDo},
+    CONFIG,
+};
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
@@ -12,7 +15,7 @@ use tui::{
 #[enum_dispatch]
 pub trait State {
     fn handle_key(&mut self, event: &KeyEvent);
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, area: Rect);
+    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, todo: &ToDo, area: Rect);
 }
 
 fn get_block(title: &str, active: bool) -> Block {
@@ -29,21 +32,39 @@ fn get_block(title: &str, active: bool) -> Block {
 #[allow(dead_code)]
 pub struct StateList {
     state: ListState,
+    f: fn(&ToDo) -> &TaskList,
 }
 
 impl StateList {
-    fn new() -> Self {
+    fn new(f: fn(&ToDo) -> &TaskList) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
-        Self { state }
+        Self { state, f }
     }
 }
 
 impl State for StateList {
-    fn handle_key(&mut self, _event: &KeyEvent) {}
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, area: Rect) {
-        f.render_widget(get_block(title, active), area);
+    fn handle_key(&mut self, event: &KeyEvent) {
+        match event.code {
+            KeyCode::Char('j') => {
+                self.state
+                    .select(self.state.selected().and_then(|i| Some(i + 1)));
+            }
+            KeyCode::Char('k') => {
+                self.state
+                    .select(self.state.selected().and_then(|i| Some(i - 1)));
+            }
+            _ => {}
+        }
+    }
+
+    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, todo: &ToDo, area: Rect) {
+        let data = (self.f)(todo);
+        let list = List::new(data.clone())
+            .block(get_block(title, active))
+            .highlight_symbol(">>");
+        f.render_stateful_widget(list, area, &mut self.state.clone());
     }
 }
 
@@ -66,8 +87,11 @@ impl State for StateInput {
             _ => {}
         }
     }
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, area: Rect) {
-        f.render_widget(Paragraph::new(self.actual.clone()).block(get_block(title, active)), area);
+    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, todo: &ToDo, area: Rect) {
+        f.render_widget(
+            Paragraph::new(self.actual.clone()).block(get_block(title, active)),
+            area,
+        );
     }
 }
 
@@ -81,7 +105,10 @@ impl WidgetState {
     pub fn new(widget_type: &WidgetType) -> Self {
         match widget_type {
             WidgetType::Input => WidgetState::Input(StateInput::new()),
-            _ => WidgetState::List(StateList::new()),
+            WidgetType::List => WidgetState::List(StateList::new(|todo| &todo.pending)),
+            WidgetType::Done => WidgetState::List(StateList::new(|todo| &todo.done)),
+            WidgetType::Project => WidgetState::List(StateList::new(|todo| &todo.done)),
+            WidgetType::Context => WidgetState::List(StateList::new(|todo| &todo.done)),
         }
     }
 }
