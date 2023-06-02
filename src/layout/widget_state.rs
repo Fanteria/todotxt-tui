@@ -1,4 +1,4 @@
-use super::widget_type::WidgetType;
+use super::{widget::Widget, widget_type::WidgetType};
 use crate::{
     todo::{TaskList, ToDo},
     CONFIG,
@@ -6,8 +6,7 @@ use crate::{
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
-    layout::Rect,
-    style::Style,
+    style::{Modifier, Style},
     widgets::{Block, BorderType, Borders, List, ListState, Paragraph},
     Frame,
 };
@@ -15,7 +14,9 @@ use tui::{
 #[enum_dispatch]
 pub trait State {
     fn handle_key(&mut self, event: &KeyEvent);
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, todo: &ToDo, area: Rect);
+    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget);
+    fn focus(&mut self);
+    fn unfocus(&mut self);
 }
 
 fn get_block(title: &str, active: bool) -> Block {
@@ -59,12 +60,21 @@ impl State for StateList {
         }
     }
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, todo: &ToDo, area: Rect) {
-        let data = (self.f)(todo);
+    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
+        let data = (self.f)(&widget.data);
         let list = List::new(data.clone())
-            .block(get_block(title, active))
+            .block(get_block(&widget.title, active))
+            // .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
             .highlight_symbol(">>");
-        f.render_stateful_widget(list, area, &mut self.state.clone());
+        f.render_stateful_widget(list, widget.chunk, &mut self.state.clone());
+    }
+
+    fn focus(&mut self) {
+        
+    }
+
+    fn unfocus(&mut self) {
+        
     }
 }
 
@@ -84,14 +94,25 @@ impl State for StateInput {
     fn handle_key(&mut self, event: &KeyEvent) {
         match event.code {
             KeyCode::Char(ch) => self.actual.push(ch),
+            KeyCode::Backspace => {
+                self.actual.pop();
+            }
             _ => {}
         }
     }
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, title: &str, todo: &ToDo, area: Rect) {
+    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         f.render_widget(
-            Paragraph::new(self.actual.clone()).block(get_block(title, active)),
-            area,
+            Paragraph::new(self.actual.clone()).block(get_block(&widget.title, active)),
+            widget.chunk,
         );
+    }
+
+    fn focus(&mut self) {
+        
+    }
+
+    fn unfocus(&mut self) {
+        
     }
 }
 

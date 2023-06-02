@@ -40,7 +40,7 @@ impl Widget {
 
     pub fn draw<B: Backend>(&self, f: &mut Frame<B>, active: bool) {
         self.state
-            .render(f, active, &self.title, self.data.as_ref(), self.chunk);
+            .render(f, active, self);
         // let get_block = || {
         //     let mut block = Block::default()
         //         .borders(Borders::ALL)

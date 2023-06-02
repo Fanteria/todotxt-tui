@@ -9,6 +9,7 @@ use self::{
     widget_type::WidgetType,
 };
 use crate::{error::ErrorToDo, todo::ToDo};
+use crossterm::event::KeyEvent;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tui::{
@@ -63,7 +64,7 @@ impl Layout {
         Layout { root, actual }
     }
 
-    pub fn move_focus(
+    fn move_focus(
         container: RcCon,
         direction: &Direction,
         f: fn(RcCon) -> Option<RcCon>,
@@ -86,36 +87,42 @@ impl Layout {
         move_to_parent()
     }
 
+    fn change_focus(&mut self, next: Option<RcCon>) {
+        if let Some(next) = next {
+            self.actual = next;
+        }
+    }
+
     pub fn left(&mut self) {
-        let left = Layout::move_focus(
+        self.change_focus(Layout::move_focus(
             Rc::clone(&self.actual),
             &Horizontal,
             Container::previous_item,
-        );
-        if let Some(actual) = left {
-            self.actual = actual;
-        }
+        ));
     }
 
     pub fn right(&mut self) {
-        let right = Layout::move_focus(Rc::clone(&self.actual), &Horizontal, Container::next_item);
-        if let Some(actual) = right {
-            self.actual = actual;
-        }
+        self.change_focus(Layout::move_focus(
+            Rc::clone(&self.actual),
+            &Horizontal,
+            Container::next_item,
+        ));
     }
 
     pub fn up(&mut self) {
-        let up = Layout::move_focus(Rc::clone(&self.actual), &Vertical, Container::previous_item);
-        if let Some(actual) = up {
-            self.actual = actual;
-        }
+        self.change_focus(Layout::move_focus(
+            Rc::clone(&self.actual),
+            &Vertical,
+            Container::previous_item,
+        ));
     }
 
     pub fn down(&mut self) {
-        let down = Layout::move_focus(Rc::clone(&self.actual), &Vertical, Container::next_item);
-        if let Some(actual) = down {
-            self.actual = actual;
-        }
+        self.change_focus(Layout::move_focus(
+            Rc::clone(&self.actual),
+            &Vertical,
+            Container::next_item,
+        ));
     }
 
     #[allow(dead_code)]
@@ -124,17 +131,12 @@ impl Layout {
         Ok(())
     }
 
-    pub fn active_widget(&self) -> Option<&mut Widget> {
-        let x = self.actual.borrow_mut().actual_item(); 
-        match x {
-            Item::Widget(widget) => Some(&mut widget.widget),
-            Item::Container(_) => None,
+    pub fn handle_key(&self, event: &KeyEvent) {
+        let mut act = self.actual.borrow_mut();
+        match &mut act.actual_item() {
+            Item::Widget(w) => w.widget.handle_key(event),
+            Item::Container(_) => {} // TODO return Error
         }
-
-        // match self.actual.borrow_mut().actual_item() {
-        //     Item::Widget(widget) => Some(widget.widget),
-        //     Item::Container(_) => None,
-        // }
     }
 
     pub fn update_chunks(&mut self, chunk: Rect) {
@@ -162,14 +164,16 @@ mod tests {
     }
 
     #[test]
-    fn test_select_widget() {}
+    fn test_select_widget() {
+        let layout = mock_layout();
+    }
 
     #[test]
     fn test_active_widget() {}
 
     #[test]
     fn test_basic_movement() {
-        let layout = mock_layout();
+        // let layout = mock_layout();
 
         // assert_eq!(
         //     layout.active_widget().unwrap().widget_type,

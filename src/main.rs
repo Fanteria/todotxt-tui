@@ -69,10 +69,11 @@ async fn draw_ui(data: Rc<ToDo>) -> Result<(), io::Error> {
                 KeyCode::Char('K') => layout.up(),
                 KeyCode::Char('J') => layout.down(),
                 _ => {
-                    if let Some(widget) = layout.active_widget() {
-                        widget.handle_key(&event);
-                        println!("THIS IS NOT PRINTED");
-                    }
+                    layout.handle_key(&event)
+                    // if let Some(widget) = layout.active_widget() {
+                    //     widget.handle_key(&event);
+                    //     println!("THIS IS NOT PRINTED");
+                    // }
                 }
             },
             _ => {}

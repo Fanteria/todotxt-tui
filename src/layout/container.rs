@@ -84,8 +84,8 @@ impl Container {
         }
     }
 
-    pub fn actual_item(&self) -> &Item {
-        &self.items[self.act_index]
+    pub fn actual_item(&mut self) -> &mut Item {
+        &mut self.items[self.act_index]
     }
 
     fn update_actual(container: &RcCon) -> RcCon {
