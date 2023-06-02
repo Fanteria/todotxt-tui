@@ -1,7 +1,7 @@
 pub mod container;
 pub mod widget;
-pub mod widget_type;
 mod widget_state;
+pub mod widget_type;
 
 use self::{
     container::{Container, InitItem, Item},
@@ -125,10 +125,16 @@ impl Layout {
     }
 
     pub fn active_widget(&self) -> Option<&mut Widget> {
-        match self.actual.borrow().actual_item() {
-            Item::Widget(_) => None,
+        let x = self.actual.borrow_mut().actual_item(); 
+        match x {
+            Item::Widget(widget) => Some(&mut widget.widget),
             Item::Container(_) => None,
         }
+
+        // match self.actual.borrow_mut().actual_item() {
+        //     Item::Widget(widget) => Some(widget.widget),
+        //     Item::Container(_) => None,
+        // }
     }
 
     pub fn update_chunks(&mut self, chunk: Rect) {
@@ -139,12 +145,35 @@ impl Layout {
     where
         B: Backend,
     {
-        self.root.as_ref().borrow().render_recursive(f);
+        self.root.borrow().render_recursive(f);
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    fn mock_layout() -> Layout {
+        Layout::new(
+            Rect::new(0, 0, 0, 0),
+            WidgetType::List,
+            Rc::new(ToDo::new(false)),
+        )
+    }
+
     #[test]
-    fn test_basic_movement() {}
+    fn test_select_widget() {}
+
+    #[test]
+    fn test_active_widget() {}
+
+    #[test]
+    fn test_basic_movement() {
+        let layout = mock_layout();
+
+        // assert_eq!(
+        //     layout.active_widget().unwrap().widget_type,
+        //     WidgetType::List
+        // );
+    }
 }
