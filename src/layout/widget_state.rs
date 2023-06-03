@@ -7,7 +7,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
     style::{Modifier, Style},
-    widgets::{Block, BorderType, Borders, List, ListState, Paragraph},
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Frame,
 };
 
@@ -33,15 +33,20 @@ fn get_block(title: &str, active: bool) -> Block {
 #[allow(dead_code)]
 pub struct StateList {
     state: ListState,
-    f: fn(&ToDo) -> &TaskList,
+    f: fn(&ToDo) -> Vec<ListItem>,
+    focus: bool,
 }
 
 impl StateList {
-    fn new(f: fn(&ToDo) -> &TaskList) -> Self {
+    fn new(f: fn(&ToDo) -> Vec<ListItem>) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
-        Self { state, f }
+        Self {
+            state,
+            f,
+            focus: false,
+        }
     }
 }
 
@@ -70,11 +75,11 @@ impl State for StateList {
     }
 
     fn focus(&mut self) {
-        
+        self.focus = true;
     }
 
     fn unfocus(&mut self) {
-        
+        self.focus = false;
     }
 }
 
@@ -97,6 +102,7 @@ impl State for StateInput {
             KeyCode::Backspace => {
                 self.actual.pop();
             }
+            KeyCode::Esc => self.actual.clear(),
             _ => {}
         }
     }
@@ -107,13 +113,9 @@ impl State for StateInput {
         );
     }
 
-    fn focus(&mut self) {
-        
-    }
+    fn focus(&mut self) {}
 
-    fn unfocus(&mut self) {
-        
-    }
+    fn unfocus(&mut self) {}
 }
 
 #[enum_dispatch(State)]
@@ -126,10 +128,18 @@ impl WidgetState {
     pub fn new(widget_type: &WidgetType) -> Self {
         match widget_type {
             WidgetType::Input => WidgetState::Input(StateInput::new()),
-            WidgetType::List => WidgetState::List(StateList::new(|todo| &todo.pending)),
-            WidgetType::Done => WidgetState::List(StateList::new(|todo| &todo.done)),
-            WidgetType::Project => WidgetState::List(StateList::new(|todo| &todo.done)),
-            WidgetType::Context => WidgetState::List(StateList::new(|todo| &todo.done)),
+            WidgetType::List => WidgetState::List(StateList::new(|todo| {
+                Into::<Vec<ListItem>>::into(todo.pending.clone())
+            })),
+            WidgetType::Done => WidgetState::List(StateList::new(|todo| { 
+                Into::<Vec<ListItem>>::into(todo.done.clone())
+            })),
+            WidgetType::Project => WidgetState::List(StateList::new(|todo| { 
+                Into::<Vec<ListItem>>::into(todo.get_projects())
+            })),
+            WidgetType::Context => WidgetState::List(StateList::new(|todo| { 
+                Into::<Vec<ListItem>>::into(todo.get_contexts())
+            })),
         }
     }
 }

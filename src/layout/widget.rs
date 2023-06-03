@@ -38,6 +38,14 @@ impl Widget {
         self.state.handle_key(event);
     }
 
+    pub fn focus(&mut self) {
+        self.state.focus();
+    }
+
+    pub fn unfocus(&mut self) {
+        self.state.unfocus();
+    }
+
     pub fn draw<B: Backend>(&self, f: &mut Frame<B>, active: bool) {
         self.state
             .render(f, active, self);

@@ -88,13 +88,22 @@ impl Layout {
     }
 
     fn change_focus(&mut self, next: Option<RcCon>) {
-        if let Some(next) = next {
-            self.actual = next;
-        }
+        let change = |f: fn(&mut Widget), data: &RcCon| {
+            if let Item::Widget(w) = data.borrow_mut().actual_item() {
+                f(&mut w.widget);
+            }
+        };
+        let next = match next {
+            Some(s) => s,
+            None => return,
+        };
+        change(Widget::unfocus, &self.actual);
+        change(Widget::focus, &next);
+        self.actual = next;
     }
 
     pub fn left(&mut self) {
-        self.change_focus(Layout::move_focus(
+        self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),
             &Horizontal,
             Container::previous_item,
@@ -102,7 +111,7 @@ impl Layout {
     }
 
     pub fn right(&mut self) {
-        self.change_focus(Layout::move_focus(
+        self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),
             &Horizontal,
             Container::next_item,
@@ -110,7 +119,7 @@ impl Layout {
     }
 
     pub fn up(&mut self) {
-        self.change_focus(Layout::move_focus(
+        self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),
             &Vertical,
             Container::previous_item,
@@ -118,7 +127,7 @@ impl Layout {
     }
 
     pub fn down(&mut self) {
-        self.change_focus(Layout::move_focus(
+        self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),
             &Vertical,
             Container::next_item,
@@ -128,6 +137,9 @@ impl Layout {
     #[allow(dead_code)]
     pub fn select_widget(&mut self, widget_type: WidgetType) -> Result<(), ErrorToDo> {
         self.actual = Container::select_widget(self.root.clone(), widget_type)?;
+        if let Item::Widget(w) = self.actual.borrow_mut().actual_item() {
+            w.widget.focus();
+        }
         Ok(())
     }
 
