@@ -138,6 +138,7 @@ impl Layout {
     pub fn select_widget(&mut self, widget_type: WidgetType) -> Result<(), ErrorToDo> {
         self.actual = Container::select_widget(self.root.clone(), widget_type)?;
         if let Item::Widget(w) = self.actual.borrow_mut().actual_item() {
+            println!("HELLO");
             w.widget.focus();
         }
         Ok(())

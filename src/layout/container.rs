@@ -208,7 +208,7 @@ mod tests {
     }
 
     fn check_active(container: &RcCon, widget_type: WidgetType) {
-        match container.borrow().actual_item() {
+        match container.borrow_mut().actual_item() {
             Item::Widget(widget) => {
                 if widget.widget.widget_type != widget_type {
                     panic!(

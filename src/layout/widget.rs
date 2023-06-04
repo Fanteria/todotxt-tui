@@ -10,7 +10,6 @@ pub struct Widget {
     pub widget_type: WidgetType,
     pub chunk: Rect,
     pub title: String,
-    pub data: Rc<ToDo>,
     state: WidgetState,
 }
 
@@ -25,8 +24,7 @@ impl Widget {
                 y: 0,
             },
             title: title.to_string(),
-            data: data.clone(),
-            state: WidgetState::new(&widget_type),
+            state: WidgetState::new(&widget_type, data),
         }
     }
 
@@ -47,50 +45,6 @@ impl Widget {
     }
 
     pub fn draw<B: Backend>(&self, f: &mut Frame<B>, active: bool) {
-        self.state
-            .render(f, active, self);
-        // let get_block = || {
-        //     let mut block = Block::default()
-        //         .borders(Borders::ALL)
-        //         .title(self.title.clone())
-        //         .border_type(BorderType::Rounded);
-        //     if active {
-        //         block = block.border_style(Style::default().fg(CONFIG.active_color));
-        //     }
-        //     block
-        // };
-        // let mut list_state = ListState::default();
-        // list_state.select(Some(0));
-        // list_state.select(list_state.selected().and_then(|i| Some(i + 1)));
-        //
-        // match self.widget_type {
-        //     WidgetType::Input => {
-        //         f.render_widget(Paragraph::new("Some text").block(get_block()), self.chunk);
-        //     }
-        //     WidgetType::List => {
-        //         let list = List::new(self.data.pending.clone())
-        //             .block(get_block())
-        //             .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-        //             .highlight_symbol(">>");
-        //         f.render_stateful_widget(list, self.chunk, &mut list_state);
-        //     }
-        //     WidgetType::Done => {
-        //         let list = List::new(self.data.done.clone())
-        //             .block(get_block())
-        //             .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-        //             .highlight_symbol(">>");
-        //         f.render_widget(list, self.chunk);
-        //     }
-        //     WidgetType::Project => {
-        //         let list = List::new(self.data.get_projects())
-        //             .block(get_block())
-        //             .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-        //             .highlight_symbol(">>");
-        //         f.render_widget(list, self.chunk);
-        //     }
-        //     WidgetType::Context => {
-        //         f.render_widget(get_block(), self.chunk);
-        //     }
-        // }
+        self.state.render(f, active, self);
     }
 }

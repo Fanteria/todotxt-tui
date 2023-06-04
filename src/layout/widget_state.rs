@@ -1,9 +1,10 @@
 use super::{widget::Widget, widget_type::WidgetType};
 use crate::{
-    todo::{TaskList, ToDo},
+    todo::ToDo,
     CONFIG,
 };
 use crossterm::event::{KeyCode, KeyEvent};
+use std::rc::Rc;
 use tui::{
     backend::Backend,
     style::{Modifier, Style},
@@ -34,17 +35,19 @@ fn get_block(title: &str, active: bool) -> Block {
 pub struct StateList {
     state: ListState,
     f: fn(&ToDo) -> Vec<ListItem>,
+    data: Rc<ToDo>,
     focus: bool,
 }
 
 impl StateList {
-    fn new(f: fn(&ToDo) -> Vec<ListItem>) -> Self {
+    fn new(f: fn(&ToDo) -> Vec<ListItem>, data: Rc<ToDo>) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
         Self {
             state,
             f,
+            data,
             focus: false,
         }
     }
@@ -54,24 +57,37 @@ impl State for StateList {
     fn handle_key(&mut self, event: &KeyEvent) {
         match event.code {
             KeyCode::Char('j') => {
-                self.state
-                    .select(self.state.selected().and_then(|i| Some(i + 1)));
+                let act = match self.state.selected() {
+                    Some(a) => a + 1,
+                    None => 0,
+                };
+                if (self.f)(&self.data).len() > act {
+                    self.state.select(Some(act));
+                }
             }
             KeyCode::Char('k') => {
-                self.state
-                    .select(self.state.selected().and_then(|i| Some(i - 1)));
+                let act = match self.state.selected() {
+                    Some(a) => a,
+                    None => 0,
+                };
+                if 0 < act {
+                    self.state.select(Some(act - 1));
+                }
             }
             _ => {}
         }
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
-        let data = (self.f)(&widget.data);
-        let list = List::new(data.clone())
-            .block(get_block(&widget.title, active))
+        let data = (self.f)(&self.data);
+        let list = List::new(data.clone()).block(get_block(&widget.title, active));
+        if !self.focus {
+            f.render_widget(list, widget.chunk)
+        } else {
             // .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            .highlight_symbol(">>");
-        f.render_stateful_widget(list, widget.chunk, &mut self.state.clone());
+            let list = list.highlight_symbol(">>");
+            f.render_stateful_widget(list, widget.chunk, &mut self.state.clone());
+        }
     }
 
     fn focus(&mut self) {
@@ -85,12 +101,14 @@ impl State for StateList {
 
 pub struct StateInput {
     actual: String,
+    data: Rc<ToDo>,
 }
 
 impl StateInput {
-    fn new() -> Self {
+    fn new(data: Rc<ToDo>) -> Self {
         Self {
             actual: String::from(""),
+            data
         }
     }
 }
@@ -125,21 +143,25 @@ pub enum WidgetState {
 }
 
 impl WidgetState {
-    pub fn new(widget_type: &WidgetType) -> Self {
+    pub fn new(widget_type: &WidgetType, data: Rc<ToDo>) -> Self {
         match widget_type {
-            WidgetType::Input => WidgetState::Input(StateInput::new()),
-            WidgetType::List => WidgetState::List(StateList::new(|todo| {
-                Into::<Vec<ListItem>>::into(todo.pending.clone())
-            })),
-            WidgetType::Done => WidgetState::List(StateList::new(|todo| { 
-                Into::<Vec<ListItem>>::into(todo.done.clone())
-            })),
-            WidgetType::Project => WidgetState::List(StateList::new(|todo| { 
-                Into::<Vec<ListItem>>::into(todo.get_projects())
-            })),
-            WidgetType::Context => WidgetState::List(StateList::new(|todo| { 
-                Into::<Vec<ListItem>>::into(todo.get_contexts())
-            })),
+            WidgetType::Input => WidgetState::Input(StateInput::new(data)),
+            WidgetType::List => WidgetState::List(StateList::new(
+                |todo| Into::<Vec<ListItem>>::into(todo.pending.clone()),
+                data,
+            )),
+            WidgetType::Done => WidgetState::List(StateList::new(
+                |todo| Into::<Vec<ListItem>>::into(todo.done.clone()),
+                data,
+            )),
+            WidgetType::Project => WidgetState::List(StateList::new(
+                |todo| Into::<Vec<ListItem>>::into(todo.get_projects()),
+                data,
+            )),
+            WidgetType::Context => WidgetState::List(StateList::new(
+                |todo| Into::<Vec<ListItem>>::into(todo.get_contexts()),
+                data,
+            )),
         }
     }
 }
