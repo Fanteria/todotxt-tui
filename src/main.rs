@@ -82,6 +82,7 @@ async fn draw_ui(data: Rc<ToDo>) -> Result<(), io::Error> {
         terminal.draw(|f| {
             layout.render(f);
         })?;
+        terminal.show_cursor()?;
     }
 
     // restore terminal

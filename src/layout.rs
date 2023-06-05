@@ -15,7 +15,6 @@ use std::rc::Rc;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Direction::Horizontal, Direction::Vertical, Rect},
-    // widgets::Widget,
     Frame,
 };
 
@@ -60,6 +59,9 @@ impl Layout {
         );
         let actual = Container::select_widget(root.clone(), actual).unwrap(); // TODO
         root.borrow_mut().update_chunks(chunk);
+        if let Item::Widget(w) = actual.borrow_mut().actual_item() {
+            w.widget.focus();
+        }
 
         Layout { root, actual }
     }

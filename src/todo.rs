@@ -168,6 +168,16 @@ impl<'a> Into<Vec<ListItem<'a>>> for TaskList {
 
 pub struct CategoryList(pub BTreeSet<String>);
 
+impl CategoryList {
+    pub fn start_with(&self, pattern: &str) -> Vec<&String>{
+        self.0.iter().filter(|item| item.starts_with(pattern)).collect()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 impl<'a> Into<Vec<ListItem<'a>>> for CategoryList {
     fn into(self) -> Vec<ListItem<'a>> {
         self.0

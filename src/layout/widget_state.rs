@@ -1,13 +1,10 @@
 use super::{widget::Widget, widget_type::WidgetType};
-use crate::{
-    todo::ToDo,
-    CONFIG,
-};
+use crate::{todo::ToDo, CONFIG};
 use crossterm::event::{KeyCode, KeyEvent};
 use std::rc::Rc;
 use tui::{
     backend::Backend,
-    style::{Modifier, Style},
+    style::Style,
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Frame,
 };
@@ -104,12 +101,71 @@ pub struct StateInput {
     data: Rc<ToDo>,
 }
 
+macro_rules! some_or_return {
+    ( $( $x:expr ) ) => {
+        match x {
+            Some(s) => s,
+            None => return
+        }
+    };
+}
+
 impl StateInput {
     fn new(data: Rc<ToDo>) -> Self {
         Self {
             actual: String::from(""),
-            data
+            data,
         }
+    }
+
+    fn autocomplete(&mut self) {
+        let last_space_index = match self.actual.rfind(' ') {
+            Some(index) => index,
+            None => return,
+        };
+        let base = match self.actual.get(last_space_index + 1..) {
+            Some(category) => category,
+            None => return,
+        };
+        let x = self.actual.get(1..4);
+        let y = some_or_return!(x);
+        let c = match base.get(0..1) {
+            Some(c) => c,
+            None => return,
+        };
+        let pattern = match base.get(1..) {
+            Some(patter) => patter,
+            None => return,
+        };
+
+        let get_list = || match c {
+            "+" => Some(self.data.get_projects()),
+            "@" => Some(self.data.get_contexts()),
+            "#" => Some(self.data.get_hashtags()),
+            _ => None,
+        };
+
+        let list = if let Some(l) = get_list() {
+            l
+        } else {
+            return;
+        };
+        if list.is_empty() {
+            return;
+        }
+
+        let list = list.start_with(pattern);
+
+        if list.len() == 1 {
+            self.actual += list[0];
+            self.actual += " ";
+        } else {
+            let same = list[0];
+            // same.
+            // list.iter().next().for_each(|item| {;})
+        }
+
+        // self.actual.find;
     }
 }
 
@@ -124,6 +180,7 @@ impl State for StateInput {
             _ => {}
         }
     }
+
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         f.render_widget(
             Paragraph::new(self.actual.clone()).block(get_block(&widget.title, active)),
