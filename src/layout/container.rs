@@ -37,7 +37,6 @@ pub struct Container {
     pub active: bool,
 }
 
-#[allow(dead_code)]
 impl Container {
     pub fn new(
         items: Vec<InitItem>,

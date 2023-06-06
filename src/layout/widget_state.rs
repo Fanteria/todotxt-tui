@@ -28,7 +28,6 @@ fn get_block(title: &str, active: bool) -> Block {
     block
 }
 
-#[allow(dead_code)]
 pub struct StateList {
     state: ListState,
     f: fn(&ToDo) -> Vec<ListItem>,

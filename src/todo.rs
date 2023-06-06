@@ -6,14 +6,12 @@ use std::str::FromStr;
 use todo_txt::Task;
 use tui::widgets::ListItem;
 
-#[allow(dead_code)]
 pub struct ToDo {
     pub pending: TaskList,
     pub done: TaskList,
     use_done: bool,
 }
 
-#[allow(dead_code)]
 impl ToDo {
     pub fn new(use_done: bool) -> Self {
         Self {
@@ -169,8 +167,11 @@ impl<'a> Into<Vec<ListItem<'a>>> for TaskList {
 pub struct CategoryList(pub BTreeSet<String>);
 
 impl CategoryList {
-    pub fn start_with(&self, pattern: &str) -> Vec<&String>{
-        self.0.iter().filter(|item| item.starts_with(pattern)).collect()
+    pub fn start_with(&self, pattern: &str) -> Vec<&String> {
+        self.0
+            .iter()
+            .filter(|item| item.starts_with(pattern))
+            .collect()
     }
 
     pub fn is_empty(&self) -> bool {

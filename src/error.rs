@@ -1,7 +1,6 @@
 use std::{error, fmt};
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum ErrorType {
     ImpossigleLayout,
     WidgetDoesNotExist,
