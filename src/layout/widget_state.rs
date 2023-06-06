@@ -102,10 +102,10 @@ pub struct StateInput {
 }
 
 macro_rules! some_or_return {
-    ( $( $x:expr ) ) => {
-        match x {
+    ($message:expr) => {
+        match $message {
             Some(s) => s,
-            None => return
+            None => return,
         }
     };
 }
