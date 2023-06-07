@@ -9,6 +9,8 @@ use tui::{
     Frame,
 };
 
+use crate::utils::some_or_return;
+
 #[enum_dispatch]
 pub trait State {
     fn handle_key(&mut self, event: &KeyEvent);
@@ -100,15 +102,6 @@ pub struct StateInput {
     data: Rc<ToDo>,
 }
 
-macro_rules! some_or_return {
-    ($message:expr) => {
-        match $message {
-            Some(s) => s,
-            None => return,
-        }
-    };
-}
-
 impl StateInput {
     fn new(data: Rc<ToDo>) -> Self {
         Self {
@@ -118,53 +111,49 @@ impl StateInput {
     }
 
     fn autocomplete(&mut self) {
-        let last_space_index = match self.actual.rfind(' ') {
-            Some(index) => index,
-            None => return,
-        };
-        let base = match self.actual.get(last_space_index + 1..) {
-            Some(category) => category,
-            None => return,
-        };
-        let x = self.actual.get(1..4);
-        let y = some_or_return!(x);
-        let c = match base.get(0..1) {
-            Some(c) => c,
-            None => return,
-        };
-        let pattern = match base.get(1..) {
-            Some(patter) => patter,
-            None => return,
-        };
+        let last_space_index = some_or_return!(self.actual.rfind(' '));
+        let base = some_or_return!(self.actual.get(last_space_index + 1..));
+        let category = some_or_return!(base.get(0..1));
+        let pattern = some_or_return!(base.get(1..));
 
-        let get_list = || match c {
+        let get_list = || match category {
             "+" => Some(self.data.get_projects()),
             "@" => Some(self.data.get_contexts()),
             "#" => Some(self.data.get_hashtags()),
             _ => None,
         };
 
-        let list = if let Some(l) = get_list() {
-            l
-        } else {
-            return;
-        };
+        let list = some_or_return!(get_list());
         if list.is_empty() {
             return;
         }
 
         let list = list.start_with(pattern);
 
-        if list.len() == 1 {
-            self.actual += list[0];
-            self.actual += " ";
-        } else {
-            let same = list[0];
-            // same.
-            // list.iter().next().for_each(|item| {;})
+        let same_start_index = |fst: &str, sec: &str| -> usize {
+            for (i, (fst_char, sec_char)) in fst
+                .chars()
+                .into_iter()
+                .zip(sec.chars().into_iter())
+                .enumerate()
+            {
+                if fst_char != sec_char {
+                    return i;
+                }
+            }
+            std::cmp::min(fst.len(), sec.len())
+        };
+
+        let mut new_act = list[0].as_str();
+
+        if list.len() != 1 {
+            list.iter()
+                .skip(1)
+                .for_each(|item| new_act = &new_act[..same_start_index(new_act, item)]);
         }
 
-        // self.actual.find;
+        self.actual += new_act;
+        self.actual += " ";
     }
 }
 
@@ -176,6 +165,7 @@ impl State for StateInput {
                 self.actual.pop();
             }
             KeyCode::Esc => self.actual.clear(),
+            KeyCode::Tab => self.autocomplete(),
             _ => {}
         }
     }
