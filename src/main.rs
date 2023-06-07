@@ -2,6 +2,7 @@ mod config;
 mod error;
 mod layout;
 mod todo;
+mod utils;
 
 use crate::config::Config;
 use crate::todo::ToDo;
