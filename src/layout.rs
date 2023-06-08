@@ -59,7 +59,7 @@ impl Layout {
         );
         let actual = Container::select_widget(root.clone(), actual).unwrap(); // TODO
         root.borrow_mut().update_chunks(chunk);
-        if let Item::Widget(w) = actual.borrow_mut().actual_item() {
+        if let Item::Widget(w) = actual.borrow_mut().actual_item_mut() {
             w.widget.focus();
         }
 
@@ -91,7 +91,7 @@ impl Layout {
 
     fn change_focus(&mut self, next: Option<RcCon>) {
         let change = |f: fn(&mut Widget), data: &RcCon| {
-            if let Item::Widget(w) = data.borrow_mut().actual_item() {
+            if let Item::Widget(w) = data.borrow_mut().actual_item_mut() {
                 f(&mut w.widget);
             }
         };
@@ -136,9 +136,16 @@ impl Layout {
         ));
     }
 
+    pub fn cursor_visible(&self) -> bool {
+        match &self.actual.borrow().actual_item() {
+            Item::Widget(w) => {w.widget.cursor_visible()}
+            Item::Container(_) => {false} // TODO return Errror
+        }
+    }
+
     pub fn select_widget(&mut self, widget_type: WidgetType) -> Result<(), ErrorToDo> {
         self.actual = Container::select_widget(self.root.clone(), widget_type)?;
-        if let Item::Widget(w) = self.actual.borrow_mut().actual_item() {
+        if let Item::Widget(w) = self.actual.borrow_mut().actual_item_mut() {
             println!("HELLO");
             w.widget.focus();
         }
@@ -147,7 +154,7 @@ impl Layout {
 
     pub fn handle_key(&self, event: &KeyEvent) {
         let mut act = self.actual.borrow_mut();
-        match &mut act.actual_item() {
+        match &mut act.actual_item_mut() {
             Item::Widget(w) => w.widget.handle_key(event),
             Item::Container(_) => {} // TODO return Error
         }

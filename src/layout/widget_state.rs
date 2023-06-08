@@ -17,6 +17,7 @@ pub trait State {
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget);
     fn focus(&mut self);
     fn unfocus(&mut self);
+    fn cursor_visible(&self) -> bool;
 }
 
 fn get_block(title: &str, active: bool) -> Block {
@@ -94,6 +95,10 @@ impl State for StateList {
 
     fn unfocus(&mut self) {
         self.focus = false;
+    }
+
+    fn cursor_visible(&self) -> bool {
+        return false;
     }
 }
 
@@ -188,6 +193,10 @@ impl State for StateInput {
     fn focus(&mut self) {}
 
     fn unfocus(&mut self) {}
+
+    fn cursor_visible(&self) -> bool {
+        return true;
+    }
 }
 
 #[enum_dispatch(State)]

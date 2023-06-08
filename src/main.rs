@@ -51,12 +51,15 @@ async fn draw_ui(data: Rc<ToDo>) -> Result<(), io::Error> {
     terminal.hide_cursor()?;
 
     let mut layout = Layout::new(terminal.size()?, CONFIG.init_widget, data);
-    terminal.draw(|f| {
-        layout.render(f);
-    })?;
 
     // main loop
     loop {
+        terminal.draw(|f| {
+            layout.render(f);
+        })?;
+        if layout.cursor_visible() {
+            terminal.show_cursor()?;
+        }
         match event::read()? {
             Event::Resize(width, height) => {
                 layout.update_chunks(Rect::new(0, 0, width, height));
@@ -79,11 +82,6 @@ async fn draw_ui(data: Rc<ToDo>) -> Result<(), io::Error> {
             },
             _ => {}
         }
-
-        terminal.draw(|f| {
-            layout.render(f);
-        })?;
-        terminal.show_cursor()?;
     }
 
     // restore terminal
