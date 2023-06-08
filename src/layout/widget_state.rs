@@ -150,10 +150,11 @@ impl StateInput {
             list.iter()
                 .skip(1)
                 .for_each(|item| new_act = &new_act[..same_start_index(new_act, item)]);
+            self.actual += &new_act[pattern.len()..];
+        } else {
+            self.actual += &new_act[pattern.len()..];
+            self.actual += " ";
         }
-
-        self.actual += new_act;
-        self.actual += " ";
     }
 }
 
