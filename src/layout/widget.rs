@@ -4,6 +4,7 @@ use super::widget_type::WidgetType;
 use crate::todo::ToDo;
 use crossterm::event::KeyEvent;
 use std::rc::Rc;
+use std::cell::RefCell;
 use tui::{backend::Backend, layout::Rect, Frame};
 
 pub struct Widget {
@@ -14,7 +15,7 @@ pub struct Widget {
 }
 
 impl Widget {
-    pub fn new(widget_type: WidgetType, title: &str, data: Rc<ToDo>) -> Widget {
+    pub fn new(widget_type: WidgetType, title: &str, data: Rc<RefCell<ToDo>>) -> Widget {
         Widget {
             widget_type,
             chunk: Rect {

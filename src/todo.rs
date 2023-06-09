@@ -150,6 +150,14 @@ impl ToDo {
     pub fn get_pending_tasks(&self) -> &TaskList {
         &self.pending
     }
+
+    pub fn remove_pending_task(&mut self, index: usize) {
+        self.pending.remove_task(index);
+    }
+
+    pub fn finish_task(&mut self, index: usize) {
+        self.done.add_task(self.pending.remove_task(index));
+    }
 }
 
 #[derive(Clone)]
@@ -161,6 +169,16 @@ impl<'a> Into<Vec<ListItem<'a>>> for TaskList {
             .iter()
             .map(|task| ListItem::new(task.subject.clone()))
             .collect::<Vec<ListItem<'a>>>()
+    }
+}
+
+impl TaskList {
+    pub fn remove_task(&mut self, index: usize) -> Task {
+        self.0.remove(index)
+    }
+
+    pub fn add_task(&mut self, task: Task) {
+        self.0.push(task);
     }
 }
 

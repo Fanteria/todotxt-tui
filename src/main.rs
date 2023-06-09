@@ -20,6 +20,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::rc::Rc;
+use std::cell::RefCell;
 use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
 
 #[macro_use]
@@ -31,14 +32,14 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let todo = Rc::new(ToDo::load(File::open(CONFIG.todo_path.clone())?, false)?);
+    let todo = Rc::new(RefCell::new(ToDo::load(File::open(CONFIG.todo_path.clone())?, false)?));
 
     draw_ui(todo).await?;
 
     Ok(())
 }
 
-async fn draw_ui(data: Rc<ToDo>) -> Result<(), io::Error> {
+async fn draw_ui(data: Rc<RefCell<ToDo>>) -> Result<(), io::Error> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();

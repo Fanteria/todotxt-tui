@@ -2,6 +2,7 @@ use super::{widget::Widget, widget_type::WidgetType};
 use crate::{todo::ToDo, CONFIG};
 use crossterm::event::{KeyCode, KeyEvent};
 use std::rc::Rc;
+use std::cell::RefCell;
 use tui::{
     backend::Backend,
     style::Style,
@@ -10,6 +11,8 @@ use tui::{
 };
 
 use crate::utils::some_or_return;
+
+type RCToDo = Rc<RefCell<ToDo>>;
 
 #[enum_dispatch]
 pub trait State {
@@ -34,12 +37,12 @@ fn get_block(title: &str, active: bool) -> Block {
 pub struct StateList {
     state: ListState,
     f: fn(&ToDo) -> Vec<ListItem>,
-    data: Rc<ToDo>,
+    data: RCToDo,
     focus: bool,
 }
 
 impl StateList {
-    fn new(f: fn(&ToDo) -> Vec<ListItem>, data: Rc<ToDo>) -> Self {
+    fn new(f: fn(&ToDo) -> Vec<ListItem>, data: RCToDo) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
@@ -60,7 +63,7 @@ impl State for StateList {
                     Some(a) => a + 1,
                     None => 0,
                 };
-                if (self.f)(&self.data).len() > act {
+                if (self.f)(&*self.data.borrow()).len() > act {
                     self.state.select(Some(act));
                 }
             }
@@ -73,12 +76,27 @@ impl State for StateList {
                     self.state.select(Some(act - 1));
                 }
             }
+            KeyCode::Char('x') => {
+                match self.state.selected() {
+                    Some(i) => self.data.borrow_mut().remove_pending_task(i),
+                    None => {}
+                }
+                // TODO panic if there are no tasks
+            }
+            KeyCode::Char('d') => {
+                match self.state.selected() {
+                    Some(i) => self.data.borrow_mut().finish_task(i),
+                    None => {}
+                }
+                // TODO panic if there are no tasks
+            }
             _ => {}
         }
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
-        let data = (self.f)(&self.data);
+        let todo = self.data.borrow();
+        let data = (self.f)(&*todo);
         let list = List::new(data.clone()).block(get_block(&widget.title, active));
         if !self.focus {
             f.render_widget(list, widget.chunk)
@@ -104,11 +122,11 @@ impl State for StateList {
 
 pub struct StateInput {
     actual: String,
-    data: Rc<ToDo>,
+    data: RCToDo,
 }
 
 impl StateInput {
-    fn new(data: Rc<ToDo>) -> Self {
+    fn new(data: RCToDo) -> Self {
         Self {
             actual: String::from(""),
             data,
@@ -126,9 +144,9 @@ impl StateInput {
         let pattern = some_or_return!(base.get(1..));
 
         let get_list = || match category {
-            "+" => Some(self.data.get_projects()),
-            "@" => Some(self.data.get_contexts()),
-            "#" => Some(self.data.get_hashtags()),
+            "+" => Some(self.data.borrow().get_projects()),
+            "@" => Some(self.data.borrow().get_contexts()),
+            "#" => Some(self.data.borrow().get_hashtags()),
             _ => None,
         };
 
@@ -206,7 +224,7 @@ pub enum WidgetState {
 }
 
 impl WidgetState {
-    pub fn new(widget_type: &WidgetType, data: Rc<ToDo>) -> Self {
+    pub fn new(widget_type: &WidgetType, data: Rc<RefCell<ToDo>>) -> Self {
         match widget_type {
             WidgetType::Input => WidgetState::Input(StateInput::new(data)),
             WidgetType::List => WidgetState::List(StateList::new(
@@ -245,7 +263,7 @@ mod tests {
         5 +name_project3 @context3 #hashtag2
         6 +unique @context2 #hashtag2
         "#;
-        let mut widget = StateInput::new(Rc::new(ToDo::load(testing_string.as_bytes(), false)?));
+        let mut widget = StateInput::new(Rc::new(RefCell::new(ToDo::load(testing_string.as_bytes(), false)?)));
 
         // not found check
         widget.actual = String::from("some text +missing");

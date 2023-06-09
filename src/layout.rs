@@ -26,7 +26,7 @@ pub struct Layout {
 }
 
 impl Layout {
-    pub fn new(chunk: Rect, actual: WidgetType, data: Rc<ToDo>) -> Layout {
+    pub fn new(chunk: Rect, actual: WidgetType, data: Rc<RefCell<ToDo>>) -> Layout {
         let input_widget = Widget::new(WidgetType::Input, "Input", data.clone());
         let list_widget = Widget::new(WidgetType::List, "List", data.clone());
         let done_widget = Widget::new(WidgetType::Done, "Done", data.clone());
