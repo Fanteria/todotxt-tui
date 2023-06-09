@@ -110,7 +110,9 @@ impl Container {
         if condition(&container.borrow()) {
             return None;
         }
+        container.borrow_mut().unfocus();
         change(&mut container.borrow_mut());
+        container.borrow_mut().focus();
         Some(Container::update_actual(container))
     }
 
@@ -124,6 +126,20 @@ impl Container {
 
     pub fn previous_item(container: RcCon) -> Option<RcCon> {
         Container::change_item(&container, |c| c.act_index <= 0, |c| c.act_index -= 1)
+    }
+
+    pub fn focus(&mut self) {
+        match self.actual_item_mut() {
+            Item::Widget(w) => {w.widget.focus()}
+            Item::Container(_) => {}, // TODO error, actual must be widget
+        }
+    }
+
+    pub fn unfocus(&mut self) {
+        match self.actual_item_mut() {
+            Item::Widget(w) => {w.widget.unfocus()}
+            Item::Container(_) => {}, // TODO error, actual must be widget
+        }
     }
 
     pub fn select_widget(container: RcCon, widget_type: WidgetType) -> Result<RcCon, ErrorToDo> {

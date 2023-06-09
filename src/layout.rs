@@ -90,17 +90,12 @@ impl Layout {
     }
 
     fn change_focus(&mut self, next: Option<RcCon>) {
-        let change = |f: fn(&mut Widget), data: &RcCon| {
-            if let Item::Widget(w) = data.borrow_mut().actual_item_mut() {
-                f(&mut w.widget);
-            }
-        };
         let next = match next {
             Some(s) => s,
             None => return,
         };
-        change(Widget::unfocus, &self.actual);
-        change(Widget::focus, &next);
+        self.actual.borrow_mut().unfocus();
+        next.borrow_mut().focus();
         self.actual = next;
     }
 
@@ -146,7 +141,7 @@ impl Layout {
     pub fn select_widget(&mut self, widget_type: WidgetType) -> Result<(), ErrorToDo> {
         self.actual = Container::select_widget(self.root.clone(), widget_type)?;
         if let Item::Widget(w) = self.actual.borrow_mut().actual_item_mut() {
-            println!("HELLO");
+            println!("HELLO"); //TODO remove
             w.widget.focus();
         }
         Ok(())
