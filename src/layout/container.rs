@@ -4,7 +4,7 @@ use std::rc::Rc;
 use crate::error::{ErrorToDo, ErrorType};
 
 use super::widget::Widget;
-use super::widget_type::WidgetType;
+use super::widget::widget_type::WidgetType;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},

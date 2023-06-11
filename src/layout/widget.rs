@@ -1,6 +1,8 @@
-use super::widget_state::State;
-use super::widget_state::WidgetState;
-use super::widget_type::WidgetType;
+pub mod widget_type;
+pub mod widget_state;
+
+use widget_state::{State, WidgetState};
+use widget_type::WidgetType;
 use crate::todo::ToDo;
 use crossterm::event::KeyEvent;
 use std::rc::Rc;

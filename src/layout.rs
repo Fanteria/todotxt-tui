@@ -1,12 +1,10 @@
 pub mod container;
 pub mod widget;
-mod widget_state;
-pub mod widget_type;
 
 use self::{
     container::{Container, InitItem, Item},
     widget::Widget,
-    widget_type::WidgetType,
+    widget::widget_type::WidgetType,
 };
 use crate::{error::ErrorToDo, todo::ToDo};
 use crossterm::event::KeyEvent;

@@ -1,4 +1,5 @@
-use super::{widget::Widget, widget_type::WidgetType};
+use super::widget_type::WidgetType;
+use super::Widget;
 use crate::{todo::ToDo, CONFIG};
 use crossterm::event::{KeyCode, KeyEvent};
 use std::cell::RefCell;

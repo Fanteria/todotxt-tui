@@ -1,4 +1,4 @@
-use crate::layout::widget_type::WidgetType;
+use crate::layout::widget::widget_type::WidgetType;
 use serde::{Deserialize, Serialize};
 use std::env::{var, VarError};
 use std::error::Error;
