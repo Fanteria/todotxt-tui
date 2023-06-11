@@ -1,8 +1,8 @@
 use super::{widget::Widget, widget_type::WidgetType};
 use crate::{todo::ToDo, CONFIG};
 use crossterm::event::{KeyCode, KeyEvent};
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 use tui::{
     backend::Backend,
     style::Style,
@@ -195,6 +195,10 @@ impl State for StateInput {
             KeyCode::Backspace => {
                 self.actual.pop();
             }
+            KeyCode::Enter => {
+                self.data.borrow_mut().new_task(&self.actual);
+                self.actual.clear();
+            }
             KeyCode::Esc => self.actual.clear(),
             KeyCode::Tab => self.autocomplete(),
             _ => {}
@@ -263,7 +267,10 @@ mod tests {
         5 +name_project3 @context3 #hashtag2
         6 +unique @context2 #hashtag2
         "#;
-        let mut widget = StateInput::new(Rc::new(RefCell::new(ToDo::load(testing_string.as_bytes(), false)?)));
+        let mut widget = StateInput::new(Rc::new(RefCell::new(ToDo::load(
+            testing_string.as_bytes(),
+            false,
+        )?)));
 
         // not found check
         widget.actual = String::from("some text +missing");

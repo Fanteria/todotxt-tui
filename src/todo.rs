@@ -10,6 +10,7 @@ pub struct ToDo {
     pub pending: TaskList,
     pub done: TaskList,
     use_done: bool,
+    // stack: 
 }
 
 impl ToDo {
@@ -149,6 +150,16 @@ impl ToDo {
 
     pub fn get_pending_tasks(&self) -> &TaskList {
         &self.pending
+    }
+
+    pub fn new_task(&mut self, task: &str) -> Result<(), Box<dyn Error>> {
+        let task = Task::from_str(task)?;
+        if task.finished {
+            self.done.0.push(task);
+        } else {
+            self.pending.0.push(task);
+        }
+        Ok(())
     }
 
     pub fn remove_pending_task(&mut self, index: usize) {
