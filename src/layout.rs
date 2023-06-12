@@ -3,8 +3,8 @@ pub mod widget;
 
 use self::{
     container::{Container, InitItem, Item},
-    widget::Widget,
     widget::widget_type::WidgetType,
+    widget::Widget,
 };
 use crate::{error::ErrorToDo, todo::ToDo};
 use crossterm::event::KeyEvent;
@@ -131,8 +131,8 @@ impl Layout {
 
     pub fn cursor_visible(&self) -> bool {
         match &self.actual.borrow().actual_item() {
-            Item::Widget(w) => {w.widget.cursor_visible()}
-            Item::Container(_) => {false} // TODO return Errror
+            Item::Widget(w) => w.widget.cursor_visible(),
+            Item::Container(_) => false, // TODO return Errror
         }
     }
 
@@ -173,25 +173,50 @@ mod tests {
         Layout::new(
             Rect::new(0, 0, 0, 0),
             WidgetType::List,
-            Rc::new(ToDo::new(false)),
+            Rc::new(RefCell::new(ToDo::new(false))),
         )
     }
 
-    #[test]
-    fn test_select_widget() {
-        let layout = mock_layout();
-    }
+    // fn check_active_type(container)
 
     #[test]
-    fn test_active_widget() {}
+    fn test_basic_movement() -> Result<(), ErrorToDo> {
+        let mut l = mock_layout();
+        let check_type = |widget_type, l: &Layout| -> Result<(), ErrorToDo>{
+            let active = l.actual.as_ref().borrow().get_active_type()?;
+            if active != widget_type {
+                panic!("Active widget must be {:?} not {:?}.", widget_type, active)
+            }
+            Ok(())
+        };
 
-    #[test]
-    fn test_basic_movement() {
-        // let layout = mock_layout();
+        l.right();
+        check_type(WidgetType::Done, &l)?;
 
-        // assert_eq!(
-        //     layout.active_widget().unwrap().widget_type,
-        //     WidgetType::List
-        // );
+        l.right();
+        check_type(WidgetType::Done, &l)?;
+
+        l.down();
+        check_type(WidgetType::Project, &l)?;
+
+        l.right();
+        check_type(WidgetType::Project, &l)?;
+
+        l.down();
+        check_type(WidgetType::Project, &l)?;
+
+        l.left();
+        check_type(WidgetType::List, &l)?;
+
+        l.right();
+        check_type(WidgetType::Project, &l)?;
+
+        l.left();
+        check_type(WidgetType::List, &l)?;
+
+        l.up();
+        check_type(WidgetType::Input, &l)?;
+
+        Ok(())
     }
 }

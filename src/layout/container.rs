@@ -3,8 +3,8 @@ use std::rc::Rc;
 
 use crate::error::{ErrorToDo, ErrorType};
 
-use super::widget::Widget;
 use super::widget::widget_type::WidgetType;
+use super::widget::Widget;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -128,17 +128,37 @@ impl Container {
         Container::change_item(&container, |c| c.act_index <= 0, |c| c.act_index -= 1)
     }
 
+    pub fn check_active(&self, widget_type: WidgetType) -> Result<bool, ErrorToDo> {
+        match self.actual_item() {
+            Item::Widget(w) => Ok(w.widget.widget_type == widget_type),
+            Item::Container(_) => Err(ErrorToDo::new(
+                ErrorType::ActualIsNotWidget,
+                "The current item is expected to be a widget.",
+            )),
+        }
+    }
+
+    pub fn get_active_type(&self) -> Result<WidgetType, ErrorToDo> {
+        match self.actual_item() {
+            Item::Widget(w) => Ok(w.widget.widget_type),
+            Item::Container(_) => Err(ErrorToDo::new(
+                ErrorType::ActualIsNotWidget,
+                "The current item is expected to be a widget.",
+            )),
+        }
+    }
+
     pub fn focus(&mut self) {
         match self.actual_item_mut() {
-            Item::Widget(w) => {w.widget.focus()}
-            Item::Container(_) => {}, // TODO error, actual must be widget
+            Item::Widget(w) => w.widget.focus(),
+            Item::Container(_) => {} // TODO error, actual must be widget
         }
     }
 
     pub fn unfocus(&mut self) {
         match self.actual_item_mut() {
-            Item::Widget(w) => {w.widget.unfocus()}
-            Item::Container(_) => {}, // TODO error, actual must be widget
+            Item::Widget(w) => w.widget.unfocus(),
+            Item::Container(_) => {} // TODO error, actual must be widget
         }
     }
 
@@ -186,14 +206,13 @@ impl Container {
 
 #[cfg(test)]
 mod tests {
-    use crate::todo::ToDo;
-
     use super::*;
+    use crate::todo::ToDo;
     use tui::layout::Direction::{Horizontal, Vertical};
     use WidgetType::*;
 
     fn create_testing_container() -> RcCon {
-        let todo = Rc::new(ToDo::new(false));
+        let todo = Rc::new(RefCell::new(ToDo::new(false)));
         let input_widget = Widget::new(WidgetType::Input, "Input", todo.clone());
         let list_widget = Widget::new(WidgetType::List, "List", todo.clone());
         let done_widget = Widget::new(WidgetType::Done, "Done", todo.clone());
@@ -226,29 +245,20 @@ mod tests {
         cnt
     }
 
-    fn check_active(container: &RcCon, widget_type: WidgetType) {
-        match container.borrow_mut().actual_item() {
-            Item::Widget(widget) => {
-                if widget.widget.widget_type != widget_type {
-                    panic!(
-                        "Active widget must be {:?} not {:?}.",
-                        widget_type, widget.widget.widget_type
-                    )
-                }
-            }
-            Item::Container(_) => panic!("Actual item must be widget not container."),
+    fn check_active_test(container: &RcCon, widget_type: WidgetType) -> Result<(), ErrorToDo> {
+        let active = container.borrow().get_active_type()?;
+        if active != widget_type {
+            panic!("Active widget must be {:?} not {:?}.", widget_type, active)
         }
+        Ok(())
     }
 
     #[test]
-    fn test_selecting_widget() {
+    fn test_selecting_widget() -> Result<(), ErrorToDo> {
         let c = create_testing_container();
-        let check = |widget_type| match &Container::select_widget(c.clone(), widget_type) {
-            Ok(c) => {
-                check_active(c, widget_type);
-                Ok(())
-            }
-            Err(_) => Err("Widget is not in container"),
+        let check = |widget_type| match Container::select_widget(c.clone(), widget_type) {
+            Ok(c) => check_active_test(&c, widget_type),
+            Err(e) => Err(e),
         };
 
         check(Input).unwrap();
@@ -259,6 +269,7 @@ mod tests {
             check(Context).is_err(),
             "Widget with type Context is not in container."
         );
+        Ok(())
     }
 
     #[test]
@@ -268,24 +279,24 @@ mod tests {
         // Test next widget in child container.
         let actual = Container::select_widget(c.clone(), List)?;
         let next = Container::next_item(actual.clone()).unwrap();
-        check_active(&next, Done);
+        check_active_test(&next, Done)?;
 
         // Test next widget in same container.
         let actual = Container::select_widget(c.clone(), Done)?;
         let next = Container::next_item(actual.clone()).unwrap();
-        check_active(&next, Project);
+        check_active_test(&next, Project)?;
 
         // Test next in container have not default value
         let actual = Container::select_widget(c.clone(), List)?;
         let next = Container::next_item(actual.clone()).unwrap();
-        check_active(&next, Project);
+        check_active_test(&next, Project)?;
 
         // Test return value if there is no next item
         assert!(Container::next_item(actual.clone()).is_none());
         assert!(Container::next_item(actual.clone()).is_none());
         assert!(Container::next_item(actual.clone()).is_none());
         assert_eq!(actual.borrow().act_index, 1);
-        check_active(&next, Project);
+        check_active_test(&next, Project)?;
 
         Ok(())
     }
@@ -297,14 +308,14 @@ mod tests {
         // Test previous widget in same container.
         let actual = Container::select_widget(c.clone(), Project)?;
         let prev = Container::previous_item(actual.clone()).unwrap();
-        check_active(&prev, Done);
+        check_active_test(&prev, Done)?;
 
         // Test return value if there is no previous item
         assert!(Container::previous_item(prev.clone()).is_none());
         assert!(Container::previous_item(prev.clone()).is_none());
         assert!(Container::previous_item(prev.clone()).is_none());
         assert_eq!(prev.borrow().act_index, 0);
-        check_active(&prev, Done);
+        check_active_test(&prev, Done)?;
 
         Ok(())
     }
