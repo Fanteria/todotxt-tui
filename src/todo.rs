@@ -152,7 +152,7 @@ impl ToDo {
         &self.pending
     }
 
-    pub fn new_task(&mut self, task: &str) -> Result<(), Box<dyn Error>> {
+    pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         let task = Task::from_str(task)?;
         if task.finished {
             self.done.0.push(task);

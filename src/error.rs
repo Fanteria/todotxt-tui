@@ -1,5 +1,7 @@
 use std::{error, fmt};
 
+pub type ToDoRes<T> = Result<T, ErrorToDo>;
+
 #[derive(Debug)]
 pub enum ErrorType {
     ImpossigleLayout,

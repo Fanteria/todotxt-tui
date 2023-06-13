@@ -2,11 +2,11 @@ pub mod container;
 pub mod widget;
 
 use self::{
-    container::{Container, InitItem, Item},
+    container::{Container, InitItem, Item, RcCon},
     widget::widget_type::WidgetType,
     widget::Widget,
 };
-use crate::{error::ErrorToDo, todo::ToDo};
+use crate::{error::ToDoRes, todo::ToDo};
 use crossterm::event::KeyEvent;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -15,8 +15,6 @@ use tui::{
     layout::{Constraint, Direction, Direction::Horizontal, Direction::Vertical, Rect},
     Frame,
 };
-
-type RcCon = Rc<RefCell<Container>>;
 
 pub struct Layout {
     root: Rc<RefCell<Container>>,
@@ -136,7 +134,7 @@ impl Layout {
         }
     }
 
-    pub fn select_widget(&mut self, widget_type: WidgetType) -> Result<(), ErrorToDo> {
+    pub fn select_widget(&mut self, widget_type: WidgetType) -> ToDoRes<()> {
         self.actual = Container::select_widget(self.root.clone(), widget_type)?;
         if let Item::Widget(w) = self.actual.borrow_mut().actual_item_mut() {
             println!("HELLO"); //TODO remove
@@ -177,12 +175,10 @@ mod tests {
         )
     }
 
-    // fn check_active_type(container)
-
     #[test]
-    fn test_basic_movement() -> Result<(), ErrorToDo> {
+    fn test_basic_movement() -> ToDoRes<()> {
         let mut l = mock_layout();
-        let check_type = |widget_type, l: &Layout| -> Result<(), ErrorToDo>{
+        let check_type = |widget_type, l: &Layout| -> ToDoRes<()> {
             let active = l.actual.as_ref().borrow().get_active_type()?;
             if active != widget_type {
                 panic!("Active widget must be {:?} not {:?}.", widget_type, active)

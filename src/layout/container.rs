@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::error::{ErrorToDo, ErrorType};
+use crate::error::{ErrorToDo, ErrorType, ToDoRes};
 
 use super::widget::widget_type::WidgetType;
 use super::widget::Widget;
@@ -11,7 +11,7 @@ use tui::{
     Frame,
 };
 
-type RcCon = Rc<RefCell<Container>>;
+pub type RcCon = Rc<RefCell<Container>>;
 
 pub enum Item {
     Container(RcCon),
@@ -128,7 +128,7 @@ impl Container {
         Container::change_item(&container, |c| c.act_index <= 0, |c| c.act_index -= 1)
     }
 
-    pub fn check_active(&self, widget_type: WidgetType) -> Result<bool, ErrorToDo> {
+    pub fn check_active(&self, widget_type: WidgetType) -> ToDoRes<bool> {
         match self.actual_item() {
             Item::Widget(w) => Ok(w.widget.widget_type == widget_type),
             Item::Container(_) => Err(ErrorToDo::new(
@@ -138,7 +138,7 @@ impl Container {
         }
     }
 
-    pub fn get_active_type(&self) -> Result<WidgetType, ErrorToDo> {
+    pub fn get_active_type(&self) -> ToDoRes<WidgetType> {
         match self.actual_item() {
             Item::Widget(w) => Ok(w.widget.widget_type),
             Item::Container(_) => Err(ErrorToDo::new(
@@ -162,7 +162,7 @@ impl Container {
         }
     }
 
-    pub fn select_widget(container: RcCon, widget_type: WidgetType) -> Result<RcCon, ErrorToDo> {
+    pub fn select_widget(container: RcCon, widget_type: WidgetType) -> ToDoRes<RcCon> {
         let mut borrowed = container.borrow_mut();
         for (index, item) in borrowed.items.iter().enumerate() {
             match item {
@@ -245,7 +245,7 @@ mod tests {
         cnt
     }
 
-    fn check_active_test(container: &RcCon, widget_type: WidgetType) -> Result<(), ErrorToDo> {
+    fn check_active_test(container: &RcCon, widget_type: WidgetType) -> ToDoRes<()> {
         let active = container.borrow().get_active_type()?;
         if active != widget_type {
             panic!("Active widget must be {:?} not {:?}.", widget_type, active)
@@ -254,7 +254,7 @@ mod tests {
     }
 
     #[test]
-    fn test_selecting_widget() -> Result<(), ErrorToDo> {
+    fn test_selecting_widget() -> ToDoRes<()> {
         let c = create_testing_container();
         let check = |widget_type| match Container::select_widget(c.clone(), widget_type) {
             Ok(c) => check_active_test(&c, widget_type),
@@ -273,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn test_next_item() -> Result<(), ErrorToDo> {
+    fn test_next_item() -> ToDoRes<()> {
         let c = create_testing_container();
 
         // Test next widget in child container.
@@ -302,7 +302,7 @@ mod tests {
     }
 
     #[test]
-    fn test_previous_item() -> Result<(), ErrorToDo> {
+    fn test_previous_item() -> ToDoRes<()> {
         let c = create_testing_container();
 
         // Test previous widget in same container.
