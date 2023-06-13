@@ -85,10 +85,10 @@ impl State for StateInput {
             KeyCode::Backspace => {
                 self.actual.pop();
             }
-            KeyCode::Enter => {
-                self.data.borrow_mut().new_task(&self.actual);
-                self.actual.clear();
-            }
+            KeyCode::Enter => match self.data.borrow_mut().new_task(&self.actual) {
+                Ok(_) => self.actual.clear(),
+                Err(_) => self.actual += " wrong!!!",
+            },
             KeyCode::Esc => self.actual.clear(),
             KeyCode::Tab => self.autocomplete(),
             _ => {}

@@ -4,13 +4,14 @@ use std::error::Error;
 use std::io::{BufRead, BufReader, Read, Result as ioResult, Write};
 use std::str::FromStr;
 use todo_txt::Task;
+use tui::text::Span;
 use tui::widgets::ListItem;
 
 pub struct ToDo {
     pub pending: TaskList,
     pub done: TaskList,
     use_done: bool,
-    // stack: 
+    // stack:
 }
 
 impl ToDo {
@@ -212,7 +213,16 @@ impl<'a> Into<Vec<ListItem<'a>>> for CategoryList {
     fn into(self) -> Vec<ListItem<'a>> {
         self.0
             .iter()
-            .map(|category| ListItem::new(category.clone()))
+            .map(|category| {
+                if category == "project2" {
+                    ListItem::new(Span::styled(
+                        category.clone(),
+                        tui::style::Style::default().fg(tui::style::Color::Blue),
+                    ))
+                } else {
+                    ListItem::new(category.clone())
+                }
+            })
             .collect()
     }
 }

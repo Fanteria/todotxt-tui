@@ -75,7 +75,7 @@ impl State for StateList {
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         let todo = self.data.borrow();
         let data = (self.f)(&*todo);
-        let list = List::new(data.clone()).block(get_block(&widget.title, active));
+        let list = List::new(data).block(get_block(&widget.title, active));
         if !self.focus {
             f.render_widget(list, widget.chunk)
         } else {
