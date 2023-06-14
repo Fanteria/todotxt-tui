@@ -17,11 +17,11 @@ impl WidgetState {
         match widget_type {
             WidgetType::Input => WidgetState::Input(StateInput::new(data)),
             WidgetType::List => WidgetState::List(StateList::new(
-                |todo| Into::<Vec<ListItem>>::into(todo.pending.clone()),
+                |todo| Into::<Vec<ListItem>>::into(todo.get_pending_filtered()),
                 data,
             )),
             WidgetType::Done => WidgetState::List(StateList::new(
-                |todo| Into::<Vec<ListItem>>::into(todo.done.clone()),
+                |todo| Into::<Vec<ListItem>>::into(todo.get_done_filtered()),
                 data,
             )),
             WidgetType::Project => WidgetState::List(StateList::new(

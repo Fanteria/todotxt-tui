@@ -8,24 +8,24 @@ use tui::text::Span;
 use tui::widgets::ListItem;
 
 pub struct ToDo {
-    pub pending: TaskList,
-    pub done: TaskList,
+    pub pending: Vec<Task>,
+    pub done: Vec<Task>,
     use_done: bool,
-    project_filters: Vec<String>,
-    context_filters: Vec<String>,
-    hashtag_filters: Vec<String>,
+    pub project_filters: BTreeSet<String>,
+    pub context_filters: BTreeSet<String>,
+    pub hashtag_filters: BTreeSet<String>,
     // stack:
 }
 
 impl ToDo {
     pub fn new(use_done: bool) -> Self {
         Self {
-            pending: TaskList(Vec::new()),
-            done: TaskList(Vec::new()),
+            pending: Vec::new(),
+            done: Vec::new(),
             use_done,
-            project_filters: Vec::new(),
-            context_filters: Vec::new(),
-            hashtag_filters: Vec::new(),
+            project_filters: BTreeSet::new(),
+            context_filters: BTreeSet::new(),
+            hashtag_filters: BTreeSet::new(),
         }
     }
 
@@ -47,20 +47,20 @@ impl ToDo {
         }
 
         Ok(ToDo {
-            pending: TaskList(pending),
-            done: TaskList(done),
+            pending,
+            done,
             use_done,
-            project_filters: Vec::new(),
-            context_filters: Vec::new(),
-            hashtag_filters: Vec::new(),
+            project_filters: BTreeSet::new(),
+            context_filters: BTreeSet::new(),
+            hashtag_filters: BTreeSet::new(),
         })
     }
 
-    fn get_btree(tasks: Vec<&TaskList>, f: fn(&Task) -> &Vec<String>) -> CategoryList {
+    fn get_btree(tasks: Vec<&Vec<Task>>, f: fn(&Task) -> &Vec<String>) -> CategoryList {
         let mut btree = BTreeSet::new();
 
         tasks.iter().for_each(|list| {
-            list.0.iter().for_each(|task| {
+            list.iter().for_each(|task| {
                 f(task).iter().for_each(|project| {
                     btree.insert(project.clone());
                 })
@@ -93,7 +93,7 @@ impl ToDo {
     }
 
     fn get_tasks<'a>(
-        tasks: Vec<&'a TaskList>,
+        tasks: Vec<&'a Vec<Task>>,
         name: &str,
         f: fn(&Task) -> &Vec<String>,
     ) -> Vec<&'a Task> {
@@ -101,7 +101,6 @@ impl ToDo {
         tasks.iter().for_each(|list| {
             vec.append(
                 &mut list
-                    .0
                     .iter()
                     .filter(|task| f(task).contains(&String::from(name)))
                     .collect::<Vec<&'a Task>>(),
@@ -138,8 +137,8 @@ impl ToDo {
         self.get_tasks_done_switch(name, |t| &t.hashtags)
     }
 
-    fn write_tasks<W: Write>(tasks: &TaskList, writer: &mut W) -> ioResult<()> {
-        for task in &tasks.0 {
+    fn write_tasks<W: Write>(tasks: &Vec<Task>, writer: &mut W) -> ioResult<()> {
+        for task in tasks {
             writer.write((task.to_string() + "\n").as_bytes())?;
         }
         Ok(())
@@ -158,26 +157,21 @@ impl ToDo {
         self.write_pending_tasks(writer)
     }
 
-    pub fn get_pending_tasks(&self) -> &TaskList {
-        &self.pending
-    }
-
     fn get_filtered<'a>(
-        tasks: &'a TaskList,
-        filters: &[(&Vec<String>, fn(&Task) -> &Vec<String>)],
-    ) -> Vec<&'a Task> {
-        tasks
-            .0
+        tasks: &'a Vec<Task>,
+        filters: &[(&BTreeSet<String>, fn(&Task) -> &Vec<String>)],
+    ) -> TaskList<'a> {
+        TaskList(tasks
             .iter()
             .filter(|task| {
                 filters
                     .iter()
                     .all(|filter| filter.0.iter().all(|item| filter.1(task).contains(item)))
             })
-            .collect()
+            .collect())
     }
 
-    pub fn get_pending_filtered(&self) -> Vec<&Task> {
+    pub fn get_pending_filtered(&self) -> TaskList {
         Self::get_filtered(
             &self.pending,
             &[
@@ -188,7 +182,11 @@ impl ToDo {
         )
     }
 
-    pub fn get_done_filtered(&self) -> Vec<&Task> {
+    pub fn get_pending_all(&self) -> TaskList {
+        TaskList(self.pending.iter().collect())
+    }
+
+    pub fn get_done_filtered(&self) -> TaskList {
         Self::get_filtered(
             &self.done,
             &[
@@ -199,44 +197,39 @@ impl ToDo {
         )
     }
 
+    pub fn get_done_all(&self) -> TaskList {
+        TaskList(self.done.iter().collect())
+    }
+
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         let task = Task::from_str(task)?;
         if task.finished {
-            self.done.0.push(task);
+            self.done.push(task);
         } else {
-            self.pending.0.push(task);
+            self.pending.push(task);
         }
         Ok(())
     }
 
     pub fn remove_pending_task(&mut self, index: usize) {
-        self.pending.remove_task(index);
+        self.pending.remove(index);
     }
 
     pub fn finish_task(&mut self, index: usize) {
-        self.done.add_task(self.pending.remove_task(index));
+        self.done.push(self.pending.remove(index));
     }
+
 }
 
 #[derive(Clone)]
-pub struct TaskList(pub Vec<Task>);
+pub struct TaskList<'a>(pub Vec<&'a Task>);
 
-impl<'a> Into<Vec<ListItem<'a>>> for TaskList {
+impl<'a> Into<Vec<ListItem<'a>>> for TaskList<'a> {
     fn into(self) -> Vec<ListItem<'a>> {
         self.0
             .iter()
             .map(|task| ListItem::new(task.subject.clone()))
             .collect::<Vec<ListItem<'a>>>()
-    }
-}
-
-impl TaskList {
-    pub fn remove_task(&mut self, index: usize) -> Task {
-        self.0.remove(index)
-    }
-
-    pub fn add_task(&mut self, task: Task) {
-        self.0.push(task);
     }
 }
 
@@ -290,38 +283,38 @@ mod tests {
     fn test_load() -> Result<(), Box<dyn Error>> {
         let todo = ToDo::load(TESTING_STRING.as_bytes(), true)?;
 
-        assert_eq!(todo.done.0.len(), 2);
-        assert_eq!(todo.pending.0.len(), 4);
+        assert_eq!(todo.done.len(), 2);
+        assert_eq!(todo.pending.len(), 4);
 
-        assert_eq!(todo.done.0[0].priority, 0);
-        assert!(todo.done.0[0].create_date.is_some());
-        assert!(todo.done.0[0].finish_date.is_some());
-        assert_eq!(todo.done.0[0].finished, true);
-        assert_eq!(todo.done.0[0].threshold_date, None);
-        assert!(todo.done.0[0].due_date.is_some());
-        assert_eq!(todo.done.0[0].contexts.len(), 1);
-        assert_eq!(todo.done.0[0].projects.len(), 1);
-        assert_eq!(todo.done.0[0].hashtags.len(), 1);
+        assert_eq!(todo.done[0].priority, 0);
+        assert!(todo.done[0].create_date.is_some());
+        assert!(todo.done[0].finish_date.is_some());
+        assert_eq!(todo.done[0].finished, true);
+        assert_eq!(todo.done[0].threshold_date, None);
+        assert!(todo.done[0].due_date.is_some());
+        assert_eq!(todo.done[0].contexts.len(), 1);
+        assert_eq!(todo.done[0].projects.len(), 1);
+        assert_eq!(todo.done[0].hashtags.len(), 1);
 
-        assert!(todo.pending.0[0].priority.is_lowest());
-        assert!(todo.pending.0[0].create_date.is_some());
-        assert!(todo.pending.0[0].finish_date.is_none());
-        assert_eq!(todo.pending.0[0].finished, false);
-        assert_eq!(todo.pending.0[0].threshold_date, None);
-        assert!(todo.pending.0[0].due_date.is_some());
-        assert_eq!(todo.pending.0[0].contexts.len(), 1);
-        assert_eq!(todo.pending.0[0].projects.len(), 1);
-        assert_eq!(todo.pending.0[0].hashtags.len(), 0);
+        assert!(todo.pending[0].priority.is_lowest());
+        assert!(todo.pending[0].create_date.is_some());
+        assert!(todo.pending[0].finish_date.is_none());
+        assert_eq!(todo.pending[0].finished, false);
+        assert_eq!(todo.pending[0].threshold_date, None);
+        assert!(todo.pending[0].due_date.is_some());
+        assert_eq!(todo.pending[0].contexts.len(), 1);
+        assert_eq!(todo.pending[0].projects.len(), 1);
+        assert_eq!(todo.pending[0].hashtags.len(), 0);
 
-        assert_eq!(todo.pending.0[1].priority, 2);
-        assert!(todo.pending.0[1].create_date.is_some());
-        assert!(todo.pending.0[1].finish_date.is_none());
-        assert_eq!(todo.pending.0[1].finished, false);
-        assert_eq!(todo.pending.0[1].threshold_date, None);
-        assert!(todo.pending.0[1].due_date.is_some());
-        assert_eq!(todo.pending.0[1].contexts.len(), 1);
-        assert_eq!(todo.pending.0[1].projects.len(), 1);
-        assert_eq!(todo.pending.0[1].hashtags.len(), 0);
+        assert_eq!(todo.pending[1].priority, 2);
+        assert!(todo.pending[1].create_date.is_some());
+        assert!(todo.pending[1].finish_date.is_none());
+        assert_eq!(todo.pending[1].finished, false);
+        assert_eq!(todo.pending[1].threshold_date, None);
+        assert!(todo.pending[1].due_date.is_some());
+        assert_eq!(todo.pending[1].contexts.len(), 1);
+        assert_eq!(todo.pending[1].projects.len(), 1);
+        assert_eq!(todo.pending[1].hashtags.len(), 0);
 
         Ok(())
     }
@@ -456,42 +449,42 @@ mod tests {
         let mut todo = ToDo::load(testing_string.as_bytes(), false)?;
 
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 12);
+        assert_eq!(filtered.0.len(), 12);
 
         todo.project_filters.insert(String::from("project9999"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 0);
+        assert_eq!(filtered.0.len(), 0);
 
         todo.project_filters.clear();
         todo.project_filters.insert(String::from("project1"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 4);
-        assert_eq!(filtered[0].subject, "task 2 +project1");
-        assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
-        assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
-        assert_eq!(filtered[3].subject, "task 5 +project1 +project2 +project3");
+        assert_eq!(filtered.0.len(), 4);
+        assert_eq!(filtered.0[0].subject, "task 2 +project1");
+        assert_eq!(filtered.0[1].subject, "task 3 +project1 +project2");
+        assert_eq!(filtered.0[2].subject, "task 4 +project1 +project3");
+        assert_eq!(filtered.0[3].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project2"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 2);
-        assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
-        assert_eq!(filtered[1].subject, "task 5 +project1 +project2 +project3");
+        assert_eq!(filtered.0.len(), 2);
+        assert_eq!(filtered.0[0].subject, "task 3 +project1 +project2");
+        assert_eq!(filtered.0[1].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project3"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
+        assert_eq!(filtered.0.len(), 1);
+        assert_eq!(filtered.0[0].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project1"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
+        assert_eq!(filtered.0.len(), 1);
+        assert_eq!(filtered.0[0].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.clear();
         todo.context_filters.insert(String::from("context1"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].subject, "task 7 +project2 @context1 #hashtag1 #hashtag2");
+        assert_eq!(filtered.0.len(), 1);
+        assert_eq!(filtered.0[0].subject, "task 7 +project2 @context1 #hashtag1 #hashtag2");
 
         Ok(())
     }
