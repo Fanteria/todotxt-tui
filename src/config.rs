@@ -9,6 +9,7 @@ use tui::style::Color;
 const CONFIG_NAME: &str = "todo-tui.conf";
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq, Debug))]
 #[serde(remote = "Color")]
 pub enum ColorDef {
     Reset,
@@ -32,6 +33,14 @@ pub enum ColorDef {
     Indexed(u8),
 }
 
+#[derive(Deserialize, Clone, Copy)]
+#[cfg_attr(test, derive(Serialize, PartialEq, Debug))]
+pub enum OptionalColor {
+    #[serde(with = "ColorDef")]
+    Some(Color),
+    Default,
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(test, derive(Serialize, PartialEq, Debug))]
 pub struct Config {
@@ -44,6 +53,8 @@ pub struct Config {
     #[serde(default = "Config::default_todo_path")]
     pub todo_path: String,
     pub archive_path: Option<String>,
+    #[serde(default = "Config::default_priority_colors")]
+    pub priority_colors: [OptionalColor; 26],
 }
 
 impl Config {
@@ -54,6 +65,7 @@ impl Config {
             window_title: Self::default_window_title(),
             todo_path: Self::default_todo_path(),
             archive_path: None,
+            priority_colors: Self::default_priority_colors(),
         }
     }
 
@@ -95,6 +107,14 @@ impl Config {
 
     fn default_window_title() -> String {
         String::from("ToDo tui")
+    }
+
+    fn default_priority_colors() -> [OptionalColor; 26] {
+        let mut ret = [OptionalColor::Default; 26];
+        ret[0] = OptionalColor::Some(Color::Red);
+        ret[1] = OptionalColor::Some(Color::Yellow);
+        ret[2] = OptionalColor::Some(Color::Blue);
+        ret
     }
 }
 
