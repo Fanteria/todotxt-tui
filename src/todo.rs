@@ -11,6 +11,9 @@ pub struct ToDo {
     pub pending: TaskList,
     pub done: TaskList,
     use_done: bool,
+    project_filters: Vec<String>,
+    context_filters: Vec<String>,
+    hashtag_filters: Vec<String>,
     // stack:
 }
 
@@ -20,6 +23,9 @@ impl ToDo {
             pending: TaskList(Vec::new()),
             done: TaskList(Vec::new()),
             use_done,
+            project_filters: Vec::new(),
+            context_filters: Vec::new(),
+            hashtag_filters: Vec::new(),
         }
     }
 
@@ -44,6 +50,9 @@ impl ToDo {
             pending: TaskList(pending),
             done: TaskList(done),
             use_done,
+            project_filters: Vec::new(),
+            context_filters: Vec::new(),
+            hashtag_filters: Vec::new(),
         })
     }
 
@@ -151,6 +160,43 @@ impl ToDo {
 
     pub fn get_pending_tasks(&self) -> &TaskList {
         &self.pending
+    }
+
+    fn get_filtered<'a>(
+        tasks: &'a TaskList,
+        filters: &[(&Vec<String>, fn(&Task) -> &Vec<String>)],
+    ) -> Vec<&'a Task> {
+        tasks
+            .0
+            .iter()
+            .filter(|task| {
+                filters
+                    .iter()
+                    .all(|filter| filter.0.iter().all(|item| filter.1(task).contains(item)))
+            })
+            .collect()
+    }
+
+    pub fn get_pending_filtered(&self) -> Vec<&Task> {
+        Self::get_filtered(
+            &self.pending,
+            &[
+                (&self.project_filters, |t| &t.projects),
+                (&self.context_filters, |t| &t.contexts),
+                (&self.hashtag_filters, |t| &t.hashtags),
+            ],
+        )
+    }
+
+    pub fn get_done_filtered(&self) -> Vec<&Task> {
+        Self::get_filtered(
+            &self.done,
+            &[
+                (&self.project_filters, |t| &t.projects),
+                (&self.context_filters, |t| &t.contexts),
+                (&self.hashtag_filters, |t| &t.hashtags),
+            ],
+        )
     }
 
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
