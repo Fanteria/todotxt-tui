@@ -436,4 +436,63 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_filtering() -> Result<(), Box<dyn Error>> {
+        let testing_string = r#"
+        task 1
+        task 2 +project1
+        task 3 +project1 +project2          
+        task 4 +project1 +project3
+        task 5 +project1 +project2 +project3
+        task 6 +project3 @context2 #hashtag2 #hashtag1
+        task 7 +project2 @context1 #hashtag1 #hashtag2
+        task 8 +project2 @context2          
+        task 9 +project3 @context3          
+        task 10 +project2 @context3 #hashtag1 #hashtag2
+        task 11 +project3 @context3 #hashtag2 #hashtag3
+        task 12 +project3 @context2 #hashtag2 #hashtag2
+        "#;
+        let mut todo = ToDo::load(testing_string.as_bytes(), false)?;
+
+        let filtered = todo.get_pending_filtered();
+        assert_eq!(filtered.len(), 12);
+
+        todo.project_filters.insert(String::from("project9999"));
+        let filtered = todo.get_pending_filtered();
+        assert_eq!(filtered.len(), 0);
+
+        todo.project_filters.clear();
+        todo.project_filters.insert(String::from("project1"));
+        let filtered = todo.get_pending_filtered();
+        assert_eq!(filtered.len(), 4);
+        assert_eq!(filtered[0].subject, "task 2 +project1");
+        assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
+        assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
+        assert_eq!(filtered[3].subject, "task 5 +project1 +project2 +project3");
+
+        todo.project_filters.insert(String::from("project2"));
+        let filtered = todo.get_pending_filtered();
+        assert_eq!(filtered.len(), 2);
+        assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
+        assert_eq!(filtered[1].subject, "task 5 +project1 +project2 +project3");
+
+        todo.project_filters.insert(String::from("project3"));
+        let filtered = todo.get_pending_filtered();
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
+
+        todo.project_filters.insert(String::from("project1"));
+        let filtered = todo.get_pending_filtered();
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
+
+        todo.project_filters.clear();
+        todo.context_filters.insert(String::from("context1"));
+        let filtered = todo.get_pending_filtered();
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].subject, "task 7 +project2 @context1 #hashtag1 #hashtag2");
+
+        Ok(())
+    }
 }
