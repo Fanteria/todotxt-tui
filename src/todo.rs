@@ -1,3 +1,5 @@
+use crate::config::OptionalColor;
+use crate::CONFIG;
 use std::collections::btree_set::BTreeSet;
 use std::convert::From;
 use std::error::Error;
@@ -6,6 +8,7 @@ use std::str::FromStr;
 use todo_txt::Task;
 use tui::text::Span;
 use tui::widgets::ListItem;
+use tui::style::Style;
 
 pub struct ToDo {
     pub pending: Vec<Task>,
@@ -14,7 +17,6 @@ pub struct ToDo {
     pub project_filters: BTreeSet<String>,
     pub context_filters: BTreeSet<String>,
     pub hashtag_filters: BTreeSet<String>,
-    // stack:
 }
 
 impl ToDo {
@@ -161,14 +163,16 @@ impl ToDo {
         tasks: &'a Vec<Task>,
         filters: &[(&BTreeSet<String>, fn(&Task) -> &Vec<String>)],
     ) -> TaskList<'a> {
-        TaskList(tasks
-            .iter()
-            .filter(|task| {
-                filters
-                    .iter()
-                    .all(|filter| filter.0.iter().all(|item| filter.1(task).contains(item)))
-            })
-            .collect())
+        TaskList(
+            tasks
+                .iter()
+                .filter(|task| {
+                    filters
+                        .iter()
+                        .all(|filter| filter.0.iter().all(|item| filter.1(task).contains(item)))
+                })
+                .collect(),
+        )
     }
 
     pub fn get_pending_filtered(&self) -> TaskList {
@@ -218,7 +222,6 @@ impl ToDo {
     pub fn finish_task(&mut self, index: usize) {
         self.done.push(self.pending.remove(index));
     }
-
 }
 
 #[derive(Clone)]
@@ -228,7 +231,10 @@ impl<'a> Into<Vec<ListItem<'a>>> for TaskList<'a> {
     fn into(self) -> Vec<ListItem<'a>> {
         self.0
             .iter()
-            .map(|task| ListItem::new(task.subject.clone()))
+            .map(|task| match CONFIG.priority_colors[usize::from(u8::from(task.priority.clone()))] {
+                OptionalColor::Some(color) => ListItem::new(Span::styled(task.subject.clone(), Style::default().fg(color))),
+                OptionalColor::Default => ListItem::new(task.subject.clone()),
+            })
             .collect::<Vec<ListItem<'a>>>()
     }
 }
@@ -295,6 +301,8 @@ mod tests {
         assert_eq!(todo.done[0].contexts.len(), 1);
         assert_eq!(todo.done[0].projects.len(), 1);
         assert_eq!(todo.done[0].hashtags.len(), 1);
+
+        println!("{:#?}", todo.pending[0]);
 
         assert!(todo.pending[0].priority.is_lowest());
         assert!(todo.pending[0].create_date.is_some());
@@ -462,29 +470,44 @@ mod tests {
         assert_eq!(filtered.0[0].subject, "task 2 +project1");
         assert_eq!(filtered.0[1].subject, "task 3 +project1 +project2");
         assert_eq!(filtered.0[2].subject, "task 4 +project1 +project3");
-        assert_eq!(filtered.0[3].subject, "task 5 +project1 +project2 +project3");
+        assert_eq!(
+            filtered.0[3].subject,
+            "task 5 +project1 +project2 +project3"
+        );
 
         todo.project_filters.insert(String::from("project2"));
         let filtered = todo.get_pending_filtered();
         assert_eq!(filtered.0.len(), 2);
         assert_eq!(filtered.0[0].subject, "task 3 +project1 +project2");
-        assert_eq!(filtered.0[1].subject, "task 5 +project1 +project2 +project3");
+        assert_eq!(
+            filtered.0[1].subject,
+            "task 5 +project1 +project2 +project3"
+        );
 
         todo.project_filters.insert(String::from("project3"));
         let filtered = todo.get_pending_filtered();
         assert_eq!(filtered.0.len(), 1);
-        assert_eq!(filtered.0[0].subject, "task 5 +project1 +project2 +project3");
+        assert_eq!(
+            filtered.0[0].subject,
+            "task 5 +project1 +project2 +project3"
+        );
 
         todo.project_filters.insert(String::from("project1"));
         let filtered = todo.get_pending_filtered();
         assert_eq!(filtered.0.len(), 1);
-        assert_eq!(filtered.0[0].subject, "task 5 +project1 +project2 +project3");
+        assert_eq!(
+            filtered.0[0].subject,
+            "task 5 +project1 +project2 +project3"
+        );
 
         todo.project_filters.clear();
         todo.context_filters.insert(String::from("context1"));
         let filtered = todo.get_pending_filtered();
         assert_eq!(filtered.0.len(), 1);
-        assert_eq!(filtered.0[0].subject, "task 7 +project2 @context1 #hashtag1 #hashtag2");
+        assert_eq!(
+            filtered.0[0].subject,
+            "task 7 +project2 @context1 #hashtag1 #hashtag2"
+        );
 
         Ok(())
     }

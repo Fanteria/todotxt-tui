@@ -54,7 +54,7 @@ pub struct Config {
     pub todo_path: String,
     pub archive_path: Option<String>,
     #[serde(default = "Config::default_priority_colors")]
-    pub priority_colors: [OptionalColor; 26],
+    pub priority_colors: [OptionalColor; 27],
 }
 
 impl Config {
@@ -109,8 +109,8 @@ impl Config {
         String::from("ToDo tui")
     }
 
-    fn default_priority_colors() -> [OptionalColor; 26] {
-        let mut ret = [OptionalColor::Default; 26];
+    fn default_priority_colors() -> [OptionalColor; 27] {
+        let mut ret = [OptionalColor::Default; 27];
         ret[0] = OptionalColor::Some(Color::Red);
         ret[1] = OptionalColor::Some(Color::Yellow);
         ret[2] = OptionalColor::Some(Color::Blue);
