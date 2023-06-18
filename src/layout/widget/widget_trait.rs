@@ -1,4 +1,7 @@
-use super::{state_input::StateInput, state_list::StateList, widget_state::WidgetState, Widget};
+use super::{
+    state_categories::StateCategories, state_input::StateInput, state_list::StateList,
+    widget_state::WidgetState, Widget,
+};
 use crossterm::event::KeyEvent;
 use tui::{backend::Backend, Frame};
 

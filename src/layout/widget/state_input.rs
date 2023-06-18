@@ -33,14 +33,14 @@ impl StateInput {
         let category = some_or_return!(base.get(0..1));
         let pattern = some_or_return!(base.get(1..));
 
-        let get_list = || match category {
-            "+" => Some(self.data.borrow().get_projects()),
-            "@" => Some(self.data.borrow().get_contexts()),
-            "#" => Some(self.data.borrow().get_hashtags()),
-            _ => None,
+        let data = self.data.borrow();
+        let list =  match category {
+            "+" => data.get_projects(),
+            "@" => data.get_contexts(),
+            "#" => data.get_hashtags(),
+            _ => return,
         };
 
-        let list = some_or_return!(get_list());
         if list.is_empty() {
             return;
         }

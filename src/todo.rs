@@ -6,9 +6,9 @@ use std::error::Error;
 use std::io::{BufRead, BufReader, Read, Result as ioResult, Write};
 use std::str::FromStr;
 use todo_txt::Task;
+use tui::style::Style;
 use tui::text::Span;
 use tui::widgets::ListItem;
-use tui::style::Style;
 
 pub struct ToDo {
     pub pending: Vec<Task>,
@@ -58,20 +58,24 @@ impl ToDo {
         })
     }
 
-    fn get_btree(tasks: Vec<&Vec<Task>>, f: fn(&Task) -> &Vec<String>) -> CategoryList {
-        let mut btree = BTreeSet::new();
+    fn get_btree<'a>(
+        tasks: Vec<&'a Vec<Task>>,
+        f: fn(&Task) -> &Vec<String>,
+        selected: &BTreeSet<String>,
+    ) -> CategoryList<'a> {
+        let mut btree = BTreeSet::<&String>::new();
 
         tasks.iter().for_each(|list| {
             list.iter().for_each(|task| {
                 f(task).iter().for_each(|project| {
-                    btree.insert(project.clone());
+                    btree.insert(project);
                 })
             })
         });
-        CategoryList(btree)
+        CategoryList(btree.iter().map(|item| (*item, selected.contains(*item))).collect())
     }
 
-    fn get_btree_done_switch(&self, f: fn(&Task) -> &Vec<String>) -> CategoryList {
+    fn get_btree_done_switch(&self, f: fn(&Task) -> &Vec<String>, selected: &BTreeSet<String>) -> CategoryList {
         Self::get_btree(
             if self.use_done {
                 vec![&self.pending, &self.done]
@@ -79,19 +83,20 @@ impl ToDo {
                 vec![&self.pending]
             },
             f,
+            selected,
         )
     }
 
     pub fn get_projects(&self) -> CategoryList {
-        self.get_btree_done_switch(|t| &t.projects)
+        self.get_btree_done_switch(|t| &t.projects, &self.project_filters)
     }
 
     pub fn get_contexts(&self) -> CategoryList {
-        self.get_btree_done_switch(|t| &t.contexts)
+        self.get_btree_done_switch(|t| &t.contexts, &self.context_filters)
     }
 
     pub fn get_hashtags(&self) -> CategoryList {
-        self.get_btree_done_switch(|t| &t.hashtags)
+        self.get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters)
     }
 
     fn get_tasks<'a>(
@@ -225,27 +230,33 @@ impl ToDo {
 }
 
 #[derive(Clone)]
-pub struct TaskList<'a>(pub Vec<&'a Task>);
+pub struct TaskList<'a>(Vec<&'a Task>);
 
 impl<'a> Into<Vec<ListItem<'a>>> for TaskList<'a> {
     fn into(self) -> Vec<ListItem<'a>> {
         self.0
             .iter()
-            .map(|task| match CONFIG.priority_colors[usize::from(u8::from(task.priority.clone()))] {
-                OptionalColor::Some(color) => ListItem::new(Span::styled(task.subject.clone(), Style::default().fg(color))),
-                OptionalColor::Default => ListItem::new(task.subject.clone()),
+            .map(|task| {
+                match CONFIG.priority_colors[usize::from(u8::from(task.priority.clone()))] {
+                    OptionalColor::Some(color) => ListItem::new(Span::styled(
+                        task.subject.clone(),
+                        Style::default().fg(color),
+                    )),
+                    OptionalColor::Default => ListItem::new(task.subject.clone()),
+                }
             })
             .collect::<Vec<ListItem<'a>>>()
     }
 }
 
-pub struct CategoryList(pub BTreeSet<String>);
+pub struct CategoryList<'a>(Vec<(&'a String, bool)>);
 
-impl CategoryList {
+impl<'a> CategoryList<'a> {
     pub fn start_with(&self, pattern: &str) -> Vec<&String> {
         self.0
             .iter()
-            .filter(|item| item.starts_with(pattern))
+            .filter(|(item, _)| item.starts_with(pattern))
+            .map(|(item, _)| *item)
             .collect()
     }
 
@@ -254,20 +265,11 @@ impl CategoryList {
     }
 }
 
-impl<'a> Into<Vec<ListItem<'a>>> for CategoryList {
+impl<'a> Into<Vec<ListItem<'a>>> for CategoryList<'a> {
     fn into(self) -> Vec<ListItem<'a>> {
         self.0
             .iter()
-            .map(|category| {
-                if category == "project2" {
-                    ListItem::new(Span::styled(
-                        category.clone(),
-                        tui::style::Style::default().fg(tui::style::Color::Blue),
-                    ))
-                } else {
-                    ListItem::new(category.clone())
-                }
-            })
+            .map(|category| ListItem::new(category.0.clone()))
             .collect()
     }
 }

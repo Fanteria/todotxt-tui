@@ -1,4 +1,6 @@
-use super::{widget_trait::State, Widget, widget_state::RCToDo};
+use std::collections::BTreeSet;
+
+use super::{widget_state::RCToDo, widget_trait::State, Widget};
 use crate::todo::ToDo;
 use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -8,28 +10,34 @@ use tui::{
     Frame,
 };
 
-pub struct StateList {
+pub struct StateCategories {
     state: ListState,
     f: fn(&ToDo) -> Vec<ListItem>,
+    get_active: fn(&mut ToDo) -> &mut BTreeSet<String>,
     data: RCToDo,
     focus: bool,
 }
 
-impl StateList {
-    pub fn new(f: fn(&ToDo) -> Vec<ListItem>, data: RCToDo) -> Self {
+impl StateCategories {
+    pub fn new(
+        f: fn(&ToDo) -> Vec<ListItem>,
+        get_active: fn(&mut ToDo) -> &mut BTreeSet<String>,
+        data: RCToDo,
+    ) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
         Self {
             state,
             f,
+            get_active,
             data,
             focus: false,
         }
     }
 }
 
-impl State for StateList {
+impl State for StateCategories {
     fn handle_key(&mut self, event: &KeyEvent) {
         match event.code {
             KeyCode::Char('j') => {
@@ -50,20 +58,7 @@ impl State for StateList {
                     self.state.select(Some(act - 1));
                 }
             }
-            KeyCode::Char('x') => {
-                match self.state.selected() {
-                    Some(i) => self.data.borrow_mut().remove_pending_task(i),
-                    None => {}
-                }
-                // TODO panic if there are no tasks
-            }
-            KeyCode::Char('d') => {
-                match self.state.selected() {
-                    Some(i) => self.data.borrow_mut().finish_task(i),
-                    None => {}
-                }
-                // TODO panic if there are no tasks
-            }
+            KeyCode::Enter => {}
             _ => {}
         }
     }

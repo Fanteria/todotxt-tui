@@ -1,15 +1,19 @@
-use super::{state_input::StateInput, state_list::StateList, widget_type::WidgetType};
+use super::{
+    state_categories::StateCategories, state_input::StateInput, state_list::StateList,
+    widget_type::WidgetType,
+};
 use crate::todo::ToDo;
 use std::cell::RefCell;
 use std::rc::Rc;
 use tui::widgets::ListItem;
 
-type RCToDo = Rc<RefCell<ToDo>>;
+pub type RCToDo = Rc<RefCell<ToDo>>;
 
 #[enum_dispatch(State)]
 pub enum WidgetState {
     Input(StateInput),
     List(StateList),
+    Category(StateCategories),
 }
 
 impl WidgetState {
@@ -24,8 +28,9 @@ impl WidgetState {
                 |todo| Into::<Vec<ListItem>>::into(todo.get_done_filtered()),
                 data,
             )),
-            WidgetType::Project => WidgetState::List(StateList::new(
+            WidgetType::Project => WidgetState::Category(StateCategories::new(
                 |todo| Into::<Vec<ListItem>>::into(todo.get_projects()),
+                |todo| &mut todo.project_filters,
                 data,
             )),
             WidgetType::Context => WidgetState::List(StateList::new(
@@ -35,4 +40,3 @@ impl WidgetState {
         }
     }
 }
-
