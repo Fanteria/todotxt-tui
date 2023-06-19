@@ -29,8 +29,8 @@ impl WidgetState {
                 data,
             )),
             WidgetType::Project => WidgetState::Category(StateCategories::new(
-                |todo| Into::<Vec<ListItem>>::into(todo.get_projects()),
-                |todo| &mut todo.project_filters,
+                |todo| todo.get_projects(),
+                |todo, category| ToDo::toggle_filter(&mut todo.project_filters, category),
                 data,
             )),
             WidgetType::Context => WidgetState::List(StateList::new(

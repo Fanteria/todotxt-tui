@@ -1,36 +1,30 @@
-use std::collections::BTreeSet;
-
 use super::{widget_state::RCToDo, widget_trait::State, Widget};
-use crate::todo::ToDo;
+use crate::todo::{CategoryList, ToDo};
 use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
-    widgets::{List, ListItem, ListState},
+    widgets::{List, ListState},
     Frame,
 };
 
 pub struct StateCategories {
     state: ListState,
-    f: fn(&ToDo) -> Vec<ListItem>,
-    get_active: fn(&mut ToDo) -> &mut BTreeSet<String>,
+    f: fn(&ToDo) -> CategoryList,
+    fn_toggle: fn(&mut ToDo, &str),
     data: RCToDo,
     focus: bool,
 }
 
 impl StateCategories {
-    pub fn new(
-        f: fn(&ToDo) -> Vec<ListItem>,
-        get_active: fn(&mut ToDo) -> &mut BTreeSet<String>,
-        data: RCToDo,
-    ) -> Self {
+    pub fn new(f: fn(&ToDo) -> CategoryList, fn_toggle: fn(&mut ToDo, &str), data: RCToDo) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
         Self {
             state,
             f,
-            get_active,
+            fn_toggle,
             data,
             focus: false,
         }
@@ -58,7 +52,17 @@ impl State for StateCategories {
                     self.state.select(Some(act - 1));
                 }
             }
-            KeyCode::Enter => {}
+            KeyCode::Enter => {
+                if let Some(index) = self.state.selected() {
+                    let name;
+                    {
+                        let todo = self.data.borrow();
+                        let data = (self.f)(&*todo);
+                        name = data.get_name(index).clone();
+                    }
+                    (self.fn_toggle)(&mut self.data.borrow_mut(), &name)
+                }
+            }
             _ => {}
         }
     }

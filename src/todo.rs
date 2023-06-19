@@ -180,6 +180,13 @@ impl ToDo {
         )
     }
 
+    pub fn toggle_filter(filter_set: &mut BTreeSet<String>, filter: &str) {
+        let filter = String::from(filter);
+        if ! filter_set.insert(filter.clone()) {
+            filter_set.remove(&filter);
+        }
+    }
+
     pub fn get_pending_filtered(&self) -> TaskList {
         Self::get_filtered(
             &self.pending,
@@ -263,6 +270,15 @@ impl<'a> CategoryList<'a> {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn get_name(&self, index: usize) -> &String {
+        self.0[index].0
+    }
+
 }
 
 impl<'a> Into<Vec<ListItem<'a>>> for CategoryList<'a> {
