@@ -10,20 +10,20 @@ use tui::{
 
 pub struct StateCategories {
     state: ListState,
-    f: fn(&ToDo) -> CategoryList,
+    fn_list: fn(&ToDo) -> CategoryList,
     fn_toggle: fn(&mut ToDo, &str),
     data: RCToDo,
     focus: bool,
 }
 
 impl StateCategories {
-    pub fn new(f: fn(&ToDo) -> CategoryList, fn_toggle: fn(&mut ToDo, &str), data: RCToDo) -> Self {
+    pub fn new(fn_list: fn(&ToDo) -> CategoryList, fn_toggle: fn(&mut ToDo, &str), data: RCToDo) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
         Self {
             state,
-            f,
+            fn_list,
             fn_toggle,
             data,
             focus: false,
@@ -39,7 +39,7 @@ impl State for StateCategories {
                     Some(a) => a + 1,
                     None => 0,
                 };
-                if (self.f)(&*self.data.borrow()).len() > act {
+                if (self.fn_list)(&*self.data.borrow()).len() > act {
                     self.state.select(Some(act));
                 }
             }
@@ -57,7 +57,7 @@ impl State for StateCategories {
                     let name;
                     {
                         let todo = self.data.borrow();
-                        let data = (self.f)(&*todo);
+                        let data = (self.fn_list)(&*todo);
                         name = data.get_name(index).clone();
                     }
                     (self.fn_toggle)(&mut self.data.borrow_mut(), &name)
@@ -69,7 +69,7 @@ impl State for StateCategories {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         let todo = self.data.borrow();
-        let data = (self.f)(&*todo);
+        let data = (self.fn_list)(&*todo);
         let list = List::new(data).block(get_block(&widget.title, active));
         if !self.focus {
             f.render_widget(list, widget.chunk)

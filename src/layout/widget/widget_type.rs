@@ -7,4 +7,5 @@ pub enum WidgetType {
     Done,
     Project,
     Context,
+    Hashtag,
 }
