@@ -55,6 +55,8 @@ pub struct Config {
     pub archive_path: Option<String>,
     #[serde(default = "Config::default_priority_colors")]
     pub priority_colors: [OptionalColor; 27],
+    #[serde(with = "ColorDef", default = "Config::default_category_color")]
+    pub category_color: Color,
 }
 
 impl Config {
@@ -66,6 +68,7 @@ impl Config {
             todo_path: Self::default_todo_path(),
             archive_path: None,
             priority_colors: Self::default_priority_colors(),
+            category_color: Self::default_category_color(),
         }
     }
 
@@ -115,6 +118,10 @@ impl Config {
         ret[1] = OptionalColor::Some(Color::Yellow);
         ret[2] = OptionalColor::Some(Color::Blue);
         ret
+    }
+
+    fn default_category_color() -> Color{
+        Color::Blue
     }
 }
 

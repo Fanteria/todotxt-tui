@@ -72,10 +72,19 @@ impl ToDo {
                 })
             })
         });
-        CategoryList(btree.iter().map(|item| (*item, selected.contains(*item))).collect())
+        CategoryList(
+            btree
+                .iter()
+                .map(|item| (*item, selected.contains(*item)))
+                .collect(),
+        )
     }
 
-    fn get_btree_done_switch(&self, f: fn(&Task) -> &Vec<String>, selected: &BTreeSet<String>) -> CategoryList {
+    fn get_btree_done_switch(
+        &self,
+        f: fn(&Task) -> &Vec<String>,
+        selected: &BTreeSet<String>,
+    ) -> CategoryList {
         Self::get_btree(
             if self.use_done {
                 vec![&self.pending, &self.done]
@@ -182,7 +191,7 @@ impl ToDo {
 
     pub fn toggle_filter(filter_set: &mut BTreeSet<String>, filter: &str) {
         let filter = String::from(filter);
-        if ! filter_set.insert(filter.clone()) {
+        if !filter_set.insert(filter.clone()) {
             filter_set.remove(&filter);
         }
     }
@@ -278,14 +287,22 @@ impl<'a> CategoryList<'a> {
     pub fn get_name(&self, index: usize) -> &String {
         self.0[index].0
     }
-
 }
 
 impl<'a> Into<Vec<ListItem<'a>>> for CategoryList<'a> {
     fn into(self) -> Vec<ListItem<'a>> {
         self.0
             .iter()
-            .map(|category| ListItem::new(category.0.clone()))
+            .map(|category| {
+                if category.1 {
+                    ListItem::new(Span::styled(
+                        category.0.clone(),
+                        Style::default().bg(CONFIG.category_color),
+                    ))
+                } else {
+                    ListItem::new(category.0.clone())
+                }
+            })
             .collect()
     }
 }
@@ -345,42 +362,50 @@ mod tests {
         Ok(())
     }
 
+    fn create_vec<'a>(items: &'a [String]) -> Vec<(&'a String, bool)> {
+        let mut vec: Vec<(&String, bool)> = Vec::new();
+        items.iter().for_each(|item| {
+            vec.push((item, false));
+        });
+        vec
+    }
+
     #[test]
     fn test_categeries_list() -> Result<(), Box<dyn Error>> {
-        let create_btree = |items: &[&str]| {
-            let mut btree: BTreeSet<String> = BTreeSet::new();
-            items.iter().for_each(|item| {
-                btree.insert(item.to_string());
-            });
-            btree
-        };
-
         let mut todo = ToDo::load(TESTING_STRING.as_bytes(), false)?;
         assert_eq!(
             todo.get_projects().0,
-            create_btree(&["project2", "project3"])
+            create_vec(&[String::from("project2"), String::from("project3")])
         );
         assert_eq!(
             todo.get_contexts().0,
-            create_btree(&["context2", "context3"])
+            create_vec(&[String::from("context2"), String::from("context3")])
         );
         assert_eq!(
             todo.get_hashtags().0,
-            create_btree(&["hashtag1", "hashtag2"])
+            create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
         );
 
         todo.use_done = true;
         assert_eq!(
             todo.get_projects().0,
-            create_btree(&["project1", "project2", "project3"])
+            create_vec(&[
+                String::from("project1"),
+                String::from("project2"),
+                String::from("project3"),
+            ])
         );
         assert_eq!(
             todo.get_contexts().0,
-            create_btree(&["context1", "context2", "context3"])
+            create_vec(&[
+                String::from("context1"),
+                String::from("context2"),
+                String::from("context3"),
+            ])
         );
         assert_eq!(
             todo.get_hashtags().0,
-            create_btree(&["hashtag1", "hashtag2"])
+            create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
         );
 
         Ok(())
