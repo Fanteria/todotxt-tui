@@ -1,5 +1,5 @@
-use super::{widget_trait::State, Widget, widget_state::RCToDo};
-use crate::todo::{ToDo, TaskList};
+use super::{widget_state::RCToDo, widget_trait::State, Widget};
+use crate::todo::{TaskList, ToDo};
 use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
@@ -11,18 +11,24 @@ use tui::{
 pub struct StateList {
     state: ListState,
     fn_data: fn(&ToDo) -> TaskList,
+    fn_move: fn(&mut ToDo, usize),
     data: RCToDo,
     focus: bool,
 }
 
 impl StateList {
-    pub fn new(fn_data: fn(&ToDo) -> TaskList, data: RCToDo) -> Self {
+    pub fn new(
+        fn_data: fn(&ToDo) -> TaskList,
+        fn_move: fn(&mut ToDo, usize),
+        data: RCToDo,
+    ) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
         Self {
             state,
             fn_data,
+            fn_move,
             data,
             focus: false,
         }
@@ -59,7 +65,9 @@ impl State for StateList {
             }
             KeyCode::Char('d') => {
                 match self.state.selected() {
-                    Some(i) => self.data.borrow_mut().finish_task(i),
+                    Some(i) => {
+                        (self.fn_move)(&mut *self.data.borrow_mut(), i)
+                    },
                     None => {}
                 }
                 // TODO panic if there are no tasks

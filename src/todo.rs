@@ -125,6 +125,21 @@ impl ToDo {
         vec
     }
 
+    fn move_task(from: &mut Vec<Task>, to: &mut Vec<Task>, index: usize) {
+        if from.len() <= index {
+            return
+        }
+        to.push(from.remove(index))
+    }
+
+    pub fn move_pending_task(&mut self, index: usize) {
+        Self::move_task(&mut self.pending, &mut self.done, index)
+    }
+
+    pub fn move_done_task(&mut self, index: usize) {
+        Self::move_task(&mut self.done, &mut self.pending, index)
+    }
+
     fn get_tasks_done_switch<'a>(
         &'a self,
         name: &str,

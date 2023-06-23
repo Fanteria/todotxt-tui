@@ -29,10 +29,12 @@ impl WidgetState {
             WidgetType::Input => WidgetState::Input(StateInput::new(data)),
             WidgetType::List => WidgetState::List(StateList::new(
                 |todo| todo.get_pending_filtered(),
+                |todo, i| todo.move_pending_task(i),
                 data,
             )),
             WidgetType::Done => WidgetState::List(StateList::new(
                 |todo| todo.get_done_filtered(),
+                |todo, i| todo.move_done_task(i),
                 data,
             )),
             WidgetType::Project => WidgetState::new_category(
