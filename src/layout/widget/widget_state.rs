@@ -5,7 +5,6 @@ use super::{
 use crate::todo::{CategoryList, ToDo};
 use std::cell::RefCell;
 use std::rc::Rc;
-use tui::widgets::ListItem;
 
 pub type RCToDo = Rc<RefCell<ToDo>>;
 
@@ -29,11 +28,11 @@ impl WidgetState {
         match widget_type {
             WidgetType::Input => WidgetState::Input(StateInput::new(data)),
             WidgetType::List => WidgetState::List(StateList::new(
-                |todo| Into::<Vec<ListItem>>::into(todo.get_pending_filtered()),
+                |todo| todo.get_pending_filtered(),
                 data,
             )),
             WidgetType::Done => WidgetState::List(StateList::new(
-                |todo| Into::<Vec<ListItem>>::into(todo.get_done_filtered()),
+                |todo| todo.get_done_filtered(),
                 data,
             )),
             WidgetType::Project => WidgetState::new_category(

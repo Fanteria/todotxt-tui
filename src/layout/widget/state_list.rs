@@ -1,28 +1,28 @@
 use super::{widget_trait::State, Widget, widget_state::RCToDo};
-use crate::todo::ToDo;
+use crate::todo::{ToDo, TaskList};
 use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
-    widgets::{List, ListItem, ListState},
+    widgets::{List, ListState},
     Frame,
 };
 
 pub struct StateList {
     state: ListState,
-    f: fn(&ToDo) -> Vec<ListItem>,
+    fn_data: fn(&ToDo) -> TaskList,
     data: RCToDo,
     focus: bool,
 }
 
 impl StateList {
-    pub fn new(f: fn(&ToDo) -> Vec<ListItem>, data: RCToDo) -> Self {
+    pub fn new(fn_data: fn(&ToDo) -> TaskList, data: RCToDo) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
         Self {
             state,
-            f,
+            fn_data,
             data,
             focus: false,
         }
@@ -37,7 +37,7 @@ impl State for StateList {
                     Some(a) => a + 1,
                     None => 0,
                 };
-                if (self.f)(&*self.data.borrow()).len() > act {
+                if (self.fn_data)(&*self.data.borrow()).len() > act {
                     self.state.select(Some(act));
                 }
             }
@@ -70,7 +70,7 @@ impl State for StateList {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         let todo = self.data.borrow();
-        let data = (self.f)(&*todo);
+        let data = (self.fn_data)(&*todo);
         let list = List::new(data).block(get_block(&widget.title, active));
         if !self.focus {
             f.render_widget(list, widget.chunk)

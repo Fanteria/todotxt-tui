@@ -180,10 +180,11 @@ impl ToDo {
         TaskList(
             tasks
                 .iter()
+                .enumerate()
                 .filter(|task| {
                     filters
                         .iter()
-                        .all(|filter| filter.0.iter().all(|item| filter.1(task).contains(item)))
+                        .all(|filter| filter.0.iter().all(|item| filter.1(task.1).contains(item)))
                 })
                 .collect(),
         )
@@ -208,7 +209,7 @@ impl ToDo {
     }
 
     pub fn get_pending_all(&self) -> TaskList {
-        TaskList(self.pending.iter().collect())
+        TaskList(self.pending.iter().enumerate().collect())
     }
 
     pub fn get_done_filtered(&self) -> TaskList {
@@ -223,7 +224,7 @@ impl ToDo {
     }
 
     pub fn get_done_all(&self) -> TaskList {
-        TaskList(self.done.iter().collect())
+        TaskList(self.done.iter().enumerate().collect())
     }
 
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
@@ -246,19 +247,25 @@ impl ToDo {
 }
 
 #[derive(Clone)]
-pub struct TaskList<'a>(Vec<&'a Task>);
+pub struct TaskList<'a>(Vec<(usize, &'a Task)>);
+
+impl<'a> TaskList<'a> {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 
 impl<'a> Into<Vec<ListItem<'a>>> for TaskList<'a> {
     fn into(self) -> Vec<ListItem<'a>> {
         self.0
             .iter()
             .map(|task| {
-                match CONFIG.priority_colors[usize::from(u8::from(task.priority.clone()))] {
+                match CONFIG.priority_colors[usize::from(u8::from(task.1.priority.clone()))] {
                     OptionalColor::Some(color) => ListItem::new(Span::styled(
-                        task.subject.clone(),
+                        task.1.subject.clone(),
                         Style::default().fg(color),
                     )),
-                    OptionalColor::Default => ListItem::new(task.subject.clone()),
+                    OptionalColor::Default => ListItem::new(task.1.subject.clone()),
                 }
             })
             .collect::<Vec<ListItem<'a>>>()
