@@ -1,15 +1,13 @@
-use crate::config::OptionalColor;
-use crate::CONFIG;
+pub mod task_list;
+pub mod category_list;
+pub use self::{category_list::CategoryList, task_list::TaskList};
+
 use std::collections::btree_set::BTreeSet;
 use std::convert::From;
 use std::error::Error;
 use std::io::{BufRead, BufReader, Read, Result as ioResult, Write};
 use std::str::FromStr;
 use todo_txt::Task;
-use tui::style::Style;
-use tui::text::Span;
-use tui::widgets::ListItem;
-use std::ops::Index;
 
 pub struct ToDo {
     pub pending: Vec<Task>,
@@ -259,80 +257,6 @@ impl ToDo {
 
     pub fn finish_task(&mut self, index: usize) {
         self.done.push(self.pending.remove(index));
-    }
-}
-
-pub struct TaskList<'a>(Vec<(usize, &'a Task)>);
-
-impl<'a> TaskList<'a> {
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-}
-
-impl<'a> Index<usize> for TaskList<'a> {
-    type Output = Task;
-    fn index<'b>(&'b self, i: usize) -> &'a Task {
-        &self.0[i].1
-    }
-}
-
-impl<'a> Into<Vec<ListItem<'a>>> for TaskList<'a> {
-    fn into(self) -> Vec<ListItem<'a>> {
-        self.0
-            .iter()
-            .map(|task| {
-                match CONFIG.priority_colors[usize::from(u8::from(task.1.priority.clone()))] {
-                    OptionalColor::Some(color) => ListItem::new(Span::styled(
-                        task.1.subject.clone(),
-                        Style::default().fg(color),
-                    )),
-                    OptionalColor::Default => ListItem::new(task.1.subject.clone()),
-                }
-            })
-            .collect::<Vec<ListItem<'a>>>()
-    }
-}
-
-pub struct CategoryList<'a>(Vec<(&'a String, bool)>);
-
-impl<'a> CategoryList<'a> {
-    pub fn start_with(&self, pattern: &str) -> Vec<&String> {
-        self.0
-            .iter()
-            .filter(|(item, _)| item.starts_with(pattern))
-            .map(|(item, _)| *item)
-            .collect()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn get_name(&self, index: usize) -> &String {
-        self.0[index].0
-    }
-}
-
-impl<'a> Into<Vec<ListItem<'a>>> for CategoryList<'a> {
-    fn into(self) -> Vec<ListItem<'a>> {
-        self.0
-            .iter()
-            .map(|category| {
-                if category.1 {
-                    ListItem::new(Span::styled(
-                        category.0.clone(),
-                        Style::default().bg(CONFIG.category_color),
-                    ))
-                } else {
-                    ListItem::new(category.0.clone())
-                }
-            })
-            .collect()
     }
 }
 
