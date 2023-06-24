@@ -1,7 +1,10 @@
 mod text_style;
-pub use self::text_style::OptionalColor;
+mod text_modifier;
+mod colors;
+pub use self::colors::OptionalColor;
 
 use self::text_style::*;
+use self::colors::*;
 use crate::layout::widget::widget_type::WidgetType;
 use serde::{Deserialize, Serialize};
 use std::env::{var, VarError};
