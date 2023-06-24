@@ -9,6 +9,7 @@ use todo_txt::Task;
 use tui::style::Style;
 use tui::text::Span;
 use tui::widgets::ListItem;
+use std::ops::Index;
 
 pub struct ToDo {
     pub pending: Vec<Task>,
@@ -261,12 +262,18 @@ impl ToDo {
     }
 }
 
-#[derive(Clone)]
 pub struct TaskList<'a>(Vec<(usize, &'a Task)>);
 
 impl<'a> TaskList<'a> {
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+}
+
+impl<'a> Index<usize> for TaskList<'a> {
+    type Output = Task;
+    fn index<'b>(&'b self, i: usize) -> &'a Task {
+        &self.0[i].1
     }
 }
 
@@ -522,55 +529,55 @@ mod tests {
         let mut todo = ToDo::load(testing_string.as_bytes(), false)?;
 
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.0.len(), 12);
+        assert_eq!(filtered.len(), 12);
 
         todo.project_filters.insert(String::from("project9999"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.0.len(), 0);
+        assert_eq!(filtered.len(), 0);
 
         todo.project_filters.clear();
         todo.project_filters.insert(String::from("project1"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.0.len(), 4);
-        assert_eq!(filtered.0[0].subject, "task 2 +project1");
-        assert_eq!(filtered.0[1].subject, "task 3 +project1 +project2");
-        assert_eq!(filtered.0[2].subject, "task 4 +project1 +project3");
+        assert_eq!(filtered.len(), 4);
+        assert_eq!(filtered[0].subject, "task 2 +project1");
+        assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
+        assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
         assert_eq!(
-            filtered.0[3].subject,
+            filtered[3].subject,
             "task 5 +project1 +project2 +project3"
         );
 
         todo.project_filters.insert(String::from("project2"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.0.len(), 2);
-        assert_eq!(filtered.0[0].subject, "task 3 +project1 +project2");
+        assert_eq!(filtered.len(), 2);
+        assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
         assert_eq!(
-            filtered.0[1].subject,
+            filtered[1].subject,
             "task 5 +project1 +project2 +project3"
         );
 
         todo.project_filters.insert(String::from("project3"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.0.len(), 1);
+        assert_eq!(filtered.len(), 1);
         assert_eq!(
-            filtered.0[0].subject,
+            filtered[0].subject,
             "task 5 +project1 +project2 +project3"
         );
 
         todo.project_filters.insert(String::from("project1"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.0.len(), 1);
+        assert_eq!(filtered.len(), 1);
         assert_eq!(
-            filtered.0[0].subject,
+            filtered[0].subject,
             "task 5 +project1 +project2 +project3"
         );
 
         todo.project_filters.clear();
         todo.context_filters.insert(String::from("context1"));
         let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.0.len(), 1);
+        assert_eq!(filtered.len(), 1);
         assert_eq!(
-            filtered.0[0].subject,
+            filtered[0].subject,
             "task 7 +project2 @context1 #hashtag1 #hashtag2"
         );
 
