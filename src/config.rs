@@ -1,3 +1,7 @@
+mod text_style;
+pub use self::text_style::OptionalColor;
+
+use self::text_style::*;
 use crate::layout::widget::widget_type::WidgetType;
 use serde::{Deserialize, Serialize};
 use std::env::{var, VarError};
@@ -10,39 +14,6 @@ const CONFIG_NAME: &str = "todo-tui.conf";
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
-#[serde(remote = "Color")]
-pub enum ColorDef {
-    Reset,
-    Black,
-    Red,
-    Green,
-    Yellow,
-    Blue,
-    Magenta,
-    Cyan,
-    Gray,
-    DarkGray,
-    LightRed,
-    LightGreen,
-    LightYellow,
-    LightBlue,
-    LightMagenta,
-    LightCyan,
-    White,
-    Rgb(u8, u8, u8),
-    Indexed(u8),
-}
-
-#[derive(Deserialize, Clone, Copy)]
-#[cfg_attr(test, derive(Serialize, PartialEq, Debug))]
-pub enum OptionalColor {
-    #[serde(with = "ColorDef")]
-    Some(Color),
-    Default,
-}
-
-#[derive(Deserialize)]
-#[cfg_attr(test, derive(Serialize, PartialEq, Debug))]
 pub struct Config {
     #[serde(with = "ColorDef", default = "Config::default_color")]
     pub active_color: Color,
@@ -150,6 +121,7 @@ mod tests {
         let c = Config::default();
         let serialized = toml::to_string_pretty(&c).unwrap();
         let deserialized: Config = toml::from_str(&serialized).unwrap();
+        println!("{}", serialized);
         assert_eq!(c, deserialized);
     }
 
