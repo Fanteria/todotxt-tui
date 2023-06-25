@@ -1,5 +1,4 @@
 use crate::CONFIG;
-use tui::style::Style;
 use tui::text::Span;
 use tui::widgets::ListItem;
 
@@ -35,7 +34,7 @@ impl<'a> Into<Vec<ListItem<'a>>> for CategoryList<'a> {
                 if category.1 {
                     ListItem::new(Span::styled(
                         category.0.clone(),
-                        Style::default().bg(CONFIG.category_color),
+                        CONFIG.category_color.get_style(),
                     ))
                 } else {
                     ListItem::new(category.0.clone())

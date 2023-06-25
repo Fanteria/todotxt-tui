@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tui::style::Modifier;
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
-#[cfg_attr(test, derive(PartialEq, Debug))]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub enum TextModifier {
     Bold,
     Italic,

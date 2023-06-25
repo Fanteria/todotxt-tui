@@ -1,11 +1,9 @@
-use crate::config::OptionalColor;
 use crate::CONFIG;
 use std::convert::From;
+use std::ops::Index;
 use todo_txt::Task;
-use tui::style::Style;
 use tui::text::Span;
 use tui::widgets::ListItem;
-use std::ops::Index;
 
 pub struct TaskList<'a>(pub Vec<(usize, &'a Task)>);
 
@@ -27,13 +25,9 @@ impl<'a> Into<Vec<ListItem<'a>>> for TaskList<'a> {
         self.0
             .iter()
             .map(|task| {
-                match CONFIG.priority_colors[usize::from(u8::from(task.1.priority.clone()))] {
-                    OptionalColor::Some(color) => ListItem::new(Span::styled(
-                        task.1.subject.clone(),
-                        Style::default().fg(color),
-                    )),
-                    OptionalColor::Default => ListItem::new(task.1.subject.clone()),
-                }
+                let index = usize::from(u8::from(task.1.priority.clone()));
+                let style = CONFIG.priority_colors.get_style(index);
+                ListItem::new(Span::styled(task.1.subject.clone(), style))
             })
             .collect::<Vec<ListItem<'a>>>()
     }
