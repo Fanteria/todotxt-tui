@@ -1,4 +1,7 @@
-use std::{error, fmt};
+use std::{
+    error::Error,
+    fmt::{self, Display},
+};
 
 pub type ToDoRes<T> = Result<T, ErrorToDo>;
 
@@ -15,9 +18,9 @@ pub struct ErrorToDo {
     pub message: &'static str,
 }
 
-impl error::Error for ErrorToDo {}
+impl Error for ErrorToDo {}
 
-impl fmt::Display for ErrorToDo {
+impl Display for ErrorToDo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Error<{:?}>: {}", self.err_type, self.message)
     }

@@ -34,18 +34,6 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn default() -> Self {
-        Self {
-            init_widget: Self::default_widget_type(),
-            active_color: Self::default_color(),
-            window_title: Self::default_window_title(),
-            todo_path: Self::default_todo_path(),
-            archive_path: None,
-            priority_colors: TextStyleList::default(),
-            category_color: TextStyle::default_category(),
-        }
-    }
-
     pub fn load_default() -> Self {
         let load = || -> Result<Self, Box<dyn Error>> {
             Ok(Self::load_config(File::open(Self::default_path()?)?))
@@ -84,6 +72,20 @@ impl Config {
 
     fn default_window_title() -> String {
         String::from("ToDo tui")
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            init_widget: Self::default_widget_type(),
+            active_color: Self::default_color(),
+            window_title: Self::default_window_title(),
+            todo_path: Self::default_todo_path(),
+            archive_path: None,
+            priority_colors: TextStyleList::default(),
+            category_color: TextStyle::default_category(),
+        }
     }
 }
 
