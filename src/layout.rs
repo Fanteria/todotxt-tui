@@ -26,7 +26,7 @@ impl Layout {
         let input_widget = Widget::new(WidgetType::Input, "Input", data.clone());
         let list_widget = Widget::new(WidgetType::List, "List", data.clone());
         let done_widget = Widget::new(WidgetType::Done, "Done", data.clone());
-        let categories_widget = Widget::new(WidgetType::Project, "Projects", data.clone());
+        let categories_widget = Widget::new(WidgetType::Project, "Projects", data);
 
         let root = Container::new(
             vec![

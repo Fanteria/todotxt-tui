@@ -46,7 +46,7 @@ impl Config {
         R: Read,
     {
         let mut buf = String::default();
-        if let Err(_) = reader.read_to_string(&mut buf) {
+        if reader.read_to_string(&mut buf).is_err() {
             return Self::default();
         }
         toml::from_str(buf.as_str()).unwrap_or(Self::default())

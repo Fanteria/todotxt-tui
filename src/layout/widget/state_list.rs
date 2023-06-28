@@ -43,32 +43,25 @@ impl State for StateList {
                     Some(a) => a + 1,
                     None => 0,
                 };
-                if (self.fn_data)(&*self.data.borrow()).len() > act {
+                if (self.fn_data)(&self.data.borrow()).len() > act {
                     self.state.select(Some(act));
                 }
             }
             KeyCode::Char('k') => {
-                let act = match self.state.selected() {
-                    Some(a) => a,
-                    None => 0,
-                };
+                let act = self.state.selected().unwrap_or(0);
                 if 0 < act {
                     self.state.select(Some(act - 1));
                 }
             }
             KeyCode::Char('x') => {
-                match self.state.selected() {
-                    Some(i) => self.data.borrow_mut().remove_pending_task(i),
-                    None => {}
+                if let Some(i) = self.state.selected() {
+                    self.data.borrow_mut().remove_pending_task(i);
                 }
                 // TODO panic if there are no tasks
             }
             KeyCode::Char('d') => {
-                match self.state.selected() {
-                    Some(i) => {
-                        (self.fn_move)(&mut *self.data.borrow_mut(), i)
-                    },
-                    None => {}
+                if let Some(i) = self.state.selected() {
+                    (self.fn_move)(&mut self.data.borrow_mut(), i)
                 }
                 // TODO panic if there are no tasks
             }
@@ -78,7 +71,7 @@ impl State for StateList {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         let todo = self.data.borrow();
-        let data = (self.fn_data)(&*todo);
+        let data = (self.fn_data)(&todo);
         let list = List::new(data).block(get_block(&widget.title, active));
         if !self.focus {
             f.render_widget(list, widget.chunk)
@@ -98,6 +91,6 @@ impl State for StateList {
     }
 
     fn cursor_visible(&self) -> bool {
-        return false;
+        false
     }
 }

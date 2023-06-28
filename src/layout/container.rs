@@ -96,9 +96,9 @@ impl Container {
         match borrow.actual_item() {
             Item::Widget(_) => {
                 borrow.active = true;
-                return Rc::clone(container);
+                Rc::clone(container)
             }
-            Item::Container(cont) => return Container::update_actual(cont),
+            Item::Container(cont) => Container::update_actual(cont),
         }
     }
 
@@ -125,7 +125,7 @@ impl Container {
     }
 
     pub fn previous_item(container: RcCon) -> Option<RcCon> {
-        Container::change_item(&container, |c| c.act_index <= 0, |c| c.act_index -= 1)
+        Container::change_item(&container, |c| c.act_index == 0, |c| c.act_index -= 1)
     }
 
     pub fn check_active(&self, widget_type: WidgetType) -> ToDoRes<bool> {
@@ -216,8 +216,8 @@ mod tests {
         let input_widget = Widget::new(WidgetType::Input, "Input", todo.clone());
         let list_widget = Widget::new(WidgetType::List, "List", todo.clone());
         let done_widget = Widget::new(WidgetType::Done, "Done", todo.clone());
-        let project_widget = Widget::new(WidgetType::Project, "Project", todo.clone());
-        let cnt = Container::new(
+        let project_widget = Widget::new(WidgetType::Project, "Project", todo);
+        Container::new(
             vec![
                 InitItem::InitWidget(input_widget),
                 InitItem::InitContainer(Container::new(
@@ -241,8 +241,7 @@ mod tests {
             vec![Constraint::Length(3), Constraint::Percentage(30)],
             Vertical,
             None,
-        );
-        cnt
+        )
     }
 
     fn check_active_test(container: &RcCon, widget_type: WidgetType) -> ToDoRes<()> {
@@ -278,16 +277,16 @@ mod tests {
 
         // Test next widget in child container.
         let actual = Container::select_widget(c.clone(), List)?;
-        let next = Container::next_item(actual.clone()).unwrap();
+        let next = Container::next_item(actual).unwrap();
         check_active_test(&next, Done)?;
 
         // Test next widget in same container.
         let actual = Container::select_widget(c.clone(), Done)?;
-        let next = Container::next_item(actual.clone()).unwrap();
+        let next = Container::next_item(actual).unwrap();
         check_active_test(&next, Project)?;
 
         // Test next in container have not default value
-        let actual = Container::select_widget(c.clone(), List)?;
+        let actual = Container::select_widget(c, List)?;
         let next = Container::next_item(actual.clone()).unwrap();
         check_active_test(&next, Project)?;
 
@@ -306,8 +305,8 @@ mod tests {
         let c = create_testing_container();
 
         // Test previous widget in same container.
-        let actual = Container::select_widget(c.clone(), Project)?;
-        let prev = Container::previous_item(actual.clone()).unwrap();
+        let actual = Container::select_widget(c, Project)?;
+        let prev = Container::previous_item(actual).unwrap();
         check_active_test(&prev, Done)?;
 
         // Test return value if there is no previous item

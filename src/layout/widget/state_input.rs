@@ -27,14 +27,14 @@ impl StateInput {
         let last_space_index = self
             .actual
             .rfind(' ')
-            .and_then(|i| Some(i + 1))
+            .map(|i| i + 1)
             .unwrap_or(0);
         let base = some_or_return!(self.actual.get(last_space_index..));
         let category = some_or_return!(base.get(0..1));
         let pattern = some_or_return!(base.get(1..));
 
         let data = self.data.borrow();
-        let list =  match category {
+        let list = match category {
             "+" => data.get_projects(),
             "@" => data.get_contexts(),
             "#" => data.get_hashtags(),
@@ -50,8 +50,7 @@ impl StateInput {
         let same_start_index = |fst: &str, sec: &str| -> usize {
             for (i, (fst_char, sec_char)) in fst
                 .chars()
-                .into_iter()
-                .zip(sec.chars().into_iter())
+                .zip(sec.chars())
                 .enumerate()
             {
                 if fst_char != sec_char {
@@ -107,7 +106,7 @@ impl State for StateInput {
     fn unfocus(&mut self) {}
 
     fn cursor_visible(&self) -> bool {
-        return true;
+        true
     }
 }
 

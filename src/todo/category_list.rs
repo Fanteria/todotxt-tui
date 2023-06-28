@@ -26,9 +26,9 @@ impl<'a> CategoryList<'a> {
     }
 }
 
-impl<'a> Into<Vec<ListItem<'a>>> for CategoryList<'a> {
-    fn into(self) -> Vec<ListItem<'a>> {
-        self.0
+impl<'a> From<CategoryList<'a>> for Vec<ListItem<'a>> {
+    fn from(val: CategoryList<'a>) -> Self {
+        val.0
             .iter()
             .map(|category| {
                 if category.1 {

@@ -9,10 +9,10 @@ pub enum TextModifier {
     Underlined,
 }
 
-impl Into<Modifier> for TextModifier {
-    fn into(self) -> Modifier {
+impl From<TextModifier> for Modifier {
+    fn from(val: TextModifier) -> Self {
         use TextModifier::*;
-        match self {
+        match val {
             Bold => Modifier::BOLD,
             Italic => Modifier::ITALIC,
             Underlined => Modifier::UNDERLINED,

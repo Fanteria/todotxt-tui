@@ -35,19 +35,12 @@ impl State for StateCategories {
     fn handle_key(&mut self, event: &KeyEvent) {
         match event.code {
             KeyCode::Char('j') => {
-                let act = match self.state.selected() {
-                    Some(a) => a + 1,
-                    None => 0,
-                };
-                if (self.fn_list)(&*self.data.borrow()).len() > act {
+                let act = self.state.selected().unwrap_or(0);               if (self.fn_list)(&self.data.borrow()).len() > act {
                     self.state.select(Some(act));
                 }
             }
             KeyCode::Char('k') => {
-                let act = match self.state.selected() {
-                    Some(a) => a,
-                    None => 0,
-                };
+                let act = self.state.selected().unwrap_or(0);
                 if 0 < act {
                     self.state.select(Some(act - 1));
                 }
@@ -57,7 +50,7 @@ impl State for StateCategories {
                     let name;
                     {
                         let todo = self.data.borrow();
-                        let data = (self.fn_list)(&*todo);
+                        let data = (self.fn_list)(&todo);
                         name = data.get_name(index).clone();
                     }
                     (self.fn_toggle)(&mut self.data.borrow_mut(), &name)
@@ -69,7 +62,7 @@ impl State for StateCategories {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         let todo = self.data.borrow();
-        let data = (self.fn_list)(&*todo);
+        let data = (self.fn_list)(&todo);
         let list = List::new(data).block(get_block(&widget.title, active));
         if !self.focus {
             f.render_widget(list, widget.chunk)
@@ -89,6 +82,6 @@ impl State for StateCategories {
     }
 
     fn cursor_visible(&self) -> bool {
-        return false;
+        false
     }
 }

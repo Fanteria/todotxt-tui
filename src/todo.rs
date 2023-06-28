@@ -9,6 +9,8 @@ use std::io::{BufRead, BufReader, Read, Result as ioResult, Write};
 use std::str::FromStr;
 use todo_txt::Task;
 
+type FilterData<'a> = (&'a BTreeSet<String>, fn(&'a Task) -> &'a Vec<String>);
+
 pub struct ToDo {
     pub pending: Vec<Task>,
     pub done: Vec<Task>,
@@ -39,7 +41,7 @@ impl ToDo {
             if line.is_empty() {
                 continue;
             }
-            let task = Task::from_str(&line)?;
+            let task = Task::from_str(line)?;
             if task.finished {
                 done.push(task);
             } else {
@@ -169,7 +171,7 @@ impl ToDo {
 
     fn write_tasks<W: Write>(tasks: &Vec<Task>, writer: &mut W) -> ioResult<()> {
         for task in tasks {
-            writer.write((task.to_string() + "\n").as_bytes())?;
+            writer.write_all((task.to_string() + "\n").as_bytes())?;
         }
         Ok(())
     }
@@ -188,8 +190,8 @@ impl ToDo {
     }
 
     fn get_filtered<'a>(
-        tasks: &'a Vec<Task>,
-        filters: &[(&BTreeSet<String>, fn(&Task) -> &Vec<String>)],
+        tasks: &'a[Task],
+        filters: &[FilterData<'a>],
     ) -> TaskList<'a> {
         TaskList(
             tasks
@@ -283,7 +285,7 @@ mod tests {
         assert_eq!(todo.done[0].priority, 0);
         assert!(todo.done[0].create_date.is_some());
         assert!(todo.done[0].finish_date.is_some());
-        assert_eq!(todo.done[0].finished, true);
+        assert!(todo.done[0].finished);
         assert_eq!(todo.done[0].threshold_date, None);
         assert!(todo.done[0].due_date.is_some());
         assert_eq!(todo.done[0].contexts.len(), 1);
@@ -295,7 +297,7 @@ mod tests {
         assert!(todo.pending[0].priority.is_lowest());
         assert!(todo.pending[0].create_date.is_some());
         assert!(todo.pending[0].finish_date.is_none());
-        assert_eq!(todo.pending[0].finished, false);
+        assert!(!todo.pending[0].finished);
         assert_eq!(todo.pending[0].threshold_date, None);
         assert!(todo.pending[0].due_date.is_some());
         assert_eq!(todo.pending[0].contexts.len(), 1);
@@ -305,7 +307,7 @@ mod tests {
         assert_eq!(todo.pending[1].priority, 2);
         assert!(todo.pending[1].create_date.is_some());
         assert!(todo.pending[1].finish_date.is_none());
-        assert_eq!(todo.pending[1].finished, false);
+        assert!(!todo.pending[1].finished);
         assert_eq!(todo.pending[1].threshold_date, None);
         assert!(todo.pending[1].due_date.is_some());
         assert_eq!(todo.pending[1].contexts.len(), 1);
@@ -315,7 +317,7 @@ mod tests {
         Ok(())
     }
 
-    fn create_vec<'a>(items: &'a [String]) -> Vec<(&'a String, bool)> {
+    fn create_vec(items: &[String]) -> Vec<(&String, bool)> {
         let mut vec: Vec<(&String, bool)> = Vec::new();
         items.iter().for_each(|item| {
             vec.push((item, false));
@@ -403,7 +405,7 @@ mod tests {
                     .trim()
                     .lines()
                     .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
-                    .filter(|line| f(line))
+                    .filter(&f)
                     .collect::<Vec<String>>()
                     .join("\n")
                     + "\n";

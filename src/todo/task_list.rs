@@ -16,13 +16,13 @@ impl<'a> TaskList<'a> {
 impl<'a> Index<usize> for TaskList<'a> {
     type Output = Task;
     fn index<'b>(&'b self, i: usize) -> &'a Task {
-        &self.0[i].1
+        self.0[i].1
     }
 }
 
-impl<'a> Into<Vec<ListItem<'a>>> for TaskList<'a> {
-    fn into(self) -> Vec<ListItem<'a>> {
-        self.0
+impl<'a> From<TaskList<'a>> for Vec<ListItem<'a>> {
+    fn from(val: TaskList<'a>) -> Self {
+        val.0
             .iter()
             .map(|task| {
                 let index = usize::from(u8::from(task.1.priority.clone()));
