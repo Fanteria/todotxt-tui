@@ -18,11 +18,11 @@ use crossterm::{
 };
 use layout::Layout;
 use lazy_static::lazy_static;
+use std::cell::RefCell;
 use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::rc::Rc;
-use std::cell::RefCell;
 use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
 
 #[macro_use]
@@ -34,7 +34,10 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let todo = Rc::new(RefCell::new(ToDo::load(File::open(CONFIG.todo_path.clone())?, false)?));
+    let todo = Rc::new(RefCell::new(ToDo::load(
+        File::open(CONFIG.todo_path.clone())?,
+        false,
+    )?));
 
     draw_ui(todo).await?;
 
@@ -54,6 +57,23 @@ async fn draw_ui(data: Rc<RefCell<ToDo>>) -> Result<(), io::Error> {
     terminal.hide_cursor()?;
 
     let mut layout = Layout::new(terminal.size()?, CONFIG.init_widget, data);
+    // let str_layout = r#"
+    //         [
+    //           Direction: Vertical,
+    //           Input: 3,
+    //           [
+    //             Direction:Horizontal,
+    //             Size: 50%,
+    //             List: 50%,
+    //             [ dIrEcTiOn: VeRtIcAl,
+    //               Done,
+    //               Hashtags: 50%,
+    //             ],
+    //             Projects: 50%,
+    //           ],
+    //         ]
+    //     "#;
+    // let mut layout = Layout::from_str(str_layout, terminal.size()?, CONFIG.init_widget, data).unwrap();
 
     // main loop
     loop {

@@ -1,6 +1,7 @@
 use std::{
     error::Error,
     fmt::{self, Display},
+    num::ParseIntError,
 };
 
 pub type ToDoRes<T> = Result<T, ErrorToDo>;
@@ -10,6 +11,10 @@ pub enum ErrorType {
     ImpossigleLayout,
     WidgetDoesNotExist,
     ActualIsNotWidget,
+    ParseValueError,
+    ParseWidgetType,
+    ParseNotStart,
+    ParseNotEnd,
 }
 
 #[derive(Debug)]
@@ -29,5 +34,14 @@ impl Display for ErrorToDo {
 impl ErrorToDo {
     pub fn new(err_type: ErrorType, message: &'static str) -> ErrorToDo {
         ErrorToDo { message, err_type }
+    }
+}
+
+impl From<ParseIntError> for ErrorToDo {
+    fn from(val: ParseIntError) -> Self {
+        ErrorToDo::new(
+            ErrorType::ParseValueError,
+            "Value must be in format unsigned integera.",
+        )
     }
 }

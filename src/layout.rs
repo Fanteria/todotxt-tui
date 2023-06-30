@@ -6,10 +6,13 @@ use self::{
     widget::widget_type::WidgetType,
     widget::Widget,
 };
-use crate::{error::ToDoRes, todo::ToDo};
+use crate::{
+    error::{ErrorToDo, ErrorType, ToDoRes},
+    todo::ToDo,
+};
 use crossterm::event::KeyEvent;
-use std::cell::RefCell;
 use std::rc::Rc;
+use std::{cell::RefCell, str::FromStr};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Direction::Horizontal, Direction::Vertical, Rect},
@@ -62,27 +65,41 @@ impl Layout {
         Layout { root, actual }
     }
 
-    fn value_from_string(value: &str) -> Constraint {
+    fn value_from_string(value: &str) -> ToDoRes<Constraint> {
         if value.is_empty() {
-            return Constraint::Percentage(50);
+            return Ok(Constraint::Percentage(50));
         }
 
         match value.find('%') {
             Some(i) => {
-                let x = &value[..i];
-                Constraint::Percentage(10)
+                if i + 1 < value.len() {
+                    Err(ErrorToDo::new(
+                        ErrorType::ParseValueError,
+                        "Value can constraint only unsigned integer and %.",
+                    ))
+                } else {
+                    Ok(Constraint::Percentage(value[..i].parse()?))
+                }
             }
-            None => {
-                Constraint::Length(10)
-            }
+            None => Ok(Constraint::Length(value.parse()?)),
         }
     }
 
-    fn from_str(template: &str, chunk: Rect, actual: WidgetType, data: Rc<RefCell<ToDo>>) {
+    pub fn from_str(
+        template: &str,
+        chunk: Rect,
+        actual: WidgetType,
+        data: Rc<RefCell<ToDo>>,
+    ) -> ToDoRes<Self> {
         // Find first '[' and move start of template to it (start of first container)
         let index = match template.find('[') {
             Some(i) => i,
-            None => return,
+            None => {
+                return Err(ErrorToDo::new(
+                    ErrorType::ParseNotStart,
+                    "There must be almost one container.",
+                ))
+            }
         };
         let template = &template[index + 1..];
 
@@ -96,8 +113,14 @@ impl Layout {
         let mut item = String::new();
         let mut indent = 0;
 
-        let mut container: Vec<(Direction, Constraint)> = Vec::new();
-        container.push((Direction::Vertical, Constraint::Percentage(50)));
+        let mut container: Vec<(Direction, Constraint, Vec<InitItem>, Vec<Constraint>)> =
+            Vec::new();
+        container.push((
+            Direction::Vertical,
+            Constraint::Percentage(50),
+            Vec::new(),
+            Vec::new(),
+        ));
 
         for (i, ch) in template.chars().enumerate() {
             match ch {
@@ -106,7 +129,12 @@ impl Layout {
                         Vertical => Horizontal,
                         Horizontal => Vertical,
                     };
-                    container.push((new_direction, Constraint::Percentage(50)));
+                    container.push((
+                        new_direction,
+                        Constraint::Percentage(50),
+                        Vec::new(),
+                        Vec::new(),
+                    ));
 
                     println!("{}[{}", " ".repeat(indent), string);
                     indent += 1;
@@ -116,8 +144,17 @@ impl Layout {
                     let cont = container.pop().unwrap();
                     // End of the brackets stack, end cycle
                     if container.is_empty() {
-                        break;
+                        let root = Container::new(cont.2, cont.3, cont.0, None);
+                        let actual = Container::select_widget(root.clone(), actual).unwrap();
+                        root.borrow_mut().update_chunks(chunk);
+                        if let Item::Widget(w) = actual.borrow_mut().actual_item_mut() {
+                            w.widget.focus();
+                        }
+                        return Ok( Layout { root, actual })
                     }
+                    let c = InitItem::InitContainer(Container::new(cont.2, cont.3, cont.0, None));
+                    container.last_mut().unwrap().2.push(c);
+                    container.last_mut().unwrap().3.push(cont.1);
                     indent -= 1;
                     println!("{}{}]", " ".repeat(indent), string);
                     string.clear();
@@ -141,21 +178,29 @@ impl Layout {
                     println!("{}Item: {}, arg: {}", " ".repeat(indent), item, string);
                     match item.as_str() {
                         "direction" => match string.as_str() {
-                            "" => {}
-                            "vertical" => {}
-                            "horizontal" => {}
-                            _ => {}
+                            "" | "vertical" => {
+                                let direction = &mut container.last_mut().unwrap().0;
+                                *direction = Direction::Vertical;
+                            }
+                            "horizontal" => {
+                                let direction = &mut container.last_mut().unwrap().0;
+                                *direction = Direction::Horizontal;
+                            }
+                            _ => { /* TODO error state */ }
                         },
                         "size" => {
-                            let (x, _) = container.last().unwrap();
+                            container.last_mut().unwrap().1 = Self::value_from_string(&string)?;
                         }
-                        "input" => {}
-                        "list" => {}
-                        "done" => {}
-                        "projects" => {}
-                        "contexts" => {}
-                        "hashtags" => {}
-                        _ => {}
+                        _ => {
+                            let widget_type = WidgetType::from_str(&item)?;
+                            let cont = container.last_mut().unwrap();
+                            cont.2.push(InitItem::InitWidget(Widget::new(
+                                widget_type,
+                                &widget_type.to_string(),
+                                data.clone(),
+                            )));
+                            cont.3.push(Self::value_from_string(&string)?);
+                        }
                     }
                     item.clear();
                     string.clear();
@@ -163,8 +208,9 @@ impl Layout {
                 ' ' => {}
                 '\n' => {}
                 _ => string.push(ch),
-            }
+            };
         }
+        Err(ErrorToDo::new(ErrorType::ParseNotEnd, "All containers must be closed"))
     }
 
     fn move_focus(
@@ -321,7 +367,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_string() {
+    fn test_from_string() -> ToDoRes<()> {
         let str_layout = r#"
             [
               Direction: Vertical,
@@ -346,6 +392,7 @@ mod tests {
             Rect::new(0, 0, 0, 0),
             WidgetType::List,
             Rc::new(RefCell::new(ToDo::new(false))),
-        );
+        )?;
+        Ok(())
     }
 }

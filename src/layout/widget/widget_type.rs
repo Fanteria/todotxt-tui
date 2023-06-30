@@ -25,9 +25,9 @@ impl Display for WidgetType {
                 Input => "Input",
                 List => "List",
                 Done => "Done",
-                Project => "Project",
-                Context => "Context",
-                Hashtag => "Hashtag",
+                Project => "Projects",
+                Context => "Contexts",
+                Hashtag => "Hashtags",
             }
         )
     }
@@ -38,13 +38,14 @@ impl FromStr for WidgetType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use WidgetType::*;
+        println!("{:#?}", s);
         match s.to_lowercase().as_str() {
             "input" => Ok(Input),
             "list" => Ok(List),
             "done" => Ok(Done),
-            "project" => Ok(Project),
-            "context" => Ok(Context),
-            "hashtag" => Ok(Hashtag),
+            "projects" => Ok(Project),
+            "contexts" => Ok(Context),
+            "hashtags" => Ok(Hashtag),
             _ => Err(ErrorToDo::new(ParseWidgetType, "Unknown widget type.")),
         }
     }
