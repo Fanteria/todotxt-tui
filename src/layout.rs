@@ -9,6 +9,7 @@ use self::{
 use crate::{
     error::{ErrorToDo, ErrorType, ToDoRes},
     todo::ToDo,
+    CONFIG,
 };
 use crossterm::event::KeyEvent;
 use std::rc::Rc;
@@ -19,13 +20,32 @@ use tui::{
     Frame,
 };
 
+pub const DEFAULT_LAYOUT: &str = r#"
+            [
+              Direction: Vertical,
+              Input: 3,
+              [
+                Direction:Horizontal,
+                Size: 50%,
+                List: 50%,
+                [ dIrEcTiOn: VeRtIcAl,
+                  Done,
+                  [ 
+                    Contexts,
+                    Projects,
+                  ],
+                ],
+              ],
+            ]
+        "#;
+
 pub struct Layout {
     root: Rc<RefCell<Container>>,
     actual: Rc<RefCell<Container>>,
 }
 
 impl Layout {
-    pub fn new(chunk: Rect, actual: WidgetType, data: Rc<RefCell<ToDo>>) -> Layout {
+    pub fn new(actual: WidgetType, data: Rc<RefCell<ToDo>>) -> Layout {
         let input_widget = Widget::new(WidgetType::Input, "Input", data.clone());
         let list_widget = Widget::new(WidgetType::List, "List", data.clone());
         let done_widget = Widget::new(WidgetType::Done, "Done", data.clone());
@@ -56,8 +76,7 @@ impl Layout {
             Vertical,
             None,
         );
-        let actual = Container::select_widget(root.clone(), actual).unwrap(); // TODO
-        root.borrow_mut().update_chunks(chunk);
+        let actual = Container::select_widget(root.clone(), CONFIG.init_widget).unwrap(); // TODO
         if let Item::Widget(w) = actual.borrow_mut().actual_item_mut() {
             w.widget.focus();
         }
@@ -85,12 +104,7 @@ impl Layout {
         }
     }
 
-    pub fn from_str(
-        template: &str,
-        chunk: Rect,
-        actual: WidgetType,
-        data: Rc<RefCell<ToDo>>,
-    ) -> ToDoRes<Self> {
+    pub fn from_str(template: &str, data: Rc<RefCell<ToDo>>) -> ToDoRes<Self> {
         // Find first '[' and move start of template to it (start of first container)
         let index = match template.find('[') {
             Some(i) => i,
@@ -144,12 +158,12 @@ impl Layout {
                     // End of the brackets stack, end cycle
                     if container.is_empty() {
                         let root = Container::new(cont.2, cont.3, cont.0, None);
-                        let actual = Container::select_widget(root.clone(), actual).unwrap();
-                        root.borrow_mut().update_chunks(chunk);
+                        let actual =
+                            Container::select_widget(root.clone(), CONFIG.init_widget).unwrap();
                         if let Item::Widget(w) = actual.borrow_mut().actual_item_mut() {
                             w.widget.focus();
                         }
-                        return Ok( Layout { root, actual })
+                        return Ok(Layout { root, actual });
                     }
                     let c = InitItem::InitContainer(Container::new(cont.2, cont.3, cont.0, None));
                     container.last_mut().unwrap().2.push(c);
@@ -207,7 +221,10 @@ impl Layout {
                 _ => string.push(ch),
             };
         }
-        Err(ErrorToDo::new(ErrorType::ParseNotEnd, "All containers must be closed"))
+        Err(ErrorToDo::new(
+            ErrorType::ParseNotEnd,
+            "All containers must be closed",
+        ))
     }
 
     fn move_focus(
@@ -315,11 +332,7 @@ mod tests {
     use super::*;
 
     fn mock_layout() -> Layout {
-        Layout::new(
-            Rect::new(0, 0, 0, 0),
-            WidgetType::List,
-            Rc::new(RefCell::new(ToDo::new(false))),
-        )
+        Layout::new(WidgetType::List, Rc::new(RefCell::new(ToDo::new(false))))
     }
 
     #[test]
@@ -386,8 +399,6 @@ mod tests {
 
         Layout::from_str(
             str_layout,
-            Rect::new(0, 0, 0, 0),
-            WidgetType::List,
             Rc::new(RefCell::new(ToDo::new(false))),
         )?;
         Ok(())

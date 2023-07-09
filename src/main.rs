@@ -16,7 +16,7 @@ use crossterm::{
     },
     ExecutableCommand,
 };
-use layout::Layout;
+use layout::{Layout, DEFAULT_LAYOUT};
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::error::Error;
@@ -56,26 +56,8 @@ async fn draw_ui(data: Rc<RefCell<ToDo>>) -> Result<(), io::Error> {
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
-    // let mut layout = Layout::new(terminal.size()?, CONFIG.init_widget, data);
-    let str_layout = r#"
-            [
-              Direction: Vertical,
-              Input: 3,
-              [
-                Direction:Horizontal,
-                Size: 50%,
-                List: 50%,
-                [ dIrEcTiOn: VeRtIcAl,
-                  Done,
-                  [ 
-                    Contexts,
-                    Projects,
-                  ],
-                ],
-              ],
-            ]
-        "#;
-    let mut layout = Layout::from_str(str_layout, terminal.size()?, CONFIG.init_widget, data).unwrap();
+    let mut layout = Layout::from_str(DEFAULT_LAYOUT, data).unwrap();
+    layout.update_chunks(terminal.size()?);
 
     // main loop
     loop {
