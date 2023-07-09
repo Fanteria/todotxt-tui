@@ -32,19 +32,18 @@ lazy_static! {
     static ref CONFIG: Config = Config::load_default();
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let todo = Rc::new(RefCell::new(ToDo::load(
         File::open(CONFIG.todo_path.clone())?,
         false,
     )?));
 
-    draw_ui(todo).await?;
+    draw_ui(todo)?;
 
     Ok(())
 }
 
-async fn draw_ui(data: Rc<RefCell<ToDo>>) -> Result<(), io::Error> {
+fn draw_ui(data: Rc<RefCell<ToDo>>) -> Result<(), io::Error> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
