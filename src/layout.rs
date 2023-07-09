@@ -136,7 +136,6 @@ impl Layout {
                         Vec::new(),
                     ));
 
-                    println!("{}[{}", " ".repeat(indent), string);
                     indent += 1;
                     string.clear();
                 }
@@ -156,7 +155,6 @@ impl Layout {
                     container.last_mut().unwrap().2.push(c);
                     container.last_mut().unwrap().3.push(cont.1);
                     indent -= 1;
-                    println!("{}{}]", " ".repeat(indent), string);
                     string.clear();
                 }
                 ARG_SEPARATOR => {
@@ -175,7 +173,6 @@ impl Layout {
                         item = item.to_lowercase();
                         string = string.to_lowercase();
                     }
-                    println!("{}Item: {}, arg: {}", " ".repeat(indent), item, string);
                     match item.as_str() {
                         "direction" => match string.as_str() {
                             "" | "vertical" => {

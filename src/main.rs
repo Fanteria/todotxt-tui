@@ -56,24 +56,26 @@ async fn draw_ui(data: Rc<RefCell<ToDo>>) -> Result<(), io::Error> {
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
 
-    let mut layout = Layout::new(terminal.size()?, CONFIG.init_widget, data);
-    // let str_layout = r#"
-    //         [
-    //           Direction: Vertical,
-    //           Input: 3,
-    //           [
-    //             Direction:Horizontal,
-    //             Size: 50%,
-    //             List: 50%,
-    //             [ dIrEcTiOn: VeRtIcAl,
-    //               Done,
-    //               Hashtags: 50%,
-    //             ],
-    //             Projects: 50%,
-    //           ],
-    //         ]
-    //     "#;
-    // let mut layout = Layout::from_str(str_layout, terminal.size()?, CONFIG.init_widget, data).unwrap();
+    // let mut layout = Layout::new(terminal.size()?, CONFIG.init_widget, data);
+    let str_layout = r#"
+            [
+              Direction: Vertical,
+              Input: 3,
+              [
+                Direction:Horizontal,
+                Size: 50%,
+                List: 50%,
+                [ dIrEcTiOn: VeRtIcAl,
+                  Done,
+                  [ 
+                    Contexts,
+                    Projects,
+                  ],
+                ],
+              ],
+            ]
+        "#;
+    let mut layout = Layout::from_str(str_layout, terminal.size()?, CONFIG.init_widget, data).unwrap();
 
     // main loop
     loop {

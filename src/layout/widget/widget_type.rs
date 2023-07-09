@@ -38,7 +38,6 @@ impl FromStr for WidgetType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use WidgetType::*;
-        println!("{:#?}", s);
         match s.to_lowercase().as_str() {
             "input" => Ok(Input),
             "list" => Ok(List),
