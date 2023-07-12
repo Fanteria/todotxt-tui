@@ -5,9 +5,11 @@ mod error;
 mod layout;
 mod todo;
 mod utils;
+mod file_worker;
 
 use crate::config::Config;
 use crate::todo::ToDo;
+use crate::file_worker::FileWorker;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -20,7 +22,6 @@ use layout::{Layout, DEFAULT_LAYOUT};
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::error::Error;
-use std::fs::File;
 use std::io;
 use std::rc::Rc;
 use tui::{backend::CrosstermBackend, layout::Rect, Terminal};
@@ -33,11 +34,10 @@ lazy_static! {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let todo = Rc::new(RefCell::new(ToDo::load(
-        File::open(CONFIG.todo_path.clone())?,
-        false,
-    )?));
-
+    let mut todo = ToDo::new(false);
+    let file_worker = FileWorker::new(CONFIG.todo_path.clone(), CONFIG.archive_path.clone());
+    file_worker.load(&mut todo)?;
+    let todo = Rc::new(RefCell::new(todo));
     draw_ui(todo)?;
 
     Ok(())

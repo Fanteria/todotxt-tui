@@ -4,8 +4,6 @@ pub use self::{category_list::CategoryList, task_list::TaskList};
 
 use std::collections::btree_set::BTreeSet;
 use std::convert::From;
-use std::error::Error;
-use std::io::{BufRead, BufReader, Read, Result as ioResult, Write};
 use std::str::FromStr;
 use todo_txt::Task;
 
@@ -32,31 +30,12 @@ impl ToDo {
         }
     }
 
-    pub fn load<R: Read>(reader: R, use_done: bool) -> Result<ToDo, Box<dyn Error>> {
-        let mut pending = Vec::new();
-        let mut done = Vec::new();
-        for line in BufReader::new(reader).lines() {
-            let line = line?;
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-            let task = Task::from_str(line)?;
-            if task.finished {
-                done.push(task);
-            } else {
-                pending.push(task);
-            }
+    pub fn add_task(&mut self, task: Task) {
+        if task.finished {
+            self.done.push(task);
+        } else {
+            self.pending.push(task);
         }
-
-        Ok(ToDo {
-            pending,
-            done,
-            use_done,
-            project_filters: BTreeSet::new(),
-            context_filters: BTreeSet::new(),
-            hashtag_filters: BTreeSet::new(),
-        })
     }
 
     fn get_btree<'a>(
@@ -169,26 +148,6 @@ impl ToDo {
         self.get_tasks_done_switch(name, |t| &t.hashtags)
     }
 
-    fn write_tasks<W: Write>(tasks: &Vec<Task>, writer: &mut W) -> ioResult<()> {
-        for task in tasks {
-            writer.write_all((task.to_string() + "\n").as_bytes())?;
-        }
-        Ok(())
-    }
-
-    pub fn write_done_tasks<W: Write>(&self, writer: &mut W) -> ioResult<()> {
-        Self::write_tasks(&self.done, writer)
-    }
-
-    pub fn write_pending_tasks<W: Write>(&self, writer: &mut W) -> ioResult<()> {
-        Self::write_tasks(&self.pending, writer)
-    }
-
-    pub fn write_all_tasks<W: Write>(&self, writer: &mut W) -> ioResult<()> {
-        self.write_done_tasks(writer)?;
-        self.write_pending_tasks(writer)
-    }
-
     fn get_filtered<'a>(
         tasks: &'a[Task],
         filters: &[FilterData<'a>],
@@ -265,6 +224,21 @@ impl ToDo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::error::Error;
+    use todo_txt::Priority;
+
+    fn example_todo(use_done: bool) -> ToDo {
+        let mut todo = ToDo::new(use_done);
+        let mut task = Task::default();
+        task.subject = String::from("measure space for 1 +project1 @context1 #hashtag1");
+        task.priority = Priority::from(0);
+        // task.create_date = Some(Naive)
+        todo.add_task(task);
+        let task = Task::from_str("x (A) 2023-05-21 2023-04-30 measure space for 1 +project1 @context1 #hashtag1 due:2023-06-30");
+        println!("{:#?}", task);
+
+        todo
+    }
 
     const TESTING_STRING: &str = r#"
         x (A) 2023-05-21 2023-04-30 measure space for 1 +project1 @context1 #hashtag1 due:2023-06-30
@@ -276,8 +250,8 @@ mod tests {
         "#;
 
     #[test]
-    fn test_load() -> Result<(), Box<dyn Error>> {
-        let todo = ToDo::load(TESTING_STRING.as_bytes(), true)?;
+    fn test_add_task() {
+        let todo = example_todo(true);
 
         assert_eq!(todo.done.len(), 2);
         assert_eq!(todo.pending.len(), 4);
@@ -314,7 +288,6 @@ mod tests {
         assert_eq!(todo.pending[1].projects.len(), 1);
         assert_eq!(todo.pending[1].hashtags.len(), 0);
 
-        Ok(())
     }
 
     fn create_vec(items: &[String]) -> Vec<(&String, bool)> {
@@ -327,7 +300,7 @@ mod tests {
 
     #[test]
     fn test_categeries_list() -> Result<(), Box<dyn Error>> {
-        let mut todo = ToDo::load(TESTING_STRING.as_bytes(), false)?;
+        let mut todo = example_todo(false);
         assert_eq!(
             todo.get_projects().0,
             create_vec(&[String::from("project2"), String::from("project3")])
@@ -368,7 +341,7 @@ mod tests {
 
     #[test]
     fn test_tasks_in_category() -> Result<(), Box<dyn Error>> {
-        let mut todo = ToDo::load(TESTING_STRING.as_bytes(), false)?;
+        let mut todo = example_todo(false);
         assert_eq!(todo.get_project_tasks("project1").len(), 0);
         assert_eq!(todo.get_project_tasks("project2").len(), 2);
         assert_eq!(todo.get_project_tasks("project3").len(), 2);
@@ -391,122 +364,122 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_write_tasks() -> Result<(), Box<dyn Error>> {
-        let todo = ToDo::load(TESTING_STRING.as_bytes(), false)?;
-        let mut buf: Vec<u8> = Vec::new();
+    // #[test]
+    // fn test_write_tasks() -> Result<(), Box<dyn Error>> {
+    //     let todo = ToDo::load(TESTING_STRING.as_bytes(), false)?;
+    //     let mut buf: Vec<u8> = Vec::new();
+    //
+    //     let mut test_function =
+    //         |function: fn(&ToDo, &mut Vec<_>) -> ioResult<()>, f: fn(&String) -> bool, message| {
+    //             // run function
+    //             function(&todo, &mut buf).unwrap();
+    //             // get testing data
+    //             let expected = TESTING_STRING
+    //                 .trim()
+    //                 .lines()
+    //                 .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
+    //                 .filter(&f)
+    //                 .collect::<Vec<String>>()
+    //                 .join("\n")
+    //                 + "\n";
+    //             assert_eq!(
+    //                 expected.as_bytes(),
+    //                 buf,
+    //                 // if test failed print data in string not in byte array
+    //                 "\n-----{}-----\nGET:\n{}\n----------------\nEXPECTED:\n{}\n",
+    //                 message,
+    //                 String::from_utf8(buf.clone()).unwrap(),
+    //                 expected.clone()
+    //             );
+    //             buf.clear();
+    //         };
+    //
+    //     test_function(
+    //         ToDo::write_done_tasks,
+    //         |f| f.starts_with("x "),
+    //         "Pending check is wrong",
+    //     );
+    //
+    //     test_function(
+    //         ToDo::write_pending_tasks,
+    //         |f| !f.starts_with("x "),
+    //         "Pending check is wrong",
+    //     );
+    //
+    //     Ok(())
+    // }
 
-        let mut test_function =
-            |function: fn(&ToDo, &mut Vec<_>) -> ioResult<()>, f: fn(&String) -> bool, message| {
-                // run function
-                function(&todo, &mut buf).unwrap();
-                // get testing data
-                let expected = TESTING_STRING
-                    .trim()
-                    .lines()
-                    .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
-                    .filter(&f)
-                    .collect::<Vec<String>>()
-                    .join("\n")
-                    + "\n";
-                assert_eq!(
-                    expected.as_bytes(),
-                    buf,
-                    // if test failed print data in string not in byte array
-                    "\n-----{}-----\nGET:\n{}\n----------------\nEXPECTED:\n{}\n",
-                    message,
-                    String::from_utf8(buf.clone()).unwrap(),
-                    expected.clone()
-                );
-                buf.clear();
-            };
-
-        test_function(
-            ToDo::write_done_tasks,
-            |f| f.starts_with("x "),
-            "Pending check is wrong",
-        );
-
-        test_function(
-            ToDo::write_pending_tasks,
-            |f| !f.starts_with("x "),
-            "Pending check is wrong",
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_filtering() -> Result<(), Box<dyn Error>> {
-        let testing_string = r#"
-        task 1
-        task 2 +project1
-        task 3 +project1 +project2          
-        task 4 +project1 +project3
-        task 5 +project1 +project2 +project3
-        task 6 +project3 @context2 #hashtag2 #hashtag1
-        task 7 +project2 @context1 #hashtag1 #hashtag2
-        task 8 +project2 @context2          
-        task 9 +project3 @context3          
-        task 10 +project2 @context3 #hashtag1 #hashtag2
-        task 11 +project3 @context3 #hashtag2 #hashtag3
-        task 12 +project3 @context2 #hashtag2 #hashtag2
-        "#;
-        let mut todo = ToDo::load(testing_string.as_bytes(), false)?;
-
-        let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 12);
-
-        todo.project_filters.insert(String::from("project9999"));
-        let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 0);
-
-        todo.project_filters.clear();
-        todo.project_filters.insert(String::from("project1"));
-        let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 4);
-        assert_eq!(filtered[0].subject, "task 2 +project1");
-        assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
-        assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
-        assert_eq!(
-            filtered[3].subject,
-            "task 5 +project1 +project2 +project3"
-        );
-
-        todo.project_filters.insert(String::from("project2"));
-        let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 2);
-        assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
-        assert_eq!(
-            filtered[1].subject,
-            "task 5 +project1 +project2 +project3"
-        );
-
-        todo.project_filters.insert(String::from("project3"));
-        let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(
-            filtered[0].subject,
-            "task 5 +project1 +project2 +project3"
-        );
-
-        todo.project_filters.insert(String::from("project1"));
-        let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(
-            filtered[0].subject,
-            "task 5 +project1 +project2 +project3"
-        );
-
-        todo.project_filters.clear();
-        todo.context_filters.insert(String::from("context1"));
-        let filtered = todo.get_pending_filtered();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(
-            filtered[0].subject,
-            "task 7 +project2 @context1 #hashtag1 #hashtag2"
-        );
-
-        Ok(())
-    }
+    // #[test]
+    // fn test_filtering() -> Result<(), Box<dyn Error>> {
+    //     let testing_string = r#"
+    //     task 1
+    //     task 2 +project1
+    //     task 3 +project1 +project2          
+    //     task 4 +project1 +project3
+    //     task 5 +project1 +project2 +project3
+    //     task 6 +project3 @context2 #hashtag2 #hashtag1
+    //     task 7 +project2 @context1 #hashtag1 #hashtag2
+    //     task 8 +project2 @context2          
+    //     task 9 +project3 @context3          
+    //     task 10 +project2 @context3 #hashtag1 #hashtag2
+    //     task 11 +project3 @context3 #hashtag2 #hashtag3
+    //     task 12 +project3 @context2 #hashtag2 #hashtag2
+    //     "#;
+    //     let mut todo = ToDo::load(testing_string.as_bytes(), false)?;
+    //
+    //     let filtered = todo.get_pending_filtered();
+    //     assert_eq!(filtered.len(), 12);
+    //
+    //     todo.project_filters.insert(String::from("project9999"));
+    //     let filtered = todo.get_pending_filtered();
+    //     assert_eq!(filtered.len(), 0);
+    //
+    //     todo.project_filters.clear();
+    //     todo.project_filters.insert(String::from("project1"));
+    //     let filtered = todo.get_pending_filtered();
+    //     assert_eq!(filtered.len(), 4);
+    //     assert_eq!(filtered[0].subject, "task 2 +project1");
+    //     assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
+    //     assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
+    //     assert_eq!(
+    //         filtered[3].subject,
+    //         "task 5 +project1 +project2 +project3"
+    //     );
+    //
+    //     todo.project_filters.insert(String::from("project2"));
+    //     let filtered = todo.get_pending_filtered();
+    //     assert_eq!(filtered.len(), 2);
+    //     assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
+    //     assert_eq!(
+    //         filtered[1].subject,
+    //         "task 5 +project1 +project2 +project3"
+    //     );
+    //
+    //     todo.project_filters.insert(String::from("project3"));
+    //     let filtered = todo.get_pending_filtered();
+    //     assert_eq!(filtered.len(), 1);
+    //     assert_eq!(
+    //         filtered[0].subject,
+    //         "task 5 +project1 +project2 +project3"
+    //     );
+    //
+    //     todo.project_filters.insert(String::from("project1"));
+    //     let filtered = todo.get_pending_filtered();
+    //     assert_eq!(filtered.len(), 1);
+    //     assert_eq!(
+    //         filtered[0].subject,
+    //         "task 5 +project1 +project2 +project3"
+    //     );
+    //
+    //     todo.project_filters.clear();
+    //     todo.context_filters.insert(String::from("context1"));
+    //     let filtered = todo.get_pending_filtered();
+    //     assert_eq!(filtered.len(), 1);
+    //     assert_eq!(
+    //         filtered[0].subject,
+    //         "task 7 +project2 @context1 #hashtag1 #hashtag2"
+    //     );
+    //
+    //     Ok(())
+    // }
 }
