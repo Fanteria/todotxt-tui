@@ -112,69 +112,70 @@ impl State for StateInput {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::error::Error;
+    use crate::file_worker::FileWorker;
 
-    // TODO fix
-    // #[test]
-    // fn test_autocomplete() -> Result<(), Box<dyn Error>> {
-    //     // prepare testing
-    //     let testing_string: &str = r#"
-    //     1 +project1 @context1 #hashtag1 
-    //     2 +project2 @context2
-    //     3 +project3 @context3
-    //     4 +name_project2 @context3 #hashtag1
-    //     5 +name_project3 @context3 #hashtag2
-    //     6 +unique @context2 #hashtag2
-    //     "#;
-    //     let mut widget = StateInput::new(Rc::new(RefCell::new(ToDo::load(
-    //         testing_string.as_bytes(),
-    //         false,
-    //     )?)));
-    //
-    //     // not found check
-    //     widget.actual = String::from("some text +missing");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "some text +missing");
-    //
-    //     // group check
-    //     widget.actual = String::from("some text +pr");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "some text +project");
-    //
-    //     // double group check
-    //     widget.actual = String::from("some text +project1 +name");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "some text +project1 +name_project");
-    //
-    //     // unique check
-    //     widget.actual = String::from("text +uni");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "text +unique ");
-    //
-    //     // empty task description check
-    //     widget.actual = String::from("+uni");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "+unique ");
-    //
-    //     // context check
-    //     widget.actual = String::from("@con");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "@context");
-    //
-    //     widget.actual = String::from("@context1");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "@context1 ");
-    //
-    //     // hashtag check
-    //     widget.actual = String::from("#hash");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "#hashtag");
-    //
-    //     widget.actual = String::from("#hashtag2");
-    //     widget.autocomplete();
-    //     assert_eq!(widget.actual, "#hashtag2 ");
-    //
-    //     Ok(())
-    // }
+    use super::*;
+    use std::io::Result as ioResult;
+
+    #[test]
+    fn test_autocomplete() -> ioResult<()> {
+        // prepare testing
+        let testing_string: &str = r#"
+        1 +project1 @context1 #hashtag1 
+        2 +project2 @context2
+        3 +project3 @context3
+        4 +name_project2 @context3 #hashtag1
+        5 +name_project3 @context3 #hashtag2
+        6 +unique @context2 #hashtag2
+        "#;
+        let mut todo = ToDo::default();
+        FileWorker::load_tasks(testing_string.as_bytes(), &mut todo)?;
+
+        let mut widget = StateInput::new(Rc::new(RefCell::new(todo)));
+
+        // not found check
+        widget.actual = String::from("some text +missing");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "some text +missing");
+
+        // group check
+        widget.actual = String::from("some text +pr");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "some text +project");
+
+        // double group check
+        widget.actual = String::from("some text +project1 +name");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "some text +project1 +name_project");
+
+        // unique check
+        widget.actual = String::from("text +uni");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "text +unique ");
+
+        // empty task description check
+        widget.actual = String::from("+uni");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "+unique ");
+
+        // context check
+        widget.actual = String::from("@con");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "@context");
+
+        widget.actual = String::from("@context1");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "@context1 ");
+
+        // hashtag check
+        widget.actual = String::from("#hash");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "#hashtag");
+
+        widget.actual = String::from("#hashtag2");
+        widget.autocomplete();
+        assert_eq!(widget.actual, "#hashtag2 ");
+
+        Ok(())
+    }
 }
