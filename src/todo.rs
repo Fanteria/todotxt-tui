@@ -7,8 +7,10 @@ use std::convert::From;
 use std::str::FromStr;
 use todo_txt::Task;
 
+/// Type alias for a tuple representing filter data.
 type FilterData<'a> = (&'a BTreeSet<String>, fn(&'a Task) -> &'a Vec<String>);
 
+/// Represents a To-Do list.
 #[derive(Default)]
 pub struct ToDo {
     pub pending: Vec<Task>,
@@ -20,6 +22,15 @@ pub struct ToDo {
 }
 
 impl ToDo {
+    /// Creates a new instance of `ToDo`.
+    ///
+    /// # Arguments
+    ///
+    /// * `use_done` - A boolean indicating whether to include completed tasks in the list.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `ToDo`.
     pub fn new(use_done: bool) -> Self {
         Self {
             pending: Vec::new(),
@@ -31,6 +42,11 @@ impl ToDo {
         }
     }
 
+    /// Adds a task to the To-Do list.
+    ///
+    /// # Arguments
+    ///
+    /// * `task` - The task to add.
     pub fn add_task(&mut self, task: Task) {
         if task.finished {
             self.done.push(task);
@@ -39,6 +55,25 @@ impl ToDo {
         }
     }
 
+    /// Constructs a [`CategoryList`] from a list of tasks, applying the 
+    /// provided filter function and checking for selected items.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `tasks`: A vector of references to `Vec<Task>` 
+    ///         containing the tasks to be categorized.
+    /// * `f`: A function that takes a reference to a `Task` 
+    ///         and returns a reference to a `Vec<String>`,
+    ///         representing the category (e.g., projects, 
+    ///         contexts, hashtags).
+    /// * `selected`: A reference to a `BTreeSet<String>` 
+    ///         containing the selected categories.
+    /// 
+    /// # Returns
+    /// 
+    /// A [`CategoryList`] containing the categorized items along with 
+    /// a boolean indicating whether each item is selected 
+    /// (contained in `selected`).
     fn get_btree<'a>(
         tasks: Vec<&'a Vec<Task>>,
         f: fn(&Task) -> &Vec<String>,

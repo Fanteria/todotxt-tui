@@ -6,6 +6,7 @@ mod layout;
 mod todo;
 mod utils;
 mod file_worker;
+mod ui;
 
 use crate::config::Config;
 use crate::todo::ToDo;

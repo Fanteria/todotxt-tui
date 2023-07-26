@@ -5,9 +5,12 @@ use todo_txt::Task;
 use tui::text::Span;
 use tui::widgets::ListItem;
 
+/// Represents a list of tasks, where each task is a tuple of `(usize, &'a Task)`.
+/// The `usize` value is the index of the task in the original list.
 pub struct TaskList<'a>(pub Vec<(usize, &'a Task)>);
 
 impl<'a> TaskList<'a> {
+    /// Returns the number of tasks in the list.
     pub fn len(&self) -> usize {
         self.0.len()
     }
