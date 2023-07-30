@@ -26,7 +26,8 @@ impl ToDo {
     ///
     /// # Arguments
     ///
-    /// * `use_done` - A boolean indicating whether to include completed tasks in the list.
+    /// * `use_done` - A boolean indicating whether to include
+    ///         completed tasks in the list.
     ///
     /// # Returns
     ///
@@ -55,24 +56,24 @@ impl ToDo {
         }
     }
 
-    /// Constructs a [`CategoryList`] from a list of tasks, applying the 
+    /// Constructs a [`CategoryList`] from a list of tasks, applying the
     /// provided filter function and checking for selected items.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * `tasks`: A vector of references to `Vec<Task>` 
+    ///
+    /// * `tasks`: A vector of references to `Vec<Task>`
     ///         containing the tasks to be categorized.
-    /// * `f`: A function that takes a reference to a `Task` 
+    /// * `f`: A function that takes a reference to a `Task`
     ///         and returns a reference to a `Vec<String>`,
-    ///         representing the category (e.g., projects, 
+    ///         representing the category (e.g., projects,
     ///         contexts, hashtags).
-    /// * `selected`: A reference to a `BTreeSet<String>` 
+    /// * `selected`: A reference to a `BTreeSet<String>`
     ///         containing the selected categories.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// A [`CategoryList`] containing the categorized items along with 
-    /// a boolean indicating whether each item is selected 
+    ///
+    /// A [`CategoryList`] containing the categorized items along with
+    /// a boolean indicating whether each item is selected
     /// (contained in `selected`).
     fn get_btree<'a>(
         tasks: Vec<&'a Vec<Task>>,
@@ -96,6 +97,23 @@ impl ToDo {
         )
     }
 
+    /// Constructs a [`CategoryList`] from the current `ToDo` instance,
+    /// applying the provided filter function and checking for selected
+    /// items based on the [`ToDo::use_done`] flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `f`: A function that takes a reference to a `Task`
+    ///         and returns a reference to a `Vec<String>`,
+    ///         representing the category (e.g., projects, contexts, hashtags).
+    /// * `selected`: A reference to a `BTreeSet<String>` containing
+    ///         the selected categories.
+    ///
+    /// # Returns
+    ///
+    /// A [`CategoryList`] containing the categorized items along
+    /// with a boolean indicating whether each item is selected
+    /// (contained in `selected`).
     fn get_btree_done_switch(
         &self,
         f: fn(&Task) -> &Vec<String>,
@@ -112,18 +130,56 @@ impl ToDo {
         )
     }
 
+    /// Returns a [`CategoryList`] of all projects available
+    /// in the current [`ToDo`] instance. If [`ToDo::use_done`] is enabled,
+    /// it includes projects from both [`ToDo::pending`] and [`ToDo::done`] lists.
+    ///
+    /// # Returns
+    ///
+    /// A [`CategoryList`] of projects along with a boolean indicating whether
+    /// each project is selected based on the applied filters.
     pub fn get_projects(&self) -> CategoryList {
         self.get_btree_done_switch(|t| &t.projects, &self.project_filters)
     }
 
+    /// Returns a [`CategoryList`] of all contexts available in the current [`ToDo`] instance.
+    /// If [`ToDo::use_done`] is enabled, it includes contexts
+    /// from both [`ToDo::pending`] and [`ToDo::done`] lists.
+    ///
+    /// # Returns
+    ///
+    /// A [`CategoryList`] of contexts along with a boolean indicating whether
+    /// each context is selected based on the applied filters.
     pub fn get_contexts(&self) -> CategoryList {
         self.get_btree_done_switch(|t| &t.contexts, &self.context_filters)
     }
 
+    /// Returns a [`CategoryList`] of all hashtags available in the current [`ToDo`] instance.
+    /// If [`ToDo::use_done`] is enabled, it includes hashtags from both [`ToDo::pending`]
+    /// and [`ToDo::done`] lists.
+    ///
+    /// # Returns
+    ///
+    /// A [`CategoryList`] of hashtags along with a boolean indicating whether each hashtag is selected
+    /// based on the applied filters.
     pub fn get_hashtags(&self) -> CategoryList {
         self.get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters)
     }
 
+    /// Retrieves tasks that match a given name for a specific category
+    /// (e.g., projects, contexts, hashtags).
+    ///
+    /// # Arguments
+    ///
+    /// * `tasks`: A vector of references to `Vec<Task>` containing
+    ///         the tasks to be searched.
+    /// * `name`: The name to search for within the category.
+    /// * `f`: A function that takes a reference to a `Task` and returns a reference
+    ///         to a `Vec<String>`, representing the category (e.g., projects, contexts, hashtags).
+    ///
+    /// # Returns
+    ///
+    /// A vector of references to the matching tasks.
     fn get_tasks<'a>(
         tasks: Vec<&'a Vec<Task>>,
         name: &str,
@@ -141,6 +197,14 @@ impl ToDo {
         vec
     }
 
+    /// Moves a task from one list to another based on the provided index.
+    ///
+    /// # Arguments
+    ///
+    /// * `from`: A mutable reference to the source list of tasks.
+    /// * `to`: A mutable reference to the destination list of tasks.
+    /// * `index`: The index of the task to be moved from the source list
+    ///         to the destination list.
     fn move_task(from: &mut Vec<Task>, to: &mut Vec<Task>, index: usize) {
         if from.len() <= index {
             return;
@@ -148,14 +212,37 @@ impl ToDo {
         to.push(from.remove(index))
     }
 
+    /// Moves a pending task to the done list based on the provided index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: The index of the pending task to be moved to the done list.
     pub fn move_pending_task(&mut self, index: usize) {
         Self::move_task(&mut self.pending, &mut self.done, index)
     }
 
+    /// Moves a done task to the pending list based on the provided index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index`: The index of the done task to be moved to the pending list.
     pub fn move_done_task(&mut self, index: usize) {
         Self::move_task(&mut self.done, &mut self.pending, index)
     }
 
+    /// Retrieves tasks that match a given name for a specific category
+    /// (e.g., projects, contexts, hashtags) based on the [`ToDo::use_done`] flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The name to search for within the category.
+    /// * `f`: A function that takes a reference to a `Task` and returns
+    ///         a reference to a `Vec<String>`,
+    ///         representing the category (e.g., projects, contexts, hashtags).
+    ///
+    /// # Returns
+    ///
+    /// A vector of references to the matching tasks.
     fn get_tasks_done_switch<'a>(
         &'a self,
         name: &str,
@@ -172,18 +259,64 @@ impl ToDo {
         )
     }
 
+    /// Retrieves tasks that match a given name for a specific category
+    /// (e.g., projects, contexts, hashtags) based on the [`ToDo::use_done`] flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The name to search for within the category.
+    ///
+    /// # Returns
+    ///
+    /// A vector of references to the matching tasks.
     pub fn get_project_tasks<'a>(&'a self, name: &str) -> Vec<&'a Task> {
         self.get_tasks_done_switch(name, |t| &t.projects)
     }
 
+    /// Retrieves tasks that match a given name for a specific category
+    /// (e.g., projects, contexts, hashtags) based on the `use_done` flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The name to search for within the category.
+    ///
+    /// # Returns
+    ///
+    /// A vector of references to the matching tasks.
     pub fn get_context_tasks<'a>(&'a self, name: &str) -> Vec<&'a Task> {
         self.get_tasks_done_switch(name, |t| &t.contexts)
     }
 
+    /// Retrieves tasks that match a given name for a specific category
+    /// (e.g., projects, contexts, hashtags) based on the [`ToDo::use_done`] flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `name`: The name to search for within the category.
+    ///
+    /// # Returns
+    ///
+    /// A vector of references to the matching tasks.
     pub fn get_hashtag_tasks<'a>(&'a self, name: &str) -> Vec<&'a Task> {
         self.get_tasks_done_switch(name, |t| &t.hashtags)
     }
 
+    /// Filters tasks based on the provided filters and returns a `TaskList`.
+    ///
+    /// # Arguments
+    ///
+    /// * `tasks`: A reference to a slice of `Task` instances to be filtered.
+    /// * `filters`: A reference to a slice of [`FilterData`] tuples containing 
+    ///             filter categories and functions. Each [`FilterData`] tuple 
+    ///             consists of a reference to a `BTreeSet<String>` representing
+    ///             the selected categories and a function that takes a reference 
+    ///             to a `Task` and returns a reference to a `Vec<String>`, 
+    ///             representing the category to be filtered (e.g., projects,
+    ///             contexts, hashtags).
+    ///
+    /// # Returns
+    ///
+    /// A `TaskList` containing the filtered tasks along with their respective indices.
     fn get_filtered<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
         TaskList(
             tasks
@@ -198,6 +331,14 @@ impl ToDo {
         )
     }
 
+    /// Toggles the filter for a given category by adding or removing 
+    /// it from the provided `filter_set`.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `filter_set`: A mutable reference to a `BTreeSet<String>` containing 
+    ///             the current selected filters.
+    /// * `filter`: The filter to toggle (add or remove) from the `filter_set`.
     pub fn toggle_filter(filter_set: &mut BTreeSet<String>, filter: &str) {
         let filter = String::from(filter);
         if !filter_set.insert(filter.clone()) {
@@ -205,6 +346,13 @@ impl ToDo {
         }
     }
 
+    /// Returns a filtered `TaskList` containing all pending tasks from 
+    /// the current `ToDo` instance based on the applied filters.
+    /// 
+    /// # Returns
+    /// 
+    /// A `TaskList` containing the filtered pending tasks along 
+    /// with their respective indices.
     pub fn get_pending_filtered(&self) -> TaskList {
         Self::get_filtered(
             &self.pending,
@@ -216,10 +364,24 @@ impl ToDo {
         )
     }
 
+    /// Returns a `TaskList` containing all pending tasks from 
+    /// the current `ToDo` instance.
+    /// 
+    /// # Returns
+    /// 
+    /// A `TaskList` containing all pending tasks along 
+    /// with their respective indices.
     pub fn get_pending_all(&self) -> TaskList {
         TaskList(self.pending.iter().enumerate().collect())
     }
 
+    /// Returns a filtered `TaskList` containing all done tasks from 
+    /// the current `ToDo` instance based on the applied filters.
+    /// 
+    /// # Returns
+    /// 
+    /// A `TaskList` containing the filtered done tasks along 
+    /// with their respective indices.
     pub fn get_done_filtered(&self) -> TaskList {
         Self::get_filtered(
             &self.done,
@@ -231,10 +393,27 @@ impl ToDo {
         )
     }
 
+    /// Returns a `TaskList` containing all done tasks from 
+    /// the current `ToDo` instance.
+    /// 
+    /// # Returns
+    /// 
+    /// A `TaskList` containing all done tasks along 
+    /// with their respective indices.
     pub fn get_done_all(&self) -> TaskList {
         TaskList(self.done.iter().enumerate().collect())
     }
 
+    /// Adds a new task to the `ToDo` instance.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `task`: The new task to be added as a string.
+    /// 
+    /// # Returns
+    /// 
+    /// An `Ok` result if the task was successfully added, or an `Err` containing 
+    /// a `todo_txt::Error` if there was a problem parsing the task.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         let task = Task::from_str(task)?;
         if task.finished {
@@ -245,10 +424,21 @@ impl ToDo {
         Ok(())
     }
 
+    /// Removes a pending task from the `ToDo` instance based 
+    /// on the provided index.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `index`: The index of the pending task to be removed.
     pub fn remove_pending_task(&mut self, index: usize) {
         self.pending.remove(index);
     }
 
+    /// Moves a pending task to the done list based on the provided index.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `index`: The index of the pending task to be moved to the done list.
     pub fn finish_task(&mut self, index: usize) {
         self.done.push(self.pending.remove(index));
     }
