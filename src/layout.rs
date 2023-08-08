@@ -21,23 +21,19 @@ use tui::{
 };
 
 pub const DEFAULT_LAYOUT: &str = r#"
-            [
-              Direction: Vertical,
-              Input: 3,
-              [
-                Direction:Horizontal,
-                Size: 50%,
-                List: 50%,
-                [ dIrEcTiOn: VeRtIcAl,
-                  Done,
-                  [ 
-                    Contexts,
-                    Projects,
-                  ],
-                ],
-              ],
-            ]
-        "#;
+[
+    Direction:Horizontal,
+    Size: 50%,
+    List: 50%,
+    [ dIrEcTiOn: VeRtIcAl,
+      Done,
+      [ 
+        Contexts,
+        Projects,
+      ],
+    ],
+]
+"#;
 
 pub struct Layout {
     root: Rc<RefCell<Container>>,

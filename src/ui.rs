@@ -10,11 +10,12 @@ use crossterm::{
 };
 use std::io;
 use std::io::Result as ioResult;
+use tui::layout::Constraint;
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::Rect,
+    layout::{Direction, Layout as tuiLayout, Rect},
     widgets::Paragraph,
-    Frame, Terminal,
+    Terminal,
 };
 
 #[derive(PartialEq, Eq)]
@@ -40,6 +41,15 @@ impl UI {
         }
     }
 
+    fn update_chunks(&mut self, main_chunk: Rect) {
+        let layout = tuiLayout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(3), Constraint::Min(1)])
+            .split(main_chunk);
+        self.input_chunk = layout[0];
+        self.layout.update_chunks(layout[1]);
+    }
+
     pub fn run(&mut self) -> ioResult<()> {
         // setup terminal
         enable_raw_mode()?;
@@ -51,7 +61,7 @@ impl UI {
 
         let mut terminal = Terminal::new(backend)?;
         terminal.hide_cursor()?;
-        self.layout.update_chunks(terminal.size()?);
+        self.update_chunks(terminal.size()?);
 
         self.main_loop(&mut terminal)?;
 
@@ -73,11 +83,14 @@ impl UI {
 
             match event::read()? {
                 Event::Resize(width, height) => {
-                    self.layout.update_chunks(Rect::new(0, 0, width, height));
+                    self.update_chunks(Rect::new(0, 0, width, height));
                 }
                 Event::Key(event) => match self.mode {
                     Mode::Input => match event.code {
-                        KeyCode::Enter => {}
+                        KeyCode::Enter => {
+                            self.input.clear();
+                            self.mode = Mode::Normal;
+                        }
                         KeyCode::Char(c) => {
                             self.input.push(c);
                         }
@@ -111,7 +124,7 @@ impl UI {
         Ok(())
     }
 
-    fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> ioResult<()>{
+    fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> ioResult<()> {
         terminal.draw(|f| {
             f.render_widget(
                 Paragraph::new(self.input.clone())
