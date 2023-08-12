@@ -17,7 +17,11 @@ pub struct StateCategories {
 }
 
 impl StateCategories {
-    pub fn new(fn_list: fn(&ToDo) -> CategoryList, fn_toggle: fn(&mut ToDo, &str), data: RCToDo) -> Self {
+    pub fn new(
+        fn_list: fn(&ToDo) -> CategoryList,
+        fn_toggle: fn(&mut ToDo, &str),
+        data: RCToDo,
+    ) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
@@ -35,7 +39,11 @@ impl State for StateCategories {
     fn handle_key(&mut self, event: &KeyEvent) {
         match event.code {
             KeyCode::Char('j') => {
-                let act = self.state.selected().unwrap_or(0);               if (self.fn_list)(&self.data.borrow()).len() > act {
+                let act = match self.state.selected() {
+                    Some(a) => a + 1,
+                    None => 0,
+                };
+                if (self.fn_list)(&self.data.borrow()).len() > act {
                     self.state.select(Some(act));
                 }
             }

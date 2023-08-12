@@ -53,6 +53,26 @@ impl State for StateList {
                     self.state.select(Some(act - 1));
                 }
             }
+            KeyCode::Char('U') => {
+                log::info!("Swap task up");
+                if let Some(act) = self.state.selected() {
+                    if act > 0 {
+                        self.data.borrow_mut().swap_pending_tasks(act, act - 1);
+                        self.state.select(Some(act - 1));
+                    }
+                };
+            }
+            KeyCode::Char('D') => {
+                log::info!("Swap task down");
+                if let Some(act) = self.state.selected() {
+                    let act = act + 1;
+                    let len = { self.data.borrow().pending.len() }; // TODO fix this
+                    if act < len {
+                        self.data.borrow_mut().swap_pending_tasks(act, act - 1);
+                        self.state.select(Some(act));
+                    }
+                };
+            }
             KeyCode::Char('x') => {
                 if let Some(i) = self.state.selected() {
                     self.data.borrow_mut().remove_pending_task(i);

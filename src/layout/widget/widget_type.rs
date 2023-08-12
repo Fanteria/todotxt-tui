@@ -39,7 +39,7 @@ impl FromStr for WidgetType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use WidgetType::*;
         match s.to_lowercase().as_str() {
-            "input" => Ok(Input),
+            "input" => Ok(Input), // TODO can be deleted
             "list" => Ok(List),
             "done" => Ok(Done),
             "projects" => Ok(Project),

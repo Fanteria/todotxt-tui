@@ -438,6 +438,14 @@ impl ToDo {
     pub fn finish_task(&mut self, index: usize) {
         self.done.push(self.pending.remove(index));
     }
+
+    pub fn swap_pending_tasks(&mut self, from: usize, to: usize) {
+        self.pending.swap(from, to);
+    }
+
+    pub fn swap_done_tasks(&mut self, from: usize, to: usize) {
+        self.done.swap(from, to);
+    }
 }
 
 #[cfg(test)]
