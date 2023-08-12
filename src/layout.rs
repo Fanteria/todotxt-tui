@@ -193,7 +193,7 @@ impl Layout {
                                 let direction = &mut container.last_mut().unwrap().0;
                                 *direction = Direction::Horizontal;
                             }
-                            _ => { /* TODO error state */ }
+                            _ => return Err(ErrorToDo::new(ErrorType::ParseInvalidDirection, "")),
                         },
                         "size" => {
                             container.last_mut().unwrap().1 = Self::value_from_string(&string)?;
@@ -291,7 +291,10 @@ impl Layout {
     pub fn cursor_visible(&self) -> bool {
         match &self.actual.borrow().actual_item() {
             Item::Widget(w) => w.widget.cursor_visible(),
-            Item::Container(_) => false, // TODO return Error
+            Item::Container(_) => {
+                log::error!("Something went wrong, actual item is container.");
+                false
+            }
         }
     }
 
@@ -307,7 +310,7 @@ impl Layout {
         let mut act = self.actual.borrow_mut();
         match &mut act.actual_item_mut() {
             Item::Widget(w) => w.widget.handle_key(event),
-            Item::Container(_) => {} // TODO return Error
+            Item::Container(_) => log::error!("Something went wrong, actual item is container."),
         }
     }
 
@@ -393,10 +396,7 @@ mod tests {
             Direction: ERROR,
         "#;
 
-        Layout::from_str(
-            str_layout,
-            Rc::new(RefCell::new(ToDo::new(false))),
-        )?;
+        Layout::from_str(str_layout, Rc::new(RefCell::new(ToDo::new(false))))?;
         Ok(())
     }
 }

@@ -34,7 +34,7 @@ impl FileWorker {
             }
             match Task::from_str(line) {
                 Ok(task) => todo.add_task(task),
-                Err(_) => {} // TODO log or something
+                Err(e) => log::warn!("Task cannot be load due {e}: {line}"),
             }
         }
         Ok(())

@@ -20,3 +20,5 @@ Cargo.lock
 
 # temporary testing files
 resources/test/tmp
+
+log.log

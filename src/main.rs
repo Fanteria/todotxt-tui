@@ -18,6 +18,11 @@ use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 
+use log::LevelFilter;
+use log4rs::append::file::FileAppender;
+use log4rs::encode::pattern::PatternEncoder;
+use log4rs::config::{Appender, Config as LogConfig, Root};
+
 #[macro_use]
 extern crate enum_dispatch;
 
@@ -30,6 +35,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     let file_worker = FileWorker::new(CONFIG.todo_path.clone(), CONFIG.archive_path.clone());
     file_worker.load(&mut todo)?;
     let todo = Rc::new(RefCell::new(todo));
+
+    // TODO solve log file by better way
+    let logfile = FileAppender::builder()
+        .encoder(Box::new(PatternEncoder::new("{d} [{h({l})}] {M}: {m}{n}")))
+        .build("log.log")?;
+
+    let config = LogConfig::builder()
+        .appender(Appender::builder().build("logfile", Box::new(logfile)))
+        .build(Root::builder()
+                   .appender("logfile")
+                   .build(LevelFilter::Trace))?;
+
+    log4rs::init_config(config)?;
 
     let mut ui = UI::new(Layout::from_str(DEFAULT_LAYOUT, todo).unwrap());
     ui.run()?;

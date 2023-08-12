@@ -3,14 +3,14 @@ name = "todo-tui"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 tui = "0.19"
+log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 crossterm = "0.25"
-todo-txt = "3.0.1"
+todo-txt = "3.1"
 toml = "0.7"
 lazy_static = "1.4"
-enum_dispatch = "0.3.11"
+enum_dispatch = "0.3"
 chrono = "0.4"
+log4rs = "1.2"

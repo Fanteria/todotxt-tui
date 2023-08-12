@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use log::error;
 
 use crate::error::{ErrorToDo, ErrorType, ToDoRes};
 
@@ -12,6 +13,8 @@ use tui::{
 };
 
 pub type RcCon = Rc<RefCell<Container>>;
+
+const MUST_BE_WIDGET: &str = "";
 
 pub enum Item {
     Container(RcCon),
@@ -151,14 +154,18 @@ impl Container {
     pub fn focus(&mut self) {
         match self.actual_item_mut() {
             Item::Widget(w) => w.widget.focus(),
-            Item::Container(_) => {} // TODO error, actual must be widget
+            Item::Container(_) => {
+                error!("{MUST_BE_WIDGET}");
+            }
         }
     }
 
     pub fn unfocus(&mut self) {
         match self.actual_item_mut() {
             Item::Widget(w) => w.widget.unfocus(),
-            Item::Container(_) => {} // TODO error, actual must be widget
+            Item::Container(_) => {
+                error!("{MUST_BE_WIDGET}");
+            }
         }
     }
 
