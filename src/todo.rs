@@ -8,7 +8,7 @@ use std::str::FromStr;
 use todo_txt::Task;
 
 /// Type alias for a tuple representing filter data.
-type FilterData<'a> = (&'a BTreeSet<String>, fn(&'a Task) -> &'a Vec<String>);
+type FilterData<'a> = (&'a BTreeSet<String>, fn(&'a Task) -> &'a [String]);
 
 /// Represents a To-Do list.
 #[derive(Default)]
@@ -77,7 +77,7 @@ impl ToDo {
     /// (contained in `selected`).
     fn get_btree<'a>(
         tasks: Vec<&'a Vec<Task>>,
-        f: fn(&Task) -> &Vec<String>,
+        f: fn(&Task) -> &[String],
         selected: &BTreeSet<String>,
     ) -> CategoryList<'a> {
         let mut btree = BTreeSet::<&String>::new();
@@ -116,7 +116,7 @@ impl ToDo {
     /// (contained in `selected`).
     fn get_btree_done_switch(
         &self,
-        f: fn(&Task) -> &Vec<String>,
+        f: fn(&Task) -> &[String],
         selected: &BTreeSet<String>,
     ) -> CategoryList {
         Self::get_btree(
@@ -139,7 +139,7 @@ impl ToDo {
     /// A [`CategoryList`] of projects along with a boolean indicating whether
     /// each project is selected based on the applied filters.
     pub fn get_projects(&self) -> CategoryList {
-        self.get_btree_done_switch(|t| &t.projects, &self.project_filters)
+        self.get_btree_done_switch(|t| t.projects(), &self.project_filters)
     }
 
     /// Returns a [`CategoryList`] of all contexts available in the current [`ToDo`] instance.
@@ -151,7 +151,7 @@ impl ToDo {
     /// A [`CategoryList`] of contexts along with a boolean indicating whether
     /// each context is selected based on the applied filters.
     pub fn get_contexts(&self) -> CategoryList {
-        self.get_btree_done_switch(|t| &t.contexts, &self.context_filters)
+        self.get_btree_done_switch(|t| t.contexts(), &self.context_filters)
     }
 
     /// Returns a [`CategoryList`] of all hashtags available in the current [`ToDo`] instance.
@@ -183,7 +183,7 @@ impl ToDo {
     fn get_tasks<'a>(
         tasks: Vec<&'a Vec<Task>>,
         name: &str,
-        f: fn(&Task) -> &Vec<String>,
+        f: fn(&Task) -> &[String],
     ) -> Vec<&'a Task> {
         let mut vec = Vec::new();
         tasks.iter().for_each(|list| {
@@ -243,11 +243,7 @@ impl ToDo {
     /// # Returns
     ///
     /// A vector of references to the matching tasks.
-    fn get_tasks_done_switch<'a>(
-        &'a self,
-        name: &str,
-        f: fn(&Task) -> &Vec<String>,
-    ) -> Vec<&'a Task> {
+    fn get_tasks_done_switch<'a>(&'a self, name: &str, f: fn(&Task) -> &[String]) -> Vec<&'a Task> {
         Self::get_tasks(
             if self.use_done {
                 vec![&self.pending, &self.done]
@@ -270,7 +266,7 @@ impl ToDo {
     ///
     /// A vector of references to the matching tasks.
     pub fn get_project_tasks<'a>(&'a self, name: &str) -> Vec<&'a Task> {
-        self.get_tasks_done_switch(name, |t| &t.projects)
+        self.get_tasks_done_switch(name, |t| t.projects())
     }
 
     /// Retrieves tasks that match a given name for a specific category
@@ -284,7 +280,7 @@ impl ToDo {
     ///
     /// A vector of references to the matching tasks.
     pub fn get_context_tasks<'a>(&'a self, name: &str) -> Vec<&'a Task> {
-        self.get_tasks_done_switch(name, |t| &t.contexts)
+        self.get_tasks_done_switch(name, |t| t.contexts())
     }
 
     /// Retrieves tasks that match a given name for a specific category
@@ -306,11 +302,11 @@ impl ToDo {
     /// # Arguments
     ///
     /// * `tasks`: A reference to a slice of `Task` instances to be filtered.
-    /// * `filters`: A reference to a slice of [`FilterData`] tuples containing 
-    ///             filter categories and functions. Each [`FilterData`] tuple 
+    /// * `filters`: A reference to a slice of [`FilterData`] tuples containing
+    ///             filter categories and functions. Each [`FilterData`] tuple
     ///             consists of a reference to a `BTreeSet<String>` representing
-    ///             the selected categories and a function that takes a reference 
-    ///             to a `Task` and returns a reference to a `Vec<String>`, 
+    ///             the selected categories and a function that takes a reference
+    ///             to a `Task` and returns a reference to a `Vec<String>`,
     ///             representing the category to be filtered (e.g., projects,
     ///             contexts, hashtags).
     ///
@@ -331,12 +327,12 @@ impl ToDo {
         )
     }
 
-    /// Toggles the filter for a given category by adding or removing 
+    /// Toggles the filter for a given category by adding or removing
     /// it from the provided `filter_set`.
-    /// 
+    ///
     /// # Arguments
-    /// 
-    /// * `filter_set`: A mutable reference to a `BTreeSet<String>` containing 
+    ///
+    /// * `filter_set`: A mutable reference to a `BTreeSet<String>` containing
     ///             the current selected filters.
     /// * `filter`: The filter to toggle (add or remove) from the `filter_set`.
     pub fn toggle_filter(filter_set: &mut BTreeSet<String>, filter: &str) {
@@ -346,73 +342,73 @@ impl ToDo {
         }
     }
 
-    /// Returns a filtered `TaskList` containing all pending tasks from 
+    /// Returns a filtered `TaskList` containing all pending tasks from
     /// the current `ToDo` instance based on the applied filters.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// A `TaskList` containing the filtered pending tasks along 
+    ///
+    /// A `TaskList` containing the filtered pending tasks along
     /// with their respective indices.
     pub fn get_pending_filtered(&self) -> TaskList {
         Self::get_filtered(
             &self.pending,
             &[
-                (&self.project_filters, |t| &t.projects),
-                (&self.context_filters, |t| &t.contexts),
+                (&self.project_filters, |t| t.projects()),
+                (&self.context_filters, |t| t.contexts()),
                 (&self.hashtag_filters, |t| &t.hashtags),
             ],
         )
     }
 
-    /// Returns a `TaskList` containing all pending tasks from 
+    /// Returns a `TaskList` containing all pending tasks from
     /// the current `ToDo` instance.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// A `TaskList` containing all pending tasks along 
+    ///
+    /// A `TaskList` containing all pending tasks along
     /// with their respective indices.
     pub fn get_pending_all(&self) -> TaskList {
         TaskList(self.pending.iter().enumerate().collect())
     }
 
-    /// Returns a filtered `TaskList` containing all done tasks from 
+    /// Returns a filtered `TaskList` containing all done tasks from
     /// the current `ToDo` instance based on the applied filters.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// A `TaskList` containing the filtered done tasks along 
+    ///
+    /// A `TaskList` containing the filtered done tasks along
     /// with their respective indices.
     pub fn get_done_filtered(&self) -> TaskList {
         Self::get_filtered(
             &self.done,
             &[
-                (&self.project_filters, |t| &t.projects),
-                (&self.context_filters, |t| &t.contexts),
+                (&self.project_filters, |t| t.projects()),
+                (&self.context_filters, |t| t.contexts()),
                 (&self.hashtag_filters, |t| &t.hashtags),
             ],
         )
     }
 
-    /// Returns a `TaskList` containing all done tasks from 
+    /// Returns a `TaskList` containing all done tasks from
     /// the current `ToDo` instance.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// A `TaskList` containing all done tasks along 
+    ///
+    /// A `TaskList` containing all done tasks along
     /// with their respective indices.
     pub fn get_done_all(&self) -> TaskList {
         TaskList(self.done.iter().enumerate().collect())
     }
 
     /// Adds a new task to the `ToDo` instance.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `task`: The new task to be added as a string.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// An `Ok` result if the task was successfully added, or an `Err` containing 
+    ///
+    /// An `Ok` result if the task was successfully added, or an `Err` containing
     /// a `todo_txt::Error` if there was a problem parsing the task.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         let task = Task::from_str(task)?;
@@ -424,20 +420,20 @@ impl ToDo {
         Ok(())
     }
 
-    /// Removes a pending task from the `ToDo` instance based 
+    /// Removes a pending task from the `ToDo` instance based
     /// on the provided index.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index`: The index of the pending task to be removed.
     pub fn remove_pending_task(&mut self, index: usize) {
         self.pending.remove(index);
     }
 
     /// Moves a pending task to the done list based on the provided index.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index`: The index of the pending task to be moved to the done list.
     pub fn finish_task(&mut self, index: usize) {
         self.done.push(self.pending.remove(index));
@@ -451,51 +447,10 @@ mod tests {
     use std::error::Error;
     use todo_txt::Priority;
 
-    fn task_pch(
-        subject: &str,
-        projects: Vec<&str>,
-        contexts: Vec<&str>,
-        hashtags: Vec<&str>,
-    ) -> Task {
-        let mut task = task_pc(subject, projects, contexts);
-        if !hashtags.is_empty() {
-            task.subject += " #";
-            task.subject += &hashtags.join(" #");
-            task.hashtags = hashtags.iter().map(|h| String::from(*h)).collect();
-        }
-        task
-    }
-
-    fn task_pc(subject: &str, projects: Vec<&str>, contexts: Vec<&str>) -> Task {
-        let mut task = task_p(subject, projects);
-        if !contexts.is_empty() {
-            task.subject += " @";
-            task.subject += &contexts.join(" @");
-            task.contexts = contexts.iter().map(|c| String::from(*c)).collect();
-        }
-        task
-    }
-
-    fn task_p(subject: &str, projects: Vec<&str>) -> Task {
-        let mut task = Task::default();
-        task.subject = String::from(subject);
-        if !projects.is_empty() {
-            task.subject += " +";
-            task.subject += &projects.join(" +");
-            task.projects = projects.iter().map(|p| String::from(*p)).collect();
-        }
-        task
-    }
-
     fn example_todo(use_done: bool) -> ToDo {
         let mut todo = ToDo::new(use_done);
 
-        let mut task = task_pch(
-            "measure space for 1",
-            vec!["project1"],
-            vec!["context1"],
-            vec!["hashtag1"],
-        );
+        let mut task = Task::from_str("measure space for 1 +project1 @context1 #hashtag1").unwrap();
         task.finished = true;
         task.priority = Priority::from(0);
         task.create_date = Some(NaiveDate::from_ymd_opt(2023, 4, 30).unwrap());
@@ -503,52 +458,27 @@ mod tests {
         task.due_date = Some(NaiveDate::from_ymd_opt(2023, 6, 30).unwrap());
         todo.add_task(task);
 
-        let mut task = task_pch(
-            "measure space for 2",
-            vec!["project2"],
-            vec!["context2"],
-            vec![],
-        );
+        let mut task = Task::from_str("measure space for 2 +project2 @context2").unwrap();
         task.create_date = Some(NaiveDate::from_ymd_opt(2023, 4, 30).unwrap());
         task.due_date = Some(NaiveDate::from_ymd_opt(2023, 6, 30).unwrap());
         todo.add_task(task);
 
-        let mut task = task_pch(
-            "measure space for 3",
-            vec!["project3"],
-            vec!["context3"],
-            vec![],
-        );
+        let mut task = Task::from_str("measure space for 3 +project3 @context3").unwrap();
         task.priority = Priority::from(2);
         task.create_date = Some(NaiveDate::from_ymd_opt(2023, 4, 30).unwrap());
         task.due_date = Some(NaiveDate::from_ymd_opt(2023, 6, 30).unwrap());
         todo.add_task(task);
 
-        let mut task = task_pch(
-            "measure space for",
-            vec!["project2"],
-            vec!["context3"],
-            vec!["hashtag1"],
-        );
+        let mut task = Task::from_str("measure space for +project2 @context3 #hashtag1").unwrap();
         task.due_date = Some(NaiveDate::from_ymd_opt(2023, 6, 30).unwrap());
         todo.add_task(task);
 
-        let mut task = task_pch(
-            "measure space for 5",
-            vec!["project3"],
-            vec!["context3"],
-            vec!["hashtag2"],
-        );
+        let mut task = Task::from_str("measure space for 5 +project3 @context3 #hashtag2").unwrap();
         task.finished = true;
         task.due_date = Some(NaiveDate::from_ymd_opt(2023, 6, 30).unwrap());
         todo.add_task(task);
 
-        let mut task = task_pch(
-            "measure space for 6",
-            vec!["project3"],
-            vec!["context2"],
-            vec!["hashtag2"],
-        );
+        let mut task = Task::from_str("measure space for 6 +project3 @context2 #hashtag2").unwrap();
         task.due_date = Some(NaiveDate::from_ymd_opt(2023, 6, 30).unwrap());
         todo.add_task(task);
 
@@ -568,8 +498,8 @@ mod tests {
         assert!(todo.done[0].finished);
         assert_eq!(todo.done[0].threshold_date, None);
         assert!(todo.done[0].due_date.is_some());
-        assert_eq!(todo.done[0].contexts.len(), 1);
-        assert_eq!(todo.done[0].projects.len(), 1);
+        assert_eq!(todo.done[0].contexts().len(), 1);
+        assert_eq!(todo.done[0].projects().len(), 1);
         assert_eq!(todo.done[0].hashtags.len(), 1);
 
         println!("{:#?}", todo.pending[0]);
@@ -580,8 +510,8 @@ mod tests {
         assert!(!todo.pending[0].finished);
         assert_eq!(todo.pending[0].threshold_date, None);
         assert!(todo.pending[0].due_date.is_some());
-        assert_eq!(todo.pending[0].contexts.len(), 1);
-        assert_eq!(todo.pending[0].projects.len(), 1);
+        assert_eq!(todo.pending[0].contexts().len(), 1);
+        assert_eq!(todo.pending[0].projects().len(), 1);
         assert_eq!(todo.pending[0].hashtags.len(), 0);
 
         assert_eq!(todo.pending[1].priority, 2);
@@ -590,8 +520,8 @@ mod tests {
         assert!(!todo.pending[1].finished);
         assert_eq!(todo.pending[1].threshold_date, None);
         assert!(todo.pending[1].due_date.is_some());
-        assert_eq!(todo.pending[1].contexts.len(), 1);
-        assert_eq!(todo.pending[1].projects.len(), 1);
+        assert_eq!(todo.pending[1].contexts().len(), 1);
+        assert_eq!(todo.pending[1].projects().len(), 1);
         assert_eq!(todo.pending[1].hashtags.len(), 0);
     }
 
@@ -672,43 +602,18 @@ mod tests {
     #[test]
     fn test_filtering() -> Result<(), Box<dyn Error>> {
         let mut todo = ToDo::new(false);
-        todo.add_task(task_p("task 1", vec![]));
-        todo.add_task(task_p("task 2", vec!["project1"]));
-        todo.add_task(task_p("task 3", vec!["project1", "project2"]));
-        todo.add_task(task_p("task 4", vec!["project1", "project3"]));
-        todo.add_task(task_p("task 5", vec!["project1", "project2", "project3"]));
-        todo.add_task(task_pch(
-            "task 6",
-            vec!["project3"],
-            vec!["context2"],
-            vec!["hashtag2", "hashtag1"],
-        ));
-        todo.add_task(task_pch(
-            "task 7",
-            vec!["project2"],
-            vec!["context1"],
-            vec!["hashtag1", "hashtag2"],
-        ));
-        todo.add_task(task_pc("task 8", vec!["project2"], vec!["context2"]));
-        todo.add_task(task_pc("task 9", vec!["projects3"], vec!["context3"]));
-        todo.add_task(task_pch(
-            "task 10",
-            vec!["project2"],
-            vec!["context3"],
-            vec!["hashtag1", "hashtag2"],
-        ));
-        todo.add_task(task_pch(
-            "task 11",
-            vec!["project3"],
-            vec!["context3"],
-            vec!["hashtag2", "hashtag3"],
-        ));
-        todo.add_task(task_pch(
-            "task 12",
-            vec!["project3"],
-            vec!["context2"],
-            vec!["hashtag2"],
-        ));
+        todo.add_task(Task::from_str("task 1").unwrap());
+        todo.add_task(Task::from_str("task 2 +project1").unwrap());
+        todo.add_task(Task::from_str("task 3 +project1 +project2").unwrap());
+        todo.add_task(Task::from_str("task 4 +project1 +project3").unwrap());
+        todo.add_task(Task::from_str("task 5 +project1 +project2 +project3").unwrap());
+        todo.add_task(Task::from_str("task 6 +project3 @context2 #hashtag2 #hashtag1").unwrap());
+        todo.add_task(Task::from_str("task 7 +project2 @context1 #hashtag1 #hashtag2").unwrap());
+        todo.add_task(Task::from_str("task 8 +project2 @context2").unwrap());
+        todo.add_task(Task::from_str("task 9 +projects3 @context3").unwrap());
+        todo.add_task(Task::from_str("task 10 +project2 @context3 #hashtag1 #hashtag2").unwrap());
+        todo.add_task(Task::from_str("task 11 +project3 @context3 #hashtag2 #hashtag3").unwrap());
+        todo.add_task(Task::from_str("task 12 +project3 @context2 #hashtag2").unwrap());
 
         let filtered = todo.get_pending_filtered();
         assert_eq!(filtered.len(), 12);

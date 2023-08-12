@@ -49,7 +49,7 @@ impl FileWorker {
         }
     }
 
-    fn save_tasks<W: Write>(writer: &mut W, tasks: &Vec<Task>) -> ioResult<()> {
+    fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> ioResult<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
             writer.write_all((task.to_string() + "\n").as_bytes())?;
