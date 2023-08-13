@@ -5,10 +5,20 @@ pub use self::{category_list::CategoryList, task_list::TaskList};
 use std::collections::btree_set::BTreeSet;
 use std::convert::From;
 use std::str::FromStr;
+use chrono::Utc;
 use todo_txt::Task;
 
 /// Type alias for a tuple representing filter data.
 type FilterData<'a> = (&'a BTreeSet<String>, fn(&'a Task) -> &'a [String]);
+
+use ToDoData::Done;
+use ToDoData::Pending;
+
+#[derive(Clone, Copy)]
+pub enum ToDoData {
+    Pending,
+    Done,
+}
 
 /// Represents a To-Do list.
 #[derive(Default)]
@@ -16,6 +26,7 @@ pub struct ToDo {
     pub pending: Vec<Task>,
     pub done: Vec<Task>,
     use_done: bool,
+    active: Option<(ToDoData, usize)>,
     pub project_filters: BTreeSet<String>,
     pub context_filters: BTreeSet<String>,
     pub hashtag_filters: BTreeSet<String>,
@@ -37,9 +48,24 @@ impl ToDo {
             pending: Vec::new(),
             done: Vec::new(),
             use_done,
+            active: None,
             project_filters: BTreeSet::new(),
             context_filters: BTreeSet::new(),
             hashtag_filters: BTreeSet::new(),
+        }
+    }
+
+    fn get_data(&self, data: ToDoData) -> &Vec<Task> {
+        match data {
+            Pending => &self.pending,
+            Done => &self.done,
+        }
+    }
+
+    fn get_data_mut(&mut self, data: ToDoData) -> &mut Vec<Task> {
+        match data {
+            Pending => &mut self.pending,
+            Done => &mut self.done,
         }
     }
 
@@ -205,11 +231,18 @@ impl ToDo {
     /// * `to`: A mutable reference to the destination list of tasks.
     /// * `index`: The index of the task to be moved from the source list
     ///         to the destination list.
-    fn move_task(from: &mut Vec<Task>, to: &mut Vec<Task>, index: usize) {
+    fn move_task_logic(from: &mut Vec<Task>, to: &mut Vec<Task>, index: usize) {
         if from.len() <= index {
             return;
         }
         to.push(from.remove(index))
+    }
+
+    pub fn move_task(&mut self, data: ToDoData, index: usize) {
+        match data {
+            Pending => Self::move_task_logic(&mut self.pending, &mut self.done, index),
+            Done => Self::move_task_logic(&mut self.done, &mut self.pending, index),
+        };
     }
 
     /// Moves a pending task to the done list based on the provided index.
@@ -218,7 +251,7 @@ impl ToDo {
     ///
     /// * `index`: The index of the pending task to be moved to the done list.
     pub fn move_pending_task(&mut self, index: usize) {
-        Self::move_task(&mut self.pending, &mut self.done, index)
+        Self::move_task_logic(&mut self.pending, &mut self.done, index)
     }
 
     /// Moves a done task to the pending list based on the provided index.
@@ -227,7 +260,7 @@ impl ToDo {
     ///
     /// * `index`: The index of the done task to be moved to the pending list.
     pub fn move_done_task(&mut self, index: usize) {
-        Self::move_task(&mut self.done, &mut self.pending, index)
+        Self::move_task_logic(&mut self.done, &mut self.pending, index)
     }
 
     /// Retrieves tasks that match a given name for a specific category
@@ -411,7 +444,10 @@ impl ToDo {
     /// An `Ok` result if the task was successfully added, or an `Err` containing
     /// a `todo_txt::Error` if there was a problem parsing the task.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
-        let task = Task::from_str(task)?;
+        let mut task = Task::from_str(task)?;
+        if task.create_date.is_none() {
+            task.create_date = Some(Utc::now().naive_utc().date());
+        }
         if task.finished {
             self.done.push(task);
         } else {
@@ -430,21 +466,28 @@ impl ToDo {
         self.pending.remove(index);
     }
 
-    /// Moves a pending task to the done list based on the provided index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index`: The index of the pending task to be moved to the done list.
-    pub fn finish_task(&mut self, index: usize) {
-        self.done.push(self.pending.remove(index));
+    pub fn remove_task(&mut self, data: ToDoData, index: usize) {
+        self.get_data_mut(data).remove(index);
     }
 
-    pub fn swap_pending_tasks(&mut self, from: usize, to: usize) {
-        self.pending.swap(from, to);
+    pub fn swap_tasks(&mut self, data: ToDoData, from: usize, to: usize) {
+        self.get_data_mut(data).swap(from, to);
+        // TODO index out of range
     }
 
-    pub fn swap_done_tasks(&mut self, from: usize, to: usize) {
-        self.done.swap(from, to);
+    pub fn set_active(&mut self, data: ToDoData, index: usize) {
+        self.active = Some((data, index));
+    }
+
+    pub fn get_active(&self) -> Option<&Task> {
+        match self.active {
+            Some((data, index)) => Some(&self.get_data(data)[index]),
+            None => None,
+        }
+    }
+
+    pub fn len(&self, data: ToDoData) -> usize {
+        self.get_data(data).len()
     }
 }
 

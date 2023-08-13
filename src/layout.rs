@@ -22,10 +22,13 @@ use tui::{
 
 pub const DEFAULT_LAYOUT: &str = r#"
 [
-    Direction:Horizontal,
+    Direction: Horizontal,
     Size: 50%,
-    List: 50%,
-    [ dIrEcTiOn: VeRtIcAl,
+    [
+        List: 50%,
+        Preview,
+    ],
+    [ Direction: Vertical,
       Done,
       [ 
         Contexts,

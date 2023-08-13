@@ -1,8 +1,9 @@
+use super::state_preview::StatePreview;
 use super::{
     state_categories::StateCategories, state_input::StateInput, state_list::StateList,
     widget_type::WidgetType,
 };
-use crate::todo::{CategoryList, ToDo};
+use crate::todo::{CategoryList, ToDo, ToDoData};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -13,6 +14,7 @@ pub enum WidgetState {
     Input(StateInput),
     List(StateList),
     Category(StateCategories),
+    Preview(StatePreview),
 }
 
 impl WidgetState {
@@ -30,11 +32,13 @@ impl WidgetState {
             WidgetType::List => WidgetState::List(StateList::new(
                 |todo| todo.get_pending_filtered(),
                 |todo, i| todo.move_pending_task(i),
+                ToDoData::Pending,
                 data,
             )),
             WidgetType::Done => WidgetState::List(StateList::new(
                 |todo| todo.get_done_filtered(),
                 |todo, i| todo.move_done_task(i),
+                ToDoData::Done,
                 data,
             )),
             WidgetType::Project => WidgetState::new_category(
@@ -52,6 +56,7 @@ impl WidgetState {
                 |todo, category| ToDo::toggle_filter(&mut todo.hashtag_filters, category),
                 data,
             ),
+            WidgetType::Preview => WidgetState::Preview(StatePreview::new("Pending: {n}   Done: {N}\nSubject: {s}\nPriority: {p}\nCreate date: {c}", data)),
         }
     }
 }

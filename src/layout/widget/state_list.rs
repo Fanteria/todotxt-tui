@@ -1,5 +1,5 @@
 use super::{widget_state::RCToDo, widget_trait::State, Widget};
-use crate::todo::{TaskList, ToDo};
+use crate::todo::{TaskList, ToDo, ToDoData};
 use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
@@ -12,6 +12,7 @@ pub struct StateList {
     state: ListState,
     fn_data: fn(&ToDo) -> TaskList,
     fn_move: fn(&mut ToDo, usize),
+    data_type: ToDoData,
     data: RCToDo,
     focus: bool,
 }
@@ -20,6 +21,7 @@ impl StateList {
     pub fn new(
         fn_data: fn(&ToDo) -> TaskList,
         fn_move: fn(&mut ToDo, usize),
+        data_type: ToDoData,
         data: RCToDo,
     ) -> Self {
         let mut state = ListState::default();
@@ -29,6 +31,7 @@ impl StateList {
             state,
             fn_data,
             fn_move,
+            data_type,
             data,
             focus: false,
         }
@@ -57,7 +60,9 @@ impl State for StateList {
                 log::info!("Swap task up");
                 if let Some(act) = self.state.selected() {
                     if act > 0 {
-                        self.data.borrow_mut().swap_pending_tasks(act, act - 1);
+                        self.data
+                            .borrow_mut()
+                            .swap_tasks(self.data_type, act, act - 1);
                         self.state.select(Some(act - 1));
                     }
                 };
@@ -66,24 +71,48 @@ impl State for StateList {
                 log::info!("Swap task down");
                 if let Some(act) = self.state.selected() {
                     let act = act + 1;
-                    let len = { self.data.borrow().pending.len() }; // TODO fix this
+                    let len = match &self.data_type {
+                        ToDoData::Pending => self.data.borrow().pending.len(),
+                        ToDoData::Done => self.data.borrow().done.len(),
+                    };
                     if act < len {
-                        self.data.borrow_mut().swap_pending_tasks(act, act - 1);
+                        self.data
+                            .borrow_mut()
+                            .swap_tasks(self.data_type, act, act - 1);
                         self.state.select(Some(act));
                     }
                 };
             }
             KeyCode::Char('x') => {
                 if let Some(i) = self.state.selected() {
-                    self.data.borrow_mut().remove_pending_task(i);
+                    log::info!("Remove task with index {i}.");
+                    self.data.borrow_mut().remove_task(self.data_type, i);
+                    let len = match &self.data_type {
+                        ToDoData::Pending => self.data.borrow().pending.len(),
+                        ToDoData::Done => self.data.borrow().done.len(),
+                    };
+                    if len <= i {
+                        self.state.select(Some(len - 1));
+                    }
                 }
-                // TODO panic if there are no tasks
             }
             KeyCode::Char('d') => {
                 if let Some(i) = self.state.selected() {
-                    (self.fn_move)(&mut self.data.borrow_mut(), i)
+                    log::info!("Move task with index {i}.");
+                    (self.fn_move)(&mut self.data.borrow_mut(), i);
+                    let len = match &self.data_type {
+                        ToDoData::Pending => self.data.borrow().pending.len(),
+                        ToDoData::Done => self.data.borrow().done.len(),
+                    };
+                    if len <= i {
+                        self.state.select(Some(len - 1));
+                    }
                 }
-                // TODO panic if there are no tasks
+            }
+            KeyCode::Enter => {
+                if let Some(i) = self.state.selected() {
+                    self.data.borrow_mut().set_active(self.data_type, i);
+                }
             }
             _ => {}
         }

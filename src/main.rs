@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     log4rs::init_config(config)?;
 
-    let mut ui = UI::new(Layout::from_str(DEFAULT_LAYOUT, todo).unwrap());
+    let mut ui = UI::new(Layout::from_str(DEFAULT_LAYOUT, todo.clone()).unwrap(), todo);
     ui.run()?;
 
     Ok(())

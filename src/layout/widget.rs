@@ -4,6 +4,7 @@ mod widget_trait;
 mod state_list;
 mod state_input;
 mod state_categories;
+mod state_preview;
 
 use widget_state::WidgetState;
 use widget_trait::State;

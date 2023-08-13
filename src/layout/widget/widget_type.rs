@@ -13,6 +13,7 @@ pub enum WidgetType {
     Project,
     Context,
     Hashtag,
+    Preview
 }
 
 impl Display for WidgetType {
@@ -28,6 +29,7 @@ impl Display for WidgetType {
                 Project => "Projects",
                 Context => "Contexts",
                 Hashtag => "Hashtags",
+                Preview => "Preview"
             }
         )
     }
@@ -45,6 +47,7 @@ impl FromStr for WidgetType {
             "projects" => Ok(Project),
             "contexts" => Ok(Context),
             "hashtags" => Ok(Hashtag),
+            "preview" => Ok(Preview),
             _ => Err(ErrorToDo::new(ParseWidgetType, "Unknown widget type.")),
         }
     }

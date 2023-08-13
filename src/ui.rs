@@ -1,5 +1,7 @@
 use crate::CONFIG;
 use crate::{layout::Layout, utils::get_block};
+use crate::ToDo;
+use crate::utils::some_or_return;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -8,6 +10,7 @@ use crossterm::{
     },
     ExecutableCommand,
 };
+use std::cell::RefCell;
 use std::io;
 use std::io::Result as ioResult;
 use tui::layout::Constraint;
@@ -17,6 +20,7 @@ use tui::{
     widgets::Paragraph,
     Terminal,
 };
+use std::rc::Rc;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -29,15 +33,17 @@ pub struct UI {
     input_chunk: Rect,
     layout: Layout,
     mode: Mode,
+    data: Rc<RefCell<ToDo>>,
 }
 
 impl UI {
-    pub fn new(layout: Layout) -> UI {
+    pub fn new(layout: Layout, data: Rc<RefCell<ToDo>>) -> UI {
         UI {
             input: String::new(),
             input_chunk: Rect::default(),
             layout,
             mode: Mode::Normal,
+            data,
         }
     }
 
@@ -88,6 +94,7 @@ impl UI {
                 Event::Key(event) => match self.mode {
                     Mode::Input => match event.code {
                         KeyCode::Enter => {
+                            self.data.borrow_mut().new_task(&self.input).unwrap(); // TODO fix
                             self.input.clear();
                             self.mode = Mode::Normal;
                         }
@@ -100,6 +107,9 @@ impl UI {
                         KeyCode::Esc => {
                             self.mode = Mode::Normal;
                         }
+                        KeyCode::Tab => {
+                            self.autocomplete();
+                        }
                         _ => {}
                     },
                     Mode::Normal => match event.code {
@@ -109,13 +119,7 @@ impl UI {
                         KeyCode::Char('H') => self.layout.left(),
                         KeyCode::Char('K') => self.layout.up(),
                         KeyCode::Char('J') => self.layout.down(),
-                        _ => {
-                            self.layout.handle_key(&event)
-                            // if let Some(widget) = layout.active_widget() {
-                            //     widget.handle_key(&event);
-                            //     println!("THIS IS NOT PRINTED");
-                            // }
-                        }
+                        _ => self.layout.handle_key(&event),
                     },
                 },
                 _ => {}
@@ -134,5 +138,58 @@ impl UI {
             self.layout.render(f);
         })?;
         Ok(())
+    }
+
+    fn autocomplete(&mut self) {
+        let last_space_index = self
+            .input
+            .rfind(' ')
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        let base = some_or_return!(self.input.get(last_space_index..));
+        let category = some_or_return!(base.get(0..1));
+        let pattern = some_or_return!(base.get(1..));
+
+        let data = self.data.borrow();
+        let list = match category {
+            "+" => data.get_projects(),
+            "@" => data.get_contexts(),
+            "#" => data.get_hashtags(),
+            _ => return,
+        };
+
+        if list.is_empty() {
+            return;
+        }
+
+        let list = list.start_with(pattern);
+
+        let same_start_index = |fst: &str, sec: &str| -> usize {
+            for (i, (fst_char, sec_char)) in fst
+                .chars()
+                .zip(sec.chars())
+                .enumerate()
+            {
+                if fst_char != sec_char {
+                    return i;
+                }
+            }
+            std::cmp::min(fst.len(), sec.len())
+        };
+        if list.is_empty() {
+            return;
+        }
+
+        let mut new_act = list[0].as_str();
+
+        if list.len() != 1 {
+            list.iter()
+                .skip(1)
+                .for_each(|item| new_act = &new_act[..same_start_index(new_act, item)]);
+            self.input += &new_act[pattern.len()..];
+        } else {
+            self.input += &new_act[pattern.len()..];
+            self.input += " ";
+        }
     }
 }
