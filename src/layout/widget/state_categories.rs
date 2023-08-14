@@ -43,7 +43,7 @@ impl State for StateCategories {
                     Some(a) => a + 1,
                     None => 0,
                 };
-                if (self.fn_list)(&self.data.borrow()).len() > act {
+                if (self.fn_list)(&self.data.lock().unwrap()).len() > act {
                     self.state.select(Some(act));
                 }
             }
@@ -57,11 +57,11 @@ impl State for StateCategories {
                 if let Some(index) = self.state.selected() {
                     let name;
                     {
-                        let todo = self.data.borrow();
+                        let todo = self.data.lock().unwrap();
                         let data = (self.fn_list)(&todo);
                         name = data.get_name(index).clone();
                     }
-                    (self.fn_toggle)(&mut self.data.borrow_mut(), &name)
+                    (self.fn_toggle)(&mut self.data.lock().unwrap(), &name)
                 }
             }
             _ => {}
@@ -69,7 +69,7 @@ impl State for StateCategories {
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
-        let todo = self.data.borrow();
+        let todo = self.data.lock().unwrap();
         let data = (self.fn_list)(&todo);
         let list = List::new(data).block(get_block(&widget.title, active));
         if !self.focus {

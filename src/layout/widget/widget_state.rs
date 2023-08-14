@@ -4,10 +4,9 @@ use super::{
     widget_type::WidgetType,
 };
 use crate::todo::{CategoryList, ToDo, ToDoData};
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
-pub type RCToDo = Rc<RefCell<ToDo>>;
+pub type RCToDo = Arc<Mutex<ToDo>>;
 
 #[enum_dispatch(State)]
 pub enum WidgetState {
@@ -56,7 +55,10 @@ impl WidgetState {
                 |todo, category| ToDo::toggle_filter(&mut todo.hashtag_filters, category),
                 data,
             ),
-            WidgetType::Preview => WidgetState::Preview(StatePreview::new("Pending: {n}   Done: {N}\nSubject: {s}\nPriority: {p}\nCreate date: {c}", data)),
+            WidgetType::Preview => WidgetState::Preview(StatePreview::new(
+                "Pending: {n}   Done: {N}\nSubject: {s}\nPriority: {p}\nCreate date: {c}",
+                data,
+            )),
         }
     }
 }

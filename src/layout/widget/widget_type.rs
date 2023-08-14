@@ -13,7 +13,7 @@ pub enum WidgetType {
     Project,
     Context,
     Hashtag,
-    Preview
+    Preview,
 }
 
 impl Display for WidgetType {
@@ -29,7 +29,7 @@ impl Display for WidgetType {
                 Project => "Projects",
                 Context => "Contexts",
                 Hashtag => "Hashtags",
-                Preview => "Preview"
+                Preview => "Preview",
             }
         )
     }

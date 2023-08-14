@@ -2,26 +2,42 @@ use crate::todo::ToDo;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Read, Result as ioResult, Write};
 use std::str::FromStr;
+use std::sync::mpsc::Receiver;
+use std::sync::{Arc, Mutex};
 use todo_txt::Task;
+
+pub enum FileWorkerCommands {
+    Save,
+    Load,
+    Exit,
+}
 
 pub struct FileWorker {
     todo_path: String,
     archive_path: Option<String>,
+    todo: Arc<Mutex<ToDo>>,
 }
 
 impl FileWorker {
-    pub fn new(todo_path: String, archive_path: Option<String>) -> FileWorker {
+    pub fn new(
+        todo_path: String,
+        archive_path: Option<String>,
+        todo: Arc<Mutex<ToDo>>,
+    ) -> FileWorker {
         FileWorker {
             todo_path,
             archive_path,
+            todo,
         }
     }
 
-    pub fn load(&self, todo: &mut ToDo) -> ioResult<()> {
-        Self::load_tasks(File::open(&self.todo_path)?, todo)?;
+    pub fn load(&self) -> ioResult<()> {
+        let mut todo = ToDo::new(false);
+        Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
         if let Some(path) = &self.archive_path {
-            Self::load_tasks(File::open(path)?, todo)?;
+            Self::load_tasks(File::open(path)?, &mut todo)?;
         }
+        *self.todo.lock().unwrap() = todo;
         Ok(())
     }
 
@@ -40,8 +56,9 @@ impl FileWorker {
         Ok(())
     }
 
-    pub fn save(&self, todo: &ToDo) -> ioResult<()> {
+    pub fn save(&self) -> ioResult<()> {
         let mut f = File::create(&self.todo_path)?;
+        let todo = self.todo.lock().unwrap();
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.archive_path {
             Some(s) => Self::save_tasks(&mut File::create(s)?, &todo.pending),
@@ -55,6 +72,19 @@ impl FileWorker {
             writer.write_all((task.to_string() + "\n").as_bytes())?;
         }
         Ok(())
+    }
+
+    pub fn run(&self, rx: Receiver<FileWorkerCommands>) {
+        use FileWorkerCommands::*;
+        for received in rx {
+            if let Err(e) = match received {
+                Save => self.save(),
+                Load => self.load(),
+                Exit => break,
+            } {
+                log::error!("File Worker: {}", e.kind());
+            }
+        }
     }
 }
 

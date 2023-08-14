@@ -1,19 +1,18 @@
-pub mod widget_type;
+mod state_categories;
+mod state_input;
+mod state_list;
+mod state_preview;
 mod widget_state;
 mod widget_trait;
-mod state_list;
-mod state_input;
-mod state_categories;
-mod state_preview;
+pub mod widget_type;
 
+use crate::todo::ToDo;
+use crossterm::event::KeyEvent;
+use std::sync::{Arc, Mutex};
+use tui::{backend::Backend, layout::Rect, Frame};
 use widget_state::WidgetState;
 use widget_trait::State;
 use widget_type::WidgetType;
-use crate::todo::ToDo;
-use crossterm::event::KeyEvent;
-use std::rc::Rc;
-use std::cell::RefCell;
-use tui::{backend::Backend, layout::Rect, Frame};
 
 pub struct Widget {
     pub widget_type: WidgetType,
@@ -23,7 +22,7 @@ pub struct Widget {
 }
 
 impl Widget {
-    pub fn new(widget_type: WidgetType, title: &str, data: Rc<RefCell<ToDo>>) -> Widget {
+    pub fn new(widget_type: WidgetType, title: &str, data: Arc<Mutex<ToDo>>) -> Widget {
         Widget {
             widget_type,
             chunk: Rect {

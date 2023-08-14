@@ -46,7 +46,7 @@ impl State for StateList {
                     Some(a) => a + 1,
                     None => 0,
                 };
-                if (self.fn_data)(&self.data.borrow()).len() > act {
+                if (self.fn_data)(&self.data.lock().unwrap()).len() > act {
                     self.state.select(Some(act));
                 }
             }
@@ -61,7 +61,8 @@ impl State for StateList {
                 if let Some(act) = self.state.selected() {
                     if act > 0 {
                         self.data
-                            .borrow_mut()
+                            .lock()
+                            .unwrap()
                             .swap_tasks(self.data_type, act, act - 1);
                         self.state.select(Some(act - 1));
                     }
@@ -72,12 +73,13 @@ impl State for StateList {
                 if let Some(act) = self.state.selected() {
                     let act = act + 1;
                     let len = match &self.data_type {
-                        ToDoData::Pending => self.data.borrow().pending.len(),
-                        ToDoData::Done => self.data.borrow().done.len(),
+                        ToDoData::Pending => self.data.lock().unwrap().pending.len(),
+                        ToDoData::Done => self.data.lock().unwrap().done.len(),
                     };
                     if act < len {
                         self.data
-                            .borrow_mut()
+                            .lock()
+                            .unwrap()
                             .swap_tasks(self.data_type, act, act - 1);
                         self.state.select(Some(act));
                     }
@@ -86,10 +88,10 @@ impl State for StateList {
             KeyCode::Char('x') => {
                 if let Some(i) = self.state.selected() {
                     log::info!("Remove task with index {i}.");
-                    self.data.borrow_mut().remove_task(self.data_type, i);
+                    self.data.lock().unwrap().remove_task(self.data_type, i);
                     let len = match &self.data_type {
-                        ToDoData::Pending => self.data.borrow().pending.len(),
-                        ToDoData::Done => self.data.borrow().done.len(),
+                        ToDoData::Pending => self.data.lock().unwrap().pending.len(),
+                        ToDoData::Done => self.data.lock().unwrap().done.len(),
                     };
                     if len <= i {
                         self.state.select(Some(len - 1));
@@ -99,10 +101,10 @@ impl State for StateList {
             KeyCode::Char('d') => {
                 if let Some(i) = self.state.selected() {
                     log::info!("Move task with index {i}.");
-                    (self.fn_move)(&mut self.data.borrow_mut(), i);
+                    (self.fn_move)(&mut self.data.lock().unwrap(), i);
                     let len = match &self.data_type {
-                        ToDoData::Pending => self.data.borrow().pending.len(),
-                        ToDoData::Done => self.data.borrow().done.len(),
+                        ToDoData::Pending => self.data.lock().unwrap().pending.len(),
+                        ToDoData::Done => self.data.lock().unwrap().done.len(),
                     };
                     if len <= i {
                         self.state.select(Some(len - 1));
@@ -111,7 +113,7 @@ impl State for StateList {
             }
             KeyCode::Enter => {
                 if let Some(i) = self.state.selected() {
-                    self.data.borrow_mut().set_active(self.data_type, i);
+                    self.data.lock().unwrap().set_active(self.data_type, i);
                 }
             }
             _ => {}
@@ -119,7 +121,7 @@ impl State for StateList {
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
-        let todo = self.data.borrow();
+        let todo = self.data.lock().unwrap();
         let data = (self.fn_data)(&todo);
         let list = List::new(data).block(get_block(&widget.title, active));
         if !self.focus {

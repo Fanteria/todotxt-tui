@@ -5,23 +5,22 @@ use crate::{
 };
 use chrono::NaiveDate;
 use crossterm::event::KeyEvent;
-use std::cell::RefCell;
-use std::rc::Rc;
 use tui::{
     backend::Backend,
     style::{Color, Style},
     widgets::Paragraph,
     Frame,
 };
+use std::sync::{Arc, Mutex};
 
 pub struct StatePreview {
-    data: Rc<RefCell<ToDo>>,
+    data: Arc<Mutex<ToDo>>,
     format: String,
     focus: bool,
 }
 
 impl StatePreview {
-    pub fn new(format: &str, data: Rc<RefCell<ToDo>>) -> Self {
+    pub fn new(format: &str, data: Arc<Mutex<ToDo>>) -> Self {
         StatePreview {
             data,
             format: String::from(format),
@@ -30,8 +29,8 @@ impl StatePreview {
     }
 
     fn get_content(&self) -> String {
-        let borrowed = self.data.borrow();
-        let task = match borrowed.get_active() {
+        let data = self.data.lock().unwrap();
+        let task = match data.get_active() {
             Some(s) => s,
             None => return String::from(""),
         };
@@ -42,8 +41,8 @@ impl StatePreview {
             }
         };
         self.format
-            .replace("{n}", &self.data.borrow().len(ToDoData::Pending).to_string())
-            .replace("{N}", &self.data.borrow().len(ToDoData::Done).to_string())
+            .replace("{n}", &data.len(ToDoData::Pending).to_string())
+            .replace("{N}", &data.len(ToDoData::Done).to_string())
             .replace("{s}", &task.subject)
             .replace("{p}", &task.priority.to_string())
             .replace("{c}", &date_to_str(task.create_date))

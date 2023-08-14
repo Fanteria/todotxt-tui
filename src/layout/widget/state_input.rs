@@ -4,11 +4,10 @@ use crate::{
     utils::{get_block, some_or_return},
 };
 use crossterm::event::{KeyCode, KeyEvent};
-use std::cell::RefCell;
-use std::rc::Rc;
 use tui::{backend::Backend, widgets::Paragraph, Frame};
+use std::sync::{Arc, Mutex};
 
-type RCToDo = Rc<RefCell<ToDo>>;
+type RCToDo = Arc<Mutex<ToDo>>;
 
 pub struct StateInput {
     actual: String,
@@ -33,7 +32,7 @@ impl StateInput {
         let category = some_or_return!(base.get(0..1));
         let pattern = some_or_return!(base.get(1..));
 
-        let data = self.data.borrow();
+        let data = self.data.lock().unwrap();
         let list = match category {
             "+" => data.get_projects(),
             "@" => data.get_contexts(),
@@ -84,7 +83,7 @@ impl State for StateInput {
             KeyCode::Backspace => {
                 self.actual.pop();
             }
-            KeyCode::Enter => match self.data.borrow_mut().new_task(&self.actual) {
+            KeyCode::Enter => match self.data.lock().unwrap().new_task(&self.actual) {
                 Ok(_) => self.actual.clear(),
                 Err(_) => self.actual += " wrong!!!",
             },

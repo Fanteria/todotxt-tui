@@ -1,7 +1,8 @@
+use crate::file_worker::FileWorkerCommands;
+use crate::utils::some_or_return;
+use crate::ToDo;
 use crate::CONFIG;
 use crate::{layout::Layout, utils::get_block};
-use crate::ToDo;
-use crate::utils::some_or_return;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -10,9 +11,10 @@ use crossterm::{
     },
     ExecutableCommand,
 };
-use std::cell::RefCell;
 use std::io;
 use std::io::Result as ioResult;
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
 use tui::layout::Constraint;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -20,7 +22,6 @@ use tui::{
     widgets::Paragraph,
     Terminal,
 };
-use std::rc::Rc;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -33,17 +34,19 @@ pub struct UI {
     input_chunk: Rect,
     layout: Layout,
     mode: Mode,
-    data: Rc<RefCell<ToDo>>,
+    data: Arc<Mutex<ToDo>>,
+    tx: Sender<FileWorkerCommands>,
 }
 
 impl UI {
-    pub fn new(layout: Layout, data: Rc<RefCell<ToDo>>) -> UI {
+    pub fn new(layout: Layout, data: Arc<Mutex<ToDo>>, tx: Sender<FileWorkerCommands>) -> UI {
         UI {
             input: String::new(),
             input_chunk: Rect::default(),
             layout,
             mode: Mode::Normal,
             data,
+            tx,
         }
     }
 
@@ -94,7 +97,7 @@ impl UI {
                 Event::Key(event) => match self.mode {
                     Mode::Input => match event.code {
                         KeyCode::Enter => {
-                            self.data.borrow_mut().new_task(&self.input).unwrap(); // TODO fix
+                            self.data.lock().unwrap().new_task(&self.input).unwrap(); // TODO fix
                             self.input.clear();
                             self.mode = Mode::Normal;
                         }
@@ -119,6 +122,12 @@ impl UI {
                         KeyCode::Char('H') => self.layout.left(),
                         KeyCode::Char('K') => self.layout.up(),
                         KeyCode::Char('J') => self.layout.down(),
+                        KeyCode::Char('S') => {
+                            self.tx.send(FileWorkerCommands::Save);
+                        }
+                        KeyCode::Char('U') => {
+                            self.tx.send(FileWorkerCommands::Load);
+                        }
                         _ => self.layout.handle_key(&event),
                     },
                 },
@@ -141,16 +150,12 @@ impl UI {
     }
 
     fn autocomplete(&mut self) {
-        let last_space_index = self
-            .input
-            .rfind(' ')
-            .map(|i| i + 1)
-            .unwrap_or(0);
+        let last_space_index = self.input.rfind(' ').map(|i| i + 1).unwrap_or(0);
         let base = some_or_return!(self.input.get(last_space_index..));
         let category = some_or_return!(base.get(0..1));
         let pattern = some_or_return!(base.get(1..));
 
-        let data = self.data.borrow();
+        let data = self.data.lock().unwrap();
         let list = match category {
             "+" => data.get_projects(),
             "@" => data.get_contexts(),
@@ -165,11 +170,7 @@ impl UI {
         let list = list.start_with(pattern);
 
         let same_start_index = |fst: &str, sec: &str| -> usize {
-            for (i, (fst_char, sec_char)) in fst
-                .chars()
-                .zip(sec.chars())
-                .enumerate()
-            {
+            for (i, (fst_char, sec_char)) in fst.chars().zip(sec.chars()).enumerate() {
                 if fst_char != sec_char {
                     return i;
                 }

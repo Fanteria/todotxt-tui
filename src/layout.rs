@@ -13,6 +13,7 @@ use crate::{
 };
 use crossterm::event::KeyEvent;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use std::{cell::RefCell, str::FromStr};
 use tui::{
     backend::Backend,
@@ -44,7 +45,7 @@ pub struct Layout {
 }
 
 impl Layout {
-    pub fn new(actual: WidgetType, data: Rc<RefCell<ToDo>>) -> Layout {
+    pub fn new(actual: WidgetType, data: Arc<Mutex<ToDo>>) -> Layout {
         let input_widget = Widget::new(WidgetType::Input, "Input", data.clone());
         let list_widget = Widget::new(WidgetType::List, "List", data.clone());
         let done_widget = Widget::new(WidgetType::Done, "Done", data.clone());
@@ -103,7 +104,7 @@ impl Layout {
         }
     }
 
-    pub fn from_str(template: &str, data: Rc<RefCell<ToDo>>) -> ToDoRes<Self> {
+    pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>) -> ToDoRes<Self> {
         // Find first '[' and move start of template to it (start of first container)
         let index = match template.find('[') {
             Some(i) => i,
