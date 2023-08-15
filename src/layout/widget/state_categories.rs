@@ -71,7 +71,7 @@ impl State for StateCategories {
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         let todo = self.data.lock().unwrap();
         let data = (self.fn_list)(&todo);
-        let list = List::new(data).block(get_block(&widget.title, active));
+        let list = List::new(data).block(get_block(&widget.title, self.focus));
         if !self.focus {
             f.render_widget(list, widget.chunk)
         } else {

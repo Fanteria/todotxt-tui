@@ -260,6 +260,14 @@ impl Layout {
         self.actual = next;
     }
 
+    pub fn unfocus(&mut self) {
+        self.actual.borrow_mut().unfocus();
+    }
+
+    pub fn focus(&mut self) {
+        self.actual.borrow_mut().focus();
+    }
+
     pub fn left(&mut self) {
         self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),

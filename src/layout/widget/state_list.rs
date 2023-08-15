@@ -111,6 +111,18 @@ impl State for StateList {
                     }
                 }
             }
+            KeyCode::Char('g') => {
+                let len = self.data.lock().unwrap().len(self.data_type);
+                if len > 0 {
+                    self.state.select(Some(0))
+                }
+            }
+            KeyCode::Char('G') => {
+                let len = self.data.lock().unwrap().len(self.data_type);
+                if len > 0 {
+                    self.state.select(Some(len - 1))
+                }
+            }
             KeyCode::Enter => {
                 if let Some(i) = self.state.selected() {
                     self.data.lock().unwrap().set_active(self.data_type, i);
@@ -123,7 +135,7 @@ impl State for StateList {
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         let todo = self.data.lock().unwrap();
         let data = (self.fn_data)(&todo);
-        let list = List::new(data).block(get_block(&widget.title, active));
+        let list = List::new(data).block(get_block(&widget.title, self.focus));
         if !self.focus {
             f.render_widget(list, widget.chunk)
         } else {

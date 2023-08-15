@@ -109,6 +109,7 @@ impl UI {
                         }
                         KeyCode::Esc => {
                             self.mode = Mode::Normal;
+                            self.layout.focus();
                         }
                         KeyCode::Tab => {
                             self.autocomplete();
@@ -117,7 +118,10 @@ impl UI {
                     },
                     Mode::Normal => match event.code {
                         KeyCode::Char('q') => break,
-                        KeyCode::Char('I') => self.mode = Mode::Input,
+                        KeyCode::Char('I') => {
+                            self.mode = Mode::Input;
+                            self.layout.unfocus();
+                        }
                         KeyCode::Char('L') => self.layout.right(),
                         KeyCode::Char('H') => self.layout.left(),
                         KeyCode::Char('K') => self.layout.up(),
