@@ -123,10 +123,16 @@ impl UI {
                         KeyCode::Char('K') => self.layout.up(),
                         KeyCode::Char('J') => self.layout.down(),
                         KeyCode::Char('S') => {
-                            self.tx.send(FileWorkerCommands::Save);
+                            if let Err(e) = self.tx.send(FileWorkerCommands::Save) {
+                                log::error!("Error while send signal to save todo list: {}", e);
+                                // TODO show something on screen
+                            }
                         }
                         KeyCode::Char('U') => {
-                            self.tx.send(FileWorkerCommands::Load);
+                            if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
+                                log::error!("Error while send signal to load todo list: {}", e);
+                                // TODO show something on screen
+                            }
                         }
                         _ => self.layout.handle_key(&event),
                     },

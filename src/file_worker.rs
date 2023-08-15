@@ -59,6 +59,14 @@ impl FileWorker {
     pub fn save(&self) -> ioResult<()> {
         let mut f = File::create(&self.todo_path)?;
         let todo = self.todo.lock().unwrap();
+        log::info!(
+            "Saveing todo task to {}{}",
+            self.todo_path,
+            self.archive_path
+                .as_ref()
+                .map_or(String::from(""), |p| String::from(" and")
+                    + &p.clone()),
+        );
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.archive_path {
             Some(s) => Self::save_tasks(&mut File::create(s)?, &todo.pending),
