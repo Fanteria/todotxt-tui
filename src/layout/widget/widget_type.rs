@@ -7,7 +7,6 @@ use crate::error::ErrorToDo;
 
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum WidgetType {
-    Input,
     List,
     Done,
     Project,
@@ -23,7 +22,6 @@ impl Display for WidgetType {
             f,
             "{}",
             match self {
-                Input => "Input",
                 List => "List",
                 Done => "Done",
                 Project => "Projects",
@@ -41,7 +39,6 @@ impl FromStr for WidgetType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use WidgetType::*;
         match s.to_lowercase().as_str() {
-            "input" => Ok(Input), // TODO can be deleted
             "list" => Ok(List),
             "done" => Ok(Done),
             "projects" => Ok(Project),

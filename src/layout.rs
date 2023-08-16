@@ -45,45 +45,6 @@ pub struct Layout {
 }
 
 impl Layout {
-    pub fn new(actual: WidgetType, data: Arc<Mutex<ToDo>>) -> Layout {
-        let input_widget = Widget::new(WidgetType::Input, "Input", data.clone());
-        let list_widget = Widget::new(WidgetType::List, "List", data.clone());
-        let done_widget = Widget::new(WidgetType::Done, "Done", data.clone());
-        let categories_widget = Widget::new(WidgetType::Project, "Projects", data);
-
-        let root = Container::new(
-            vec![
-                InitItem::InitWidget(input_widget),
-                InitItem::InitContainer(Container::new(
-                    vec![
-                        InitItem::InitWidget(list_widget),
-                        InitItem::InitContainer(Container::new(
-                            vec![
-                                InitItem::InitWidget(done_widget),
-                                InitItem::InitWidget(categories_widget),
-                            ],
-                            vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-                            Vertical,
-                            None,
-                        )),
-                    ],
-                    vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-                    Horizontal,
-                    None,
-                )),
-            ],
-            vec![Constraint::Length(3), Constraint::Percentage(30)],
-            Vertical,
-            None,
-        );
-        let actual = Container::select_widget(root.clone(), CONFIG.init_widget).unwrap(); // TODO
-        if let Item::Widget(w) = actual.borrow_mut().actual_item_mut() {
-            w.widget.focus();
-        }
-
-        Layout { root, actual }
-    }
-
     fn value_from_string(value: &str) -> ToDoRes<Constraint> {
         if value.is_empty() {
             return Ok(Constraint::Percentage(50));

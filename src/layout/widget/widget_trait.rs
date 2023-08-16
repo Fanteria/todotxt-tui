@@ -1,5 +1,5 @@
 use super::{
-    state_categories::StateCategories, state_input::StateInput, state_list::StateList,
+    state_categories::StateCategories, state_list::StateList,
     state_preview::StatePreview, widget_state::WidgetState, Widget,
 };
 use crossterm::event::KeyEvent;
