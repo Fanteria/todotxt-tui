@@ -2,10 +2,10 @@ pub mod category_list;
 pub mod task_list;
 pub use self::{category_list::CategoryList, task_list::TaskList};
 
+use chrono::Utc;
 use std::collections::btree_set::BTreeSet;
 use std::convert::From;
 use std::str::FromStr;
-use chrono::Utc;
 use todo_txt::Task;
 
 /// Type alias for a tuple representing filter data.
@@ -18,6 +18,17 @@ use ToDoData::Pending;
 pub enum ToDoData {
     Pending,
     Done,
+}
+
+use ToDoCategory::Contexts;
+use ToDoCategory::Hashtags;
+use ToDoCategory::Projects;
+
+#[derive(Clone, Copy)]
+pub enum ToDoCategory {
+    Projects,
+    Contexts,
+    Hashtags,
 }
 
 /// Represents a To-Do list.
@@ -154,6 +165,14 @@ impl ToDo {
             f,
             selected,
         )
+    }
+
+    pub fn get_category(&self, category: ToDoCategory) -> CategoryList {
+        match category {
+            Projects => self.get_btree_done_switch(|t| t.projects(), &self.project_filters),
+            Contexts => self.get_btree_done_switch(|t| t.contexts(), &self.context_filters),
+            Hashtags => self.get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters),
+        }
     }
 
     /// Returns a [`CategoryList`] of all projects available
@@ -373,6 +392,18 @@ impl ToDo {
         if !filter_set.insert(filter.clone()) {
             filter_set.remove(&filter);
         }
+    }
+
+    pub fn toggle_filter_aux(&mut self, category: ToDoCategory, filter: &str) {
+        let filter_set = match category {
+            Projects => &mut self.project_filters,
+            Contexts => &mut self.context_filters,
+            Hashtags => &mut self.hashtag_filters,
+        };
+        if !filter_set.insert(String::from(filter)) {
+            filter_set.remove(filter);
+        }
+
     }
 
     pub fn get_filtered(&self, data: ToDoData) -> TaskList {

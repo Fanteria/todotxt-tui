@@ -1,5 +1,5 @@
 use super::{widget_state::RCToDo, widget_trait::State, Widget};
-use crate::todo::{CategoryList, ToDo};
+use crate::todo::ToDoCategory;
 use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
@@ -10,16 +10,14 @@ use tui::{
 
 pub struct StateCategories {
     state: ListState,
-    fn_list: fn(&ToDo) -> CategoryList,
-    fn_toggle: fn(&mut ToDo, &str),
+    category: ToDoCategory,
     data: RCToDo,
     focus: bool,
 }
 
 impl StateCategories {
     pub fn new(
-        fn_list: fn(&ToDo) -> CategoryList,
-        fn_toggle: fn(&mut ToDo, &str),
+        category: ToDoCategory,
         data: RCToDo,
     ) -> Self {
         let mut state = ListState::default();
@@ -27,11 +25,18 @@ impl StateCategories {
 
         Self {
             state,
-            fn_list,
-            fn_toggle,
+            category,
             data,
             focus: false,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.lock().unwrap().get_category(self.category).len()
+    }
+
+    pub fn act(&self) -> usize {
+        self.state.selected().unwrap_or(0)
     }
 }
 
@@ -39,30 +44,24 @@ impl State for StateCategories {
     fn handle_key(&mut self, event: &KeyEvent) {
         match event.code {
             KeyCode::Char('j') => {
-                let act = match self.state.selected() {
-                    Some(a) => a + 1,
-                    None => 0,
-                };
-                if (self.fn_list)(&self.data.lock().unwrap()).len() > act {
+                let act = self.act() + 1;
+                if self.len() > act {
                     self.state.select(Some(act));
                 }
             }
             KeyCode::Char('k') => {
-                let act = self.state.selected().unwrap_or(0);
+                let act = self.act();
                 if 0 < act {
                     self.state.select(Some(act - 1));
                 }
             }
             KeyCode::Enter => {
-                if let Some(index) = self.state.selected() {
-                    let name;
-                    {
-                        let todo = self.data.lock().unwrap();
-                        let data = (self.fn_list)(&todo);
-                        name = data.get_name(index).clone();
-                    }
-                    (self.fn_toggle)(&mut self.data.lock().unwrap(), &name)
+                let name;
+                {
+                    let todo = self.data.lock().unwrap();
+                    name = todo.get_category(self.category).get_name(self.act()).clone();
                 }
+                self.data.lock().unwrap().toggle_filter_aux(self.category, &name);
             }
             _ => {}
         }
@@ -70,7 +69,7 @@ impl State for StateCategories {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
         let todo = self.data.lock().unwrap();
-        let data = (self.fn_list)(&todo);
+        let data = todo.get_category(self.category);
         let list = List::new(data).block(get_block(&widget.title, self.focus));
         if !self.focus {
             f.render_widget(list, widget.chunk)
