@@ -13,8 +13,10 @@ use crossterm::{
 };
 use std::io;
 use std::io::Result as ioResult;
+use std::str::FromStr;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
+use todo_txt::Task;
 use tui::layout::Constraint;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -26,6 +28,7 @@ use tui::{
 #[derive(PartialEq, Eq)]
 enum Mode {
     Input,
+    Edit,
     Normal,
 }
 
@@ -117,6 +120,29 @@ impl UI {
                         }
                         _ => {}
                     },
+                    Mode::Edit => match event.code {
+                        KeyCode::Enter => {
+                            self.data.lock().unwrap().update_active(&self.input).unwrap();
+                            self.input.clear();
+                            self.mode = Mode::Normal;
+                            self.layout.focus();
+                        }
+                        KeyCode::Char(c) => {
+                            self.input.push(c);
+                        }
+                        KeyCode::Backspace => {
+                            self.input.pop();
+                        }
+                        KeyCode::Esc => {
+                            self.input.clear();
+                            self.mode = Mode::Normal;
+                            self.layout.focus();
+                        }
+                        KeyCode::Tab => {
+                            self.autocomplete();
+                        }
+                        _ => {}
+                    },
                     Mode::Normal => match event.code {
                         KeyCode::Char('q') => break,
                         KeyCode::Char('I') => {
@@ -137,6 +163,13 @@ impl UI {
                             if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
                                 log::error!("Error while send signal to load todo list: {}", e);
                                 // TODO show something on screen
+                            }
+                        }
+                        KeyCode::Char('E') => {
+                            if let Some(active) = self.data.lock().unwrap().get_active() {
+                                self.input = active.to_string();
+                                self.mode = Mode::Edit;
+                                self.layout.unfocus();
                             }
                         }
                         _ => self.layout.handle_key(&event),

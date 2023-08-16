@@ -486,6 +486,13 @@ impl ToDo {
         }
     }
 
+    pub fn update_active(&mut self, task: &str) -> Result<(), todo_txt::Error> {
+        if let Some((data, index)) = self.active {
+            self.get_data_mut(data)[index] = Task::from_str(task)?;
+        }
+        Ok(())
+    }
+
     pub fn len(&self, data: ToDoData) -> usize {
         self.get_data(data).len()
     }
