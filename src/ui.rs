@@ -100,6 +100,7 @@ impl UI {
                             self.data.lock().unwrap().new_task(&self.input).unwrap(); // TODO fix
                             self.input.clear();
                             self.mode = Mode::Normal;
+                            self.layout.focus();
                         }
                         KeyCode::Char(c) => {
                             self.input.push(c);
