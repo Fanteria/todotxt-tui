@@ -14,7 +14,6 @@ use std::io::Read;
 use tui::style::Color;
 
 const CONFIG_NAME: &str = "todo-tui.conf";
-const LOG_FILE: &str = "log.log";
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]

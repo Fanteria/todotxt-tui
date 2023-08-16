@@ -61,13 +61,13 @@ impl State for StateCategories {
                     let todo = self.data.lock().unwrap();
                     name = todo.get_category(self.category).get_name(self.act()).clone();
                 }
-                self.data.lock().unwrap().toggle_filter_aux(self.category, &name);
+                self.data.lock().unwrap().toggle_filter(self.category, &name);
             }
             _ => {}
         }
     }
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
+    fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
         let todo = self.data.lock().unwrap();
         let data = todo.get_category(self.category);
         let list = List::new(data).block(get_block(&widget.title, self.focus));
@@ -86,9 +86,5 @@ impl State for StateCategories {
 
     fn unfocus(&mut self) {
         self.focus = false;
-    }
-
-    fn cursor_visible(&self) -> bool {
-        false
     }
 }

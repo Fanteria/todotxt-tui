@@ -103,10 +103,6 @@ impl State for StateInput {
     fn focus(&mut self) {}
 
     fn unfocus(&mut self) {}
-
-    fn cursor_visible(&self) -> bool {
-        true
-    }
 }
 
 #[cfg(test)]

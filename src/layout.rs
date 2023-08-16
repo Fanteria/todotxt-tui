@@ -125,7 +125,6 @@ impl Layout {
 
         let mut string = String::new();
         let mut item = String::new();
-        let mut indent = 0;
 
         let mut container: Vec<(Direction, Constraint, Vec<InitItem>, Vec<Constraint>)> =
             Vec::new();
@@ -136,7 +135,7 @@ impl Layout {
             Vec::new(),
         ));
 
-        for (i, ch) in template.chars().enumerate() {
+        for ch in template.chars() {
             match ch {
                 START_CONTAINER => {
                     let new_direction = match container.last().unwrap().0 {
@@ -150,7 +149,6 @@ impl Layout {
                         Vec::new(),
                     ));
 
-                    indent += 1;
                     string.clear();
                 }
                 END_CONTAINER => {
@@ -168,7 +166,6 @@ impl Layout {
                     let c = InitItem::InitContainer(Container::new(cont.2, cont.3, cont.0, None));
                     container.last_mut().unwrap().2.push(c);
                     container.last_mut().unwrap().3.push(cont.1);
-                    indent -= 1;
                     string.clear();
                 }
                 ARG_SEPARATOR => {
@@ -300,16 +297,7 @@ impl Layout {
         ));
     }
 
-    pub fn cursor_visible(&self) -> bool {
-        match &self.actual.borrow().actual_item() {
-            Item::Widget(w) => w.widget.cursor_visible(),
-            Item::Container(_) => {
-                log::error!("Something went wrong, actual item is container.");
-                false
-            }
-        }
-    }
-
+    #[allow(dead_code)]
     pub fn select_widget(&mut self, widget_type: WidgetType) -> ToDoRes<()> {
         self.actual = Container::select_widget(self.root.clone(), widget_type)?;
         if let Item::Widget(w) = self.actual.borrow_mut().actual_item_mut() {

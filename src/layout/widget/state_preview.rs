@@ -57,9 +57,9 @@ impl StatePreview {
 }
 
 impl State for StatePreview {
-    fn handle_key(&mut self, event: &KeyEvent) {}
+    fn handle_key(&mut self, _: &KeyEvent) {}
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
+    fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
         let paragraph = Paragraph::new(self.get_content()).block(get_block("Title", self.focus));
         // .style(Style::default().fg(Color::White).bg(Color::Black));
         // .alignment(Alignment::Center)
@@ -73,9 +73,5 @@ impl State for StatePreview {
 
     fn unfocus(&mut self) {
         self.focus = false;
-    }
-
-    fn cursor_visible(&self) -> bool {
-        false
     }
 }

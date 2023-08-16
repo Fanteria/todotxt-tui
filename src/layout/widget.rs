@@ -52,10 +52,6 @@ impl Widget {
         self.state.unfocus();
     }
 
-    pub fn cursor_visible(&self) -> bool {
-        self.state.cursor_visible()
-    }
-
     pub fn draw<B: Backend>(&self, f: &mut Frame<B>, active: bool) {
         self.state.render(f, active, self);
     }

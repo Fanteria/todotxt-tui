@@ -105,7 +105,7 @@ impl State for StateList {
         }
     }
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget) {
+    fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
         let data = self.data.lock().unwrap();
         let filtered = data.get_filtered(self.data_type);
         let list = List::new(filtered).block(get_block(&widget.title, self.focus));
@@ -124,9 +124,5 @@ impl State for StateList {
 
     fn unfocus(&mut self) {
         self.focus = false;
-    }
-
-    fn cursor_visible(&self) -> bool {
-        false
     }
 }

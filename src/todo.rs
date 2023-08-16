@@ -225,6 +225,7 @@ impl ToDo {
     /// # Returns
     ///
     /// A vector of references to the matching tasks.
+    #[allow(dead_code)]
     fn get_tasks<'a>(
         tasks: Vec<&'a Vec<Task>>,
         name: &str,
@@ -264,24 +265,6 @@ impl ToDo {
         };
     }
 
-    /// Moves a pending task to the done list based on the provided index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index`: The index of the pending task to be moved to the done list.
-    pub fn move_pending_task(&mut self, index: usize) {
-        Self::move_task_logic(&mut self.pending, &mut self.done, index)
-    }
-
-    /// Moves a done task to the pending list based on the provided index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index`: The index of the done task to be moved to the pending list.
-    pub fn move_done_task(&mut self, index: usize) {
-        Self::move_task_logic(&mut self.done, &mut self.pending, index)
-    }
-
     /// Retrieves tasks that match a given name for a specific category
     /// (e.g., projects, contexts, hashtags) based on the [`ToDo::use_done`] flag.
     ///
@@ -295,6 +278,7 @@ impl ToDo {
     /// # Returns
     ///
     /// A vector of references to the matching tasks.
+    #[allow(dead_code)]
     fn get_tasks_done_switch<'a>(&'a self, name: &str, f: fn(&Task) -> &[String]) -> Vec<&'a Task> {
         Self::get_tasks(
             if self.use_done {
@@ -305,48 +289,6 @@ impl ToDo {
             name,
             f,
         )
-    }
-
-    /// Retrieves tasks that match a given name for a specific category
-    /// (e.g., projects, contexts, hashtags) based on the [`ToDo::use_done`] flag.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The name to search for within the category.
-    ///
-    /// # Returns
-    ///
-    /// A vector of references to the matching tasks.
-    pub fn get_project_tasks<'a>(&'a self, name: &str) -> Vec<&'a Task> {
-        self.get_tasks_done_switch(name, |t| t.projects())
-    }
-
-    /// Retrieves tasks that match a given name for a specific category
-    /// (e.g., projects, contexts, hashtags) based on the `use_done` flag.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The name to search for within the category.
-    ///
-    /// # Returns
-    ///
-    /// A vector of references to the matching tasks.
-    pub fn get_context_tasks<'a>(&'a self, name: &str) -> Vec<&'a Task> {
-        self.get_tasks_done_switch(name, |t| t.contexts())
-    }
-
-    /// Retrieves tasks that match a given name for a specific category
-    /// (e.g., projects, contexts, hashtags) based on the [`ToDo::use_done`] flag.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The name to search for within the category.
-    ///
-    /// # Returns
-    ///
-    /// A vector of references to the matching tasks.
-    pub fn get_hashtag_tasks<'a>(&'a self, name: &str) -> Vec<&'a Task> {
-        self.get_tasks_done_switch(name, |t| &t.hashtags)
     }
 
     /// Filters tasks based on the provided filters and returns a `TaskList`.
@@ -379,22 +321,7 @@ impl ToDo {
         )
     }
 
-    /// Toggles the filter for a given category by adding or removing
-    /// it from the provided `filter_set`.
-    ///
-    /// # Arguments
-    ///
-    /// * `filter_set`: A mutable reference to a `BTreeSet<String>` containing
-    ///             the current selected filters.
-    /// * `filter`: The filter to toggle (add or remove) from the `filter_set`.
-    pub fn toggle_filter(filter_set: &mut BTreeSet<String>, filter: &str) {
-        let filter = String::from(filter);
-        if !filter_set.insert(filter.clone()) {
-            filter_set.remove(&filter);
-        }
-    }
-
-    pub fn toggle_filter_aux(&mut self, category: ToDoCategory, filter: &str) {
+    pub fn toggle_filter(&mut self, category: ToDoCategory, filter: &str) {
         let filter_set = match category {
             Projects => &mut self.project_filters,
             Contexts => &mut self.context_filters,
@@ -417,66 +344,9 @@ impl ToDo {
         )
     }
 
+    #[allow(dead_code)]
     pub fn get_all(&self, data: ToDoData) -> TaskList {
         TaskList(self.get_data(data).iter().enumerate().collect())
-    }
-
-    /// Returns a filtered `TaskList` containing all pending tasks from
-    /// the current `ToDo` instance based on the applied filters.
-    ///
-    /// # Returns
-    ///
-    /// A `TaskList` containing the filtered pending tasks along
-    /// with their respective indices.
-    pub fn get_pending_filtered(&self) -> TaskList {
-        Self::get_filtered_tasks(
-            &self.pending,
-            &[
-                (&self.project_filters, |t| t.projects()),
-                (&self.context_filters, |t| t.contexts()),
-                (&self.hashtag_filters, |t| &t.hashtags),
-            ],
-        )
-    }
-
-    /// Returns a `TaskList` containing all pending tasks from
-    /// the current `ToDo` instance.
-    ///
-    /// # Returns
-    ///
-    /// A `TaskList` containing all pending tasks along
-    /// with their respective indices.
-    pub fn get_pending_all(&self) -> TaskList {
-        TaskList(self.pending.iter().enumerate().collect())
-    }
-
-    /// Returns a filtered `TaskList` containing all done tasks from
-    /// the current `ToDo` instance based on the applied filters.
-    ///
-    /// # Returns
-    ///
-    /// A `TaskList` containing the filtered done tasks along
-    /// with their respective indices.
-    pub fn get_done_filtered(&self) -> TaskList {
-        Self::get_filtered_tasks(
-            &self.done,
-            &[
-                (&self.project_filters, |t| t.projects()),
-                (&self.context_filters, |t| t.contexts()),
-                (&self.hashtag_filters, |t| &t.hashtags),
-            ],
-        )
-    }
-
-    /// Returns a `TaskList` containing all done tasks from
-    /// the current `ToDo` instance.
-    ///
-    /// # Returns
-    ///
-    /// A `TaskList` containing all done tasks along
-    /// with their respective indices.
-    pub fn get_done_all(&self) -> TaskList {
-        TaskList(self.done.iter().enumerate().collect())
     }
 
     /// Adds a new task to the `ToDo` instance.
@@ -500,16 +370,6 @@ impl ToDo {
             self.pending.push(task);
         }
         Ok(())
-    }
-
-    /// Removes a pending task from the `ToDo` instance based
-    /// on the provided index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index`: The index of the pending task to be removed.
-    pub fn remove_pending_task(&mut self, index: usize) {
-        self.pending.remove(index);
     }
 
     pub fn remove_task(&mut self, data: ToDoData, index: usize) {

@@ -11,5 +11,4 @@ pub trait State {
     fn render<B: Backend>(&self, f: &mut Frame<B>, active: bool, widget: &Widget);
     fn focus(&mut self);
     fn unfocus(&mut self);
-    fn cursor_visible(&self) -> bool;
 }
