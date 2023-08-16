@@ -13,10 +13,8 @@ use crossterm::{
 };
 use std::io;
 use std::io::Result as ioResult;
-use std::str::FromStr;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
-use todo_txt::Task;
 use tui::layout::Constraint;
 use tui::{
     backend::{Backend, CrosstermBackend},

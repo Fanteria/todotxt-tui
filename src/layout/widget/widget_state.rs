@@ -28,18 +28,8 @@ impl WidgetState {
     pub fn new(widget_type: &WidgetType, data: RCToDo) -> Self {
         match widget_type {
             WidgetType::Input => WidgetState::Input(StateInput::new(data)),
-            WidgetType::List => WidgetState::List(StateList::new(
-                |todo| todo.get_pending_filtered(),
-                |todo, i| todo.move_pending_task(i),
-                ToDoData::Pending,
-                data,
-            )),
-            WidgetType::Done => WidgetState::List(StateList::new(
-                |todo| todo.get_done_filtered(),
-                |todo, i| todo.move_done_task(i),
-                ToDoData::Done,
-                data,
-            )),
+            WidgetType::List => WidgetState::List(StateList::new(ToDoData::Pending, data)),
+            WidgetType::Done => WidgetState::List(StateList::new(ToDoData::Done, data)),
             WidgetType::Project => WidgetState::new_category(
                 |todo| todo.get_projects(),
                 |todo, category| ToDo::toggle_filter(&mut todo.project_filters, category),

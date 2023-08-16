@@ -55,7 +55,7 @@ impl ToDo {
         }
     }
 
-    fn get_data(&self, data: ToDoData) -> &Vec<Task> {
+    pub fn get_data(&self, data: ToDoData) -> &Vec<Task> {
         match data {
             Pending => &self.pending,
             Done => &self.done,
@@ -346,7 +346,7 @@ impl ToDo {
     /// # Returns
     ///
     /// A `TaskList` containing the filtered tasks along with their respective indices.
-    fn get_filtered<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
+    fn get_filtered_tasks<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
         TaskList(
             tasks
                 .iter()
@@ -375,6 +375,21 @@ impl ToDo {
         }
     }
 
+    pub fn get_filtered(&self, data: ToDoData) -> TaskList {
+        Self::get_filtered_tasks(
+            self.get_data(data),
+            &[
+                (&self.project_filters, |t| t.projects()),
+                (&self.context_filters, |t| t.contexts()),
+                (&self.hashtag_filters, |t| &t.hashtags),
+            ],
+        )
+    }
+
+    pub fn get_all(&self, data: ToDoData) -> TaskList {
+        TaskList(self.get_data(data).iter().enumerate().collect())
+    }
+
     /// Returns a filtered `TaskList` containing all pending tasks from
     /// the current `ToDo` instance based on the applied filters.
     ///
@@ -383,7 +398,7 @@ impl ToDo {
     /// A `TaskList` containing the filtered pending tasks along
     /// with their respective indices.
     pub fn get_pending_filtered(&self) -> TaskList {
-        Self::get_filtered(
+        Self::get_filtered_tasks(
             &self.pending,
             &[
                 (&self.project_filters, |t| t.projects()),
@@ -412,7 +427,7 @@ impl ToDo {
     /// A `TaskList` containing the filtered done tasks along
     /// with their respective indices.
     pub fn get_done_filtered(&self) -> TaskList {
-        Self::get_filtered(
+        Self::get_filtered_tasks(
             &self.done,
             &[
                 (&self.project_filters, |t| t.projects()),
