@@ -171,14 +171,7 @@ impl ToDo {
         )
     }
 
-    pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
-        match category {
-            Projects => self.get_btree_done_switch(|t| t.projects(), &self.project_filters),
-            Contexts => self.get_btree_done_switch(|t| t.contexts(), &self.context_filters),
-            Hashtags => self.get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters),
-        }
-    }
-
+    /// TODO rewrite
     /// Returns a [`CategoryList`] of all projects available
     /// in the current [`ToDo`] instance. If [`ToDo::use_done`] is enabled,
     /// it includes projects from both [`ToDo::pending`] and [`ToDo::done`] lists.
@@ -187,32 +180,12 @@ impl ToDo {
     ///
     /// A [`CategoryList`] of projects along with a boolean indicating whether
     /// each project is selected based on the applied filters.
-    pub fn get_projects(&self) -> CategoryList {
-        self.get_btree_done_switch(|t| t.projects(), &self.project_filters)
-    }
-
-    /// Returns a [`CategoryList`] of all contexts available in the current [`ToDo`] instance.
-    /// If [`ToDo::use_done`] is enabled, it includes contexts
-    /// from both [`ToDo::pending`] and [`ToDo::done`] lists.
-    ///
-    /// # Returns
-    ///
-    /// A [`CategoryList`] of contexts along with a boolean indicating whether
-    /// each context is selected based on the applied filters.
-    pub fn get_contexts(&self) -> CategoryList {
-        self.get_btree_done_switch(|t| t.contexts(), &self.context_filters)
-    }
-
-    /// Returns a [`CategoryList`] of all hashtags available in the current [`ToDo`] instance.
-    /// If [`ToDo::use_done`] is enabled, it includes hashtags from both [`ToDo::pending`]
-    /// and [`ToDo::done`] lists.
-    ///
-    /// # Returns
-    ///
-    /// A [`CategoryList`] of hashtags along with a boolean indicating whether each hashtag is selected
-    /// based on the applied filters.
-    pub fn get_hashtags(&self) -> CategoryList {
-        self.get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters)
+    pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
+        match category {
+            Projects => self.get_btree_done_switch(|t| t.projects(), &self.project_filters),
+            Contexts => self.get_btree_done_switch(|t| t.contexts(), &self.context_filters),
+            Hashtags => self.get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters),
+        }
     }
 
     /// Retrieves tasks that match a given name for a specific category
@@ -510,21 +483,21 @@ mod tests {
     fn test_categeries_list() -> Result<(), Box<dyn Error>> {
         let mut todo = example_todo(false);
         assert_eq!(
-            todo.get_projects().0,
+            todo.get_categories(ToDoCategory::Projects).0,
             create_vec(&[String::from("project2"), String::from("project3")])
         );
         assert_eq!(
-            todo.get_contexts().0,
+            todo.get_categories(ToDoCategory::Contexts).0,
             create_vec(&[String::from("context2"), String::from("context3")])
         );
         assert_eq!(
-            todo.get_hashtags().0,
+            todo.get_categories(ToDoCategory::Hashtags).0,
             create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
         );
 
         todo.use_done = true;
         assert_eq!(
-            todo.get_projects().0,
+            todo.get_categories(ToDoCategory::Projects).0,
             create_vec(&[
                 String::from("project1"),
                 String::from("project2"),
@@ -532,7 +505,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            todo.get_contexts().0,
+            todo.get_categories(ToDoCategory::Contexts).0,
             create_vec(&[
                 String::from("context1"),
                 String::from("context2"),
@@ -540,7 +513,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            todo.get_hashtags().0,
+            todo.get_categories(ToDoCategory::Hashtags).0,
             create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
         );
 

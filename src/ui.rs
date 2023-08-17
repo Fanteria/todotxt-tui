@@ -1,4 +1,5 @@
 use crate::file_worker::FileWorkerCommands;
+use crate::todo::ToDoCategory;
 use crate::utils::some_or_return;
 use crate::ToDo;
 use crate::CONFIG;
@@ -199,9 +200,9 @@ impl UI {
 
         let data = self.data.lock().unwrap();
         let list = match category {
-            "+" => data.get_projects(),
-            "@" => data.get_contexts(),
-            "#" => data.get_hashtags(),
+            "+" => data.get_categories(ToDoCategory::Projects),
+            "@" => data.get_categories(ToDoCategory::Contexts),
+            "#" => data.get_categories(ToDoCategory::Hashtags),
             _ => return,
         };
 
