@@ -292,7 +292,7 @@ mod tests {
     use super::*;
 
     fn mock_layout() -> Layout {
-        Layout::new(WidgetType::List, Rc::new(RefCell::new(ToDo::new(false))))
+        Layout::from_str(DEFAULT_LAYOUT, Arc::new(Mutex::new(ToDo::new(false)))).unwrap()
     }
 
     #[test]
@@ -306,6 +306,8 @@ mod tests {
             Ok(())
         };
 
+        check_type(WidgetType::List, &l)?;
+
         l.right();
         check_type(WidgetType::Done, &l)?;
 
@@ -313,7 +315,7 @@ mod tests {
         check_type(WidgetType::Done, &l)?;
 
         l.down();
-        check_type(WidgetType::Project, &l)?;
+        check_type(WidgetType::Context, &l)?;
 
         l.right();
         check_type(WidgetType::Project, &l)?;
@@ -322,16 +324,19 @@ mod tests {
         check_type(WidgetType::Project, &l)?;
 
         l.left();
+        check_type(WidgetType::Context, &l)?;
+
+        l.left();
         check_type(WidgetType::List, &l)?;
 
         l.right();
-        check_type(WidgetType::Project, &l)?;
+        check_type(WidgetType::Context, &l)?;
 
         l.left();
         check_type(WidgetType::List, &l)?;
 
         l.up();
-        check_type(WidgetType::Input, &l)?;
+        check_type(WidgetType::List, &l)?;
 
         Ok(())
     }
@@ -340,24 +345,20 @@ mod tests {
     fn test_from_string() -> ToDoRes<()> {
         let str_layout = r#"
             [
-              Direction: Vertical,
-              Input: 3,
-              [
-                Direction:Horizontal,
-                Size: 50%,
-                List: 50%,
-                [ dIrEcTiOn: VeRtIcAl,
-                  Done,
-                  Hashtags: 50%,
-                ],
-                Projects: 50%,
+              Direction:Horizontal,
+              Size: 50%,
+              List: 50%,
+              [ dIrEcTiOn: VeRtIcAl,
+                Done,
+                Hashtags: 50%,
               ],
+              Projects: 50%,
             ]
             
             Direction: ERROR,
         "#;
 
-        Layout::from_str(str_layout, Rc::new(RefCell::new(ToDo::new(false))))?;
+        Layout::from_str(str_layout, Arc::new(Mutex::new(ToDo::new(false))))?;
         Ok(())
     }
 }

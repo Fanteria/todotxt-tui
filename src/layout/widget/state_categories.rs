@@ -32,7 +32,7 @@ impl StateCategories {
     }
 
     pub fn len(&self) -> usize {
-        self.data.lock().unwrap().get_category(self.category).len()
+        self.data.lock().unwrap().get_categories(self.category).len()
     }
 
     pub fn act(&self) -> usize {
@@ -59,7 +59,7 @@ impl State for StateCategories {
                 let name;
                 {
                     let todo = self.data.lock().unwrap();
-                    name = todo.get_category(self.category).get_name(self.act()).clone();
+                    name = todo.get_categories(self.category).get_name(self.act()).clone();
                 }
                 self.data.lock().unwrap().toggle_filter(self.category, &name);
             }
@@ -69,7 +69,7 @@ impl State for StateCategories {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
         let todo = self.data.lock().unwrap();
-        let data = todo.get_category(self.category);
+        let data = todo.get_categories(self.category);
         let list = List::new(data).block(get_block(&widget.title, self.focus));
         if !self.focus {
             f.render_widget(list, widget.chunk)

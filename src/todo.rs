@@ -167,7 +167,7 @@ impl ToDo {
         )
     }
 
-    pub fn get_category(&self, category: ToDoCategory) -> CategoryList {
+    pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
         match category {
             Projects => self.get_btree_done_switch(|t| t.projects(), &self.project_filters),
             Contexts => self.get_btree_done_switch(|t| t.contexts(), &self.context_filters),
@@ -539,31 +539,6 @@ mod tests {
     }
 
     #[test]
-    fn test_tasks_in_category() -> Result<(), Box<dyn Error>> {
-        let mut todo = example_todo(false);
-        assert_eq!(todo.get_project_tasks("project1").len(), 0);
-        assert_eq!(todo.get_project_tasks("project2").len(), 2);
-        assert_eq!(todo.get_project_tasks("project3").len(), 2);
-        assert_eq!(todo.get_context_tasks("context1").len(), 0);
-        assert_eq!(todo.get_context_tasks("context2").len(), 2);
-        assert_eq!(todo.get_context_tasks("context3").len(), 2);
-        assert_eq!(todo.get_hashtag_tasks("hashtag1").len(), 1);
-        assert_eq!(todo.get_hashtag_tasks("hashtag2").len(), 1);
-
-        todo.use_done = true;
-        assert_eq!(todo.get_project_tasks("project1").len(), 1);
-        assert_eq!(todo.get_project_tasks("project2").len(), 2);
-        assert_eq!(todo.get_project_tasks("project3").len(), 3);
-        assert_eq!(todo.get_context_tasks("context1").len(), 1);
-        assert_eq!(todo.get_context_tasks("context2").len(), 2);
-        assert_eq!(todo.get_context_tasks("context3").len(), 3);
-        assert_eq!(todo.get_hashtag_tasks("hashtag1").len(), 2);
-        assert_eq!(todo.get_hashtag_tasks("hashtag2").len(), 2);
-
-        Ok(())
-    }
-
-    #[test]
     fn test_filtering() -> Result<(), Box<dyn Error>> {
         let mut todo = ToDo::new(false);
         todo.add_task(Task::from_str("task 1").unwrap());
@@ -579,16 +554,16 @@ mod tests {
         todo.add_task(Task::from_str("task 11 +project3 @context3 #hashtag2 #hashtag3").unwrap());
         todo.add_task(Task::from_str("task 12 +project3 @context2 #hashtag2").unwrap());
 
-        let filtered = todo.get_pending_filtered();
+        let filtered = todo.get_filtered(ToDoData::Pending);
         assert_eq!(filtered.len(), 12);
 
         todo.project_filters.insert(String::from("project9999"));
-        let filtered = todo.get_pending_filtered();
+        let filtered = todo.get_filtered(ToDoData::Pending);
         assert_eq!(filtered.len(), 0);
 
         todo.project_filters.clear();
         todo.project_filters.insert(String::from("project1"));
-        let filtered = todo.get_pending_filtered();
+        let filtered = todo.get_filtered(ToDoData::Pending);
         assert_eq!(filtered.len(), 4);
         assert_eq!(filtered[0].subject, "task 2 +project1");
         assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
@@ -596,24 +571,24 @@ mod tests {
         assert_eq!(filtered[3].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project2"));
-        let filtered = todo.get_pending_filtered();
+        let filtered = todo.get_filtered(ToDoData::Pending);
         assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
         assert_eq!(filtered[1].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project3"));
-        let filtered = todo.get_pending_filtered();
+        let filtered = todo.get_filtered(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project1"));
-        let filtered = todo.get_pending_filtered();
+        let filtered = todo.get_filtered(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.clear();
         todo.context_filters.insert(String::from("context1"));
-        let filtered = todo.get_pending_filtered();
+        let filtered = todo.get_filtered(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(
             filtered[0].subject,

@@ -217,16 +217,15 @@ mod tests {
     use crate::todo::ToDo;
     use tui::layout::Direction::{Horizontal, Vertical};
     use WidgetType::*;
+    use std::sync::{Arc, Mutex};
 
     fn create_testing_container() -> RcCon {
-        let todo = Rc::new(RefCell::new(ToDo::new(false)));
-        let input_widget = Widget::new(WidgetType::Input, "Input", todo.clone());
+        let todo = Arc::new(Mutex::new(ToDo::new(false)));
         let list_widget = Widget::new(WidgetType::List, "List", todo.clone());
         let done_widget = Widget::new(WidgetType::Done, "Done", todo.clone());
         let project_widget = Widget::new(WidgetType::Project, "Project", todo);
         Container::new(
             vec![
-                InitItem::InitWidget(input_widget),
                 InitItem::InitContainer(Container::new(
                     vec![
                         InitItem::InitWidget(list_widget),
@@ -267,7 +266,6 @@ mod tests {
             Err(e) => Err(e),
         };
 
-        check(Input).unwrap();
         check(List).unwrap();
         check(Done).unwrap();
         check(Project).unwrap();
