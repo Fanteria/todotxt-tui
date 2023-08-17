@@ -80,6 +80,10 @@ impl ToDo {
         }
     }
 
+    fn get_actual_index(&self, data: ToDoData, index: usize) -> usize {
+        self.get_filtered(data).get_actual_index(index)
+    }
+
     /// Adds a task to the To-Do list.
     ///
     /// # Arguments
@@ -259,6 +263,7 @@ impl ToDo {
     }
 
     pub fn move_task(&mut self, data: ToDoData, index: usize) {
+        let index = self.get_actual_index(data, index);
         match data {
             Pending => Self::move_task_logic(&mut self.pending, &mut self.done, index),
             Done => Self::move_task_logic(&mut self.done, &mut self.pending, index),
@@ -373,15 +378,19 @@ impl ToDo {
     }
 
     pub fn remove_task(&mut self, data: ToDoData, index: usize) {
+        let index = self.get_actual_index(data, index);
         self.get_data_mut(data).remove(index);
     }
 
     pub fn swap_tasks(&mut self, data: ToDoData, from: usize, to: usize) {
+        let from = self.get_actual_index(data, from);
+        let to = self.get_actual_index(data, to);
         self.get_data_mut(data).swap(from, to);
         // TODO index out of range
     }
 
     pub fn set_active(&mut self, data: ToDoData, index: usize) {
+        let index = self.get_actual_index(data, index);
         self.active = Some((data, index));
     }
 
@@ -400,7 +409,7 @@ impl ToDo {
     }
 
     pub fn len(&self, data: ToDoData) -> usize {
-        self.get_data(data).len()
+        self.get_filtered(data).len()
     }
 }
 

@@ -29,7 +29,7 @@ impl StateList {
     }
 
     pub fn len(&self) -> usize {
-        self.data.lock().unwrap().get_data(self.data_type).len()
+        self.data.lock().unwrap().len(self.data_type)
     }
 
     pub fn act(&self) -> usize {

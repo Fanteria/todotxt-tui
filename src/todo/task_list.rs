@@ -14,6 +14,10 @@ impl<'a> TaskList<'a> {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn get_actual_index(&self, index: usize) -> usize {
+        self.0[index].0
+    }
 }
 
 impl<'a> Index<usize> for TaskList<'a> {
