@@ -5,13 +5,13 @@ use crate::{
 };
 use chrono::NaiveDate;
 use crossterm::event::KeyEvent;
+use std::sync::{Arc, Mutex};
 use tui::{
     backend::Backend,
     style::{Color, Style},
-    widgets::Paragraph,
+    widgets::{Paragraph, Wrap},
     Frame,
 };
-use std::sync::{Arc, Mutex};
 
 pub struct StatePreview {
     data: Arc<Mutex<ToDo>>,
@@ -34,11 +34,9 @@ impl StatePreview {
             Some(s) => s,
             None => return String::from(""),
         };
-        let date_to_str = |date: Option<NaiveDate>| {
-            match date {
-                Some(date) => date.to_string(),
-                None => String::from(""),
-            }
+        let date_to_str = |date: Option<NaiveDate>| match date {
+            Some(date) => date.to_string(),
+            None => String::from(""),
         };
         self.format
             .replace("{n}", &data.len(ToDoData::Pending).to_string())
@@ -60,10 +58,11 @@ impl State for StatePreview {
     fn handle_key(&mut self, _: &KeyEvent) {}
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
-        let paragraph = Paragraph::new(self.get_content()).block(get_block("Title", self.focus));
+        let paragraph = Paragraph::new(self.get_content())
+            .block(get_block("Title", self.focus))
+            .wrap(Wrap { trim: true });
         // .style(Style::default().fg(Color::White).bg(Color::Black));
         // .alignment(Alignment::Center)
-        // .wrap(Wrap { trim: true });
         f.render_widget(paragraph, widget.chunk);
     }
 

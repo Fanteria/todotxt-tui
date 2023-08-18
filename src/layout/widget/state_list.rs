@@ -5,7 +5,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
     widgets::{List, ListState},
-    Frame,
+    Frame, style::{Style, Color},
 };
 
 pub struct StateList {
@@ -112,14 +112,17 @@ impl State for StateList {
         if !self.focus {
             f.render_widget(list, widget.chunk)
         } else {
-            // .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            let list = list.highlight_symbol(">>");
+            let list = list.highlight_style(Style::default().bg(Color::LightRed)); 
             f.render_stateful_widget(list, widget.chunk, &mut self.state.clone());
         }
     }
 
     fn focus(&mut self) {
         self.focus = true;
+        let len = self.len();
+        if self.act() >= len {
+            self.state.select(Some(len - 1));
+        }
     }
 
     fn unfocus(&mut self) {

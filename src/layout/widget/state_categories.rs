@@ -4,6 +4,7 @@ use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
+    style::{Style, Color},
     widgets::{List, ListState},
     Frame,
 };
@@ -16,10 +17,7 @@ pub struct StateCategories {
 }
 
 impl StateCategories {
-    pub fn new(
-        category: ToDoCategory,
-        data: RCToDo,
-    ) -> Self {
+    pub fn new(category: ToDoCategory, data: RCToDo) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
@@ -32,7 +30,11 @@ impl StateCategories {
     }
 
     pub fn len(&self) -> usize {
-        self.data.lock().unwrap().get_categories(self.category).len()
+        self.data
+            .lock()
+            .unwrap()
+            .get_categories(self.category)
+            .len()
     }
 
     pub fn act(&self) -> usize {
@@ -55,13 +57,21 @@ impl State for StateCategories {
                     self.state.select(Some(act - 1));
                 }
             }
+            KeyCode::Char('g') => self.state.select(Some(0)),
+            KeyCode::Char('G') => self.state.select(Some(self.len() - 1)),
             KeyCode::Enter => {
                 let name;
                 {
                     let todo = self.data.lock().unwrap();
-                    name = todo.get_categories(self.category).get_name(self.act()).clone();
+                    name = todo
+                        .get_categories(self.category)
+                        .get_name(self.act())
+                        .clone();
                 }
-                self.data.lock().unwrap().toggle_filter(self.category, &name);
+                self.data
+                    .lock()
+                    .unwrap()
+                    .toggle_filter(self.category, &name);
             }
             _ => {}
         }
@@ -74,8 +84,7 @@ impl State for StateCategories {
         if !self.focus {
             f.render_widget(list, widget.chunk)
         } else {
-            // .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            let list = list.highlight_symbol(">>");
+            let list = list.highlight_style(Style::default().bg(Color::LightRed)); // TODO add to config
             f.render_stateful_widget(list, widget.chunk, &mut self.state.clone());
         }
     }
