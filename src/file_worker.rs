@@ -8,6 +8,7 @@ use std::{thread, time::Duration};
 use todo_txt::Task;
 
 pub enum FileWorkerCommands {
+    Autosave,
     Save,
     Load,
     Exit,
@@ -25,6 +26,7 @@ impl FileWorker {
         archive_path: Option<String>,
         todo: Arc<Mutex<ToDo>>,
     ) -> FileWorker {
+        let version = todo.lock().unwrap().get_version();
         FileWorker {
             todo_path,
             archive_path,
@@ -82,7 +84,7 @@ impl FileWorker {
         Ok(())
     }
 
-    pub fn run(self, autosave_duration: Duration) -> Sender<FileWorkerCommands>{
+    pub fn run(self, autosave_duration: Duration) -> Sender<FileWorkerCommands> {
         use FileWorkerCommands::*;
         let (tx, rx) = mpsc::channel::<FileWorkerCommands>();
         let tx_auto = tx.clone();
@@ -91,17 +93,32 @@ impl FileWorker {
             thread::spawn(move || loop {
                 thread::sleep(autosave_duration);
                 log::info!("Autosave with duration {}", autosave_duration.as_secs_f64());
-                if let Err(_) = tx_auto.send(Save) {
+                if let Err(_) = tx_auto.send(Autosave) {
                     log::trace!("Autosave end");
                 }
             });
         }
 
         thread::spawn(move || {
+            let mut version = self.todo.lock().unwrap().get_version();
             for received in rx {
                 if let Err(e) = match received {
+                    Autosave => {
+                        let act_version = self.todo.lock().unwrap().get_version();
+                        if version == act_version {
+                            log::info!("File Worker: Todo list is actual.");
+                            Ok(())
+                        } else {
+                            version = act_version;
+                            self.save()
+                        }
+                    }
                     Save => self.save(),
-                    Load => self.load(),
+                    Load => {
+                        let result = self.load();
+                        version = self.todo.lock().unwrap().get_version();
+                        result
+                    }
                     Exit => break,
                 } {
                     log::error!("File Worker: {}", e.kind());

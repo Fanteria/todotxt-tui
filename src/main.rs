@@ -19,7 +19,7 @@ use log4rs::{
 };
 use std::{
     error::Error,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex}, time::Duration,
 };
 
 #[macro_use]
@@ -51,7 +51,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     file_worker.load()?;
 
-    let tx = file_worker.run(CONFIG.autosave_duration);
+    // let tx = file_worker.run(CONFIG.autosave_duration);
+    let tx = file_worker.run(Duration::from_secs(5));
 
     let mut ui = UI::new(
         Layout::from_str(DEFAULT_LAYOUT, todo.clone()).unwrap(),

@@ -38,6 +38,7 @@ pub struct ToDo {
     pub done: Vec<Task>,
     use_done: bool,
     active: Option<(ToDoData, usize)>,
+    version: usize,
     pub project_filters: BTreeSet<String>,
     pub context_filters: BTreeSet<String>,
     pub hashtag_filters: BTreeSet<String>,
@@ -60,6 +61,7 @@ impl ToDo {
             done: Vec::new(),
             use_done,
             active: None,
+            version: 0,
             project_filters: BTreeSet::new(),
             context_filters: BTreeSet::new(),
             hashtag_filters: BTreeSet::new(),
@@ -69,6 +71,7 @@ impl ToDo {
     pub fn move_data(&mut self, other: Self) {
         self.pending = other.pending;
         self.done = other.done;
+        self.version += 1;
     }
 
     pub fn get_data(&self, data: ToDoData) -> &Vec<Task> {
@@ -79,10 +82,15 @@ impl ToDo {
     }
 
     fn get_data_mut(&mut self, data: ToDoData) -> &mut Vec<Task> {
+        self.version += 1;
         match data {
             Pending => &mut self.pending,
             Done => &mut self.done,
         }
+    }
+
+    pub fn get_version(&self) -> usize {
+        self.version
     }
 
     fn get_actual_index(&self, data: ToDoData, index: usize) -> usize {
@@ -95,6 +103,7 @@ impl ToDo {
     ///
     /// * `task` - The task to add.
     pub fn add_task(&mut self, task: Task) {
+        self.version += 1;
         if task.finished {
             self.done.push(task);
         } else {
@@ -241,6 +250,7 @@ impl ToDo {
     }
 
     pub fn move_task(&mut self, data: ToDoData, index: usize) {
+        self.version += 1;
         let index = self.get_actual_index(data, index);
         match data {
             Pending => Self::move_task_logic(&mut self.pending, &mut self.done, index),
@@ -343,6 +353,7 @@ impl ToDo {
     /// An `Ok` result if the task was successfully added, or an `Err` containing
     /// a `todo_txt::Error` if there was a problem parsing the task.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
+        self.version += 1;
         let mut task = Task::from_str(task)?;
         if task.create_date.is_none() {
             task.create_date = Some(Utc::now().naive_utc().date());

@@ -42,6 +42,9 @@ impl StateList {
 
 impl State for StateList {
     fn handle_key(&mut self, event: &KeyEvent) {
+        if self.len() == 0 {
+            return
+        }
         match event.code {
             KeyCode::Char('j') => {
                 let act = self.act() + 1;
@@ -83,7 +86,7 @@ impl State for StateList {
                 log::info!("Remove task with index {act}.");
                 self.data.lock().unwrap().remove_task(self.data_type, act);
                 let len = self.len();
-                if len <= act {
+                if len <= act && len > 0 {
                     self.state.select(Some(len - 1));
                 }
             }
@@ -92,7 +95,7 @@ impl State for StateList {
                 log::info!("Move task with index {act}.");
                 self.data.lock().unwrap().move_task(self.data_type, act);
                 let len = self.len();
-                if len <= act {
+                if len <= act && len > 0 {
                     self.state.select(Some(len - 1));
                 }
             }

@@ -14,7 +14,7 @@ use tui::{
 
 pub type RcCon = Rc<RefCell<Container>>;
 
-const MUST_BE_WIDGET: &str = "";
+const MUST_BE_WIDGET: &str = "ASDF";
 
 pub enum Item {
     Container(RcCon),
@@ -153,20 +153,14 @@ impl Container {
     }
 
     pub fn focus(&mut self) {
-        match self.actual_item_mut() {
-            Item::Widget(w) => w.widget.focus(),
-            Item::Container(_) => {
-                error!("{MUST_BE_WIDGET}");
-            }
+        if let Item::Widget(w) = self.actual_item_mut() {
+            w.widget.focus();
         }
     }
 
     pub fn unfocus(&mut self) {
-        match self.actual_item_mut() {
-            Item::Widget(w) => w.widget.unfocus(),
-            Item::Container(_) => {
-                error!("{MUST_BE_WIDGET}");
-            }
+        if let Item::Widget(w) = self.actual_item_mut() {
+            w.widget.unfocus();
         }
     }
 
