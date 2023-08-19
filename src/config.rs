@@ -1,17 +1,20 @@
-mod text_style;
-mod text_modifier;
 mod colors;
+mod text_modifier;
+mod text_style;
+
 pub use self::colors::OptionalColor;
 
-use self::text_style::*;
-use self::colors::*;
+use self::{colors::*, text_style::*};
 use crate::layout::widget::widget_type::WidgetType;
+use log::LevelFilter;
 use serde::{Deserialize, Serialize};
-use std::env::{var, VarError};
-use std::error::Error;
-use std::fs::File;
-use std::io::Read;
-use std::time::Duration;
+use std::{
+    env::{var, VarError},
+    error::Error,
+    fs::File,
+    io::Read,
+    time::Duration,
+};
 use tui::style::Color;
 
 const CONFIG_NAME: &str = "todo-tui.conf";
@@ -42,6 +45,12 @@ pub struct Config {
     pub done_active_color: TextStyle,
     #[serde(default = "Config::default_autosave_duration")]
     pub autosave_duration: Duration,
+    #[serde(default = "Config::default_log_file")]
+    pub log_file: String,
+    #[serde(default = "Config::default_log_format")]
+    pub log_format: String,
+    #[serde(default = "Config::default_log_level")]
+    pub log_level: LevelFilter,
 }
 
 impl Config {
@@ -93,7 +102,7 @@ impl Config {
     fn default_wrap_preview() -> bool {
         true
     }
-    
+
     fn default_list_active_color() -> TextStyle {
         TextStyle::default().bg(Color::LightRed)
     }
@@ -102,6 +111,17 @@ impl Config {
         Duration::from_secs(900)
     }
 
+    fn default_log_file() -> String {
+        String::from("log.log")
+    }
+
+    fn default_log_format() -> String {
+        String::from("{d} [{h({l})}] {M}: {m}{n}")
+    }
+
+    fn default_log_level() -> LevelFilter {
+        LevelFilter::Info
+    }
 }
 
 impl Default for Config {
@@ -119,6 +139,9 @@ impl Default for Config {
             pending_active_color: TextStyle::default(),
             done_active_color: TextStyle::default(),
             autosave_duration: Self::default_autosave_duration(),
+            log_file: Self::default_log_file(),
+            log_format: Self::default_log_format(),
+            log_level: Self::default_log_level(),
         }
     }
 }
@@ -149,7 +172,7 @@ mod tests {
         let serialized = toml::to_string_pretty(&c).unwrap();
         println!("{}", serialized);
         let deserialized: Config = toml::from_str(&serialized).unwrap();
-        // assert_eq!(c, deserialized);
+        assert_eq!(c, deserialized);
     }
 
     #[test]

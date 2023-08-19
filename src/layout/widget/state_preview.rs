@@ -8,7 +8,6 @@ use crossterm::event::KeyEvent;
 use std::sync::{Arc, Mutex};
 use tui::{
     backend::Backend,
-    style::{Color, Style},
     widgets::{Paragraph, Wrap},
     Frame,
 };

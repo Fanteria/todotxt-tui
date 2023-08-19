@@ -19,15 +19,6 @@ const PRIORITIES: [&str; 27] = [
     "T", "U", "V", "W", "X", "Y", "Z", "empty",
 ];
 
-fn priority_number(s: &str) -> Option<usize> {
-    for (i, prio) in PRIORITIES.iter().enumerate() {
-        if *prio == s {
-            return Some(i);
-        }
-    }
-    None
-}
-
 impl TextStyle {
     pub fn bg(mut self, bg: Color) -> Self {
         self.bg = Some(bg);
@@ -39,17 +30,19 @@ impl TextStyle {
         self
     }
 
+    #[allow(dead_code)]
     pub fn modifier(mut self, modifier: TextModifier) -> Self {
         self.modifier = Some(modifier);
         self
     }
 
+    #[allow(dead_code)]
     pub fn is_some(&self) -> bool {
         self.bg.is_some() || self.fg.is_some() || self.modifier.is_some()
     }
 
     pub fn combine(&self, additional: &Self) -> TextStyle {
-        let mut new = self.clone();
+        let mut new = *self;
         if let Some(bg) = additional.bg {
             new.bg = Some(bg);
         }
@@ -82,11 +75,6 @@ impl TextStyle {
 pub struct TextStyleList(HashMap<String, TextStyle>);
 
 impl TextStyleList {
-
-    pub fn count(&self) -> usize {
-        self.0.len()
-    }
-
     pub fn get_style(&self, index: usize) -> Style {
         let name = PRIORITIES[index];
         match self.0.get(name) {

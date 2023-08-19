@@ -8,9 +8,7 @@ pub type ToDoRes<T> = Result<T, ErrorToDo>;
 
 #[derive(Debug)]
 pub enum ErrorType {
-    ImpossigleLayout,
     WidgetDoesNotExist,
-    ActualIsNotWidget,
     ParseValueError,
     ParseWidgetType,
     ParseNotStart,
@@ -39,10 +37,10 @@ impl ErrorToDo {
 }
 
 impl From<ParseIntError> for ErrorToDo {
-    fn from(val: ParseIntError) -> Self {
+    fn from(_val: ParseIntError) -> Self {
         ErrorToDo::new(
             ErrorType::ParseValueError,
-            "Value must be in format unsigned integera.",
+            "Value must be in format unsigned integer.",
         )
     }
 }

@@ -1,11 +1,6 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-use log::error;
-
+use super::widget::{widget_type::WidgetType, Widget};
 use crate::error::{ErrorToDo, ErrorType, ToDoRes};
-
-use super::widget::widget_type::WidgetType;
-use super::widget::Widget;
+use std::{cell::RefCell, rc::Rc};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -13,8 +8,6 @@ use tui::{
 };
 
 pub type RcCon = Rc<RefCell<Container>>;
-
-const MUST_BE_WIDGET: &str = "ASDF";
 
 pub enum Item {
     Container(RcCon),
@@ -132,26 +125,6 @@ impl Container {
         Container::change_item(&container, |c| c.act_index == 0, |c| c.act_index -= 1)
     }
 
-    pub fn check_active(&self, widget_type: WidgetType) -> ToDoRes<bool> {
-        match self.actual_item() {
-            Item::Widget(w) => Ok(w.widget.widget_type == widget_type),
-            Item::Container(_) => Err(ErrorToDo::new(
-                ErrorType::ActualIsNotWidget,
-                "The current item is expected to be a widget.",
-            )),
-        }
-    }
-
-    pub fn get_active_type(&self) -> ToDoRes<WidgetType> {
-        match self.actual_item() {
-            Item::Widget(w) => Ok(w.widget.widget_type),
-            Item::Container(_) => Err(ErrorToDo::new(
-                ErrorType::ActualIsNotWidget,
-                "The current item is expected to be a widget.",
-            )),
-        }
-    }
-
     pub fn focus(&mut self) {
         if let Item::Widget(w) = self.actual_item_mut() {
             w.widget.focus();
@@ -207,12 +180,22 @@ impl Container {
 }
 
 #[cfg(test)]
+impl Container {
+    pub fn get_active_type(&self) -> WidgetType {
+        if let Item::Widget(w) = self.actual_item() {
+            return w.widget.widget_type;
+        };
+        panic!("The current item is expected to be a widget.");
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::todo::ToDo;
+    use std::sync::{Arc, Mutex};
     use tui::layout::Direction::{Horizontal, Vertical};
     use WidgetType::*;
-    use std::sync::{Arc, Mutex};
 
     fn create_testing_container() -> RcCon {
         let todo = Arc::new(Mutex::new(ToDo::new(false)));
@@ -220,44 +203,44 @@ mod tests {
         let done_widget = Widget::new(WidgetType::Done, "Done", todo.clone());
         let project_widget = Widget::new(WidgetType::Project, "Project", todo);
         Container::new(
-            vec![
-                InitItem::InitContainer(Container::new(
-                    vec![
-                        InitItem::InitWidget(list_widget),
-                        InitItem::InitContainer(Container::new(
-                            vec![
-                                InitItem::InitWidget(done_widget),
-                                InitItem::InitWidget(project_widget),
-                            ],
-                            vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-                            Vertical,
-                            None,
-                        )),
-                    ],
-                    vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-                    Horizontal,
-                    None,
-                )),
-            ],
+            vec![InitItem::InitContainer(Container::new(
+                vec![
+                    InitItem::InitWidget(list_widget),
+                    InitItem::InitContainer(Container::new(
+                        vec![
+                            InitItem::InitWidget(done_widget),
+                            InitItem::InitWidget(project_widget),
+                        ],
+                        vec![Constraint::Percentage(50), Constraint::Percentage(50)],
+                        Vertical,
+                        None,
+                    )),
+                ],
+                vec![Constraint::Percentage(50), Constraint::Percentage(50)],
+                Horizontal,
+                None,
+            ))],
             vec![Constraint::Length(3), Constraint::Percentage(30)],
             Vertical,
             None,
         )
     }
 
-    fn check_active_test(container: &RcCon, widget_type: WidgetType) -> ToDoRes<()> {
-        let active = container.borrow().get_active_type()?;
+    fn check_active_test(container: &RcCon, widget_type: WidgetType) {
+        let active = container.borrow().get_active_type();
         if active != widget_type {
             panic!("Active widget must be {:?} not {:?}.", widget_type, active)
         }
-        Ok(())
     }
 
     #[test]
-    fn test_selecting_widget() -> ToDoRes<()> {
+    fn test_selecting_widget() {
         let c = create_testing_container();
         let check = |widget_type| match Container::select_widget(c.clone(), widget_type) {
-            Ok(c) => check_active_test(&c, widget_type),
+            Ok(c) => {
+                check_active_test(&c, widget_type);
+                Ok(())
+            }
             Err(e) => Err(e),
         };
 
@@ -268,7 +251,6 @@ mod tests {
             check(Context).is_err(),
             "Widget with type Context is not in container."
         );
-        Ok(())
     }
 
     #[test]
@@ -278,24 +260,24 @@ mod tests {
         // Test next widget in child container.
         let actual = Container::select_widget(c.clone(), List)?;
         let next = Container::next_item(actual).unwrap();
-        check_active_test(&next, Done)?;
+        check_active_test(&next, Done);
 
         // Test next widget in same container.
         let actual = Container::select_widget(c.clone(), Done)?;
         let next = Container::next_item(actual).unwrap();
-        check_active_test(&next, Project)?;
+        check_active_test(&next, Project);
 
         // Test next in container have not default value
         let actual = Container::select_widget(c, List)?;
         let next = Container::next_item(actual.clone()).unwrap();
-        check_active_test(&next, Project)?;
+        check_active_test(&next, Project);
 
         // Test return value if there is no next item
         assert!(Container::next_item(actual.clone()).is_none());
         assert!(Container::next_item(actual.clone()).is_none());
         assert!(Container::next_item(actual.clone()).is_none());
         assert_eq!(actual.borrow().act_index, 1);
-        check_active_test(&next, Project)?;
+        check_active_test(&next, Project);
 
         Ok(())
     }
@@ -306,15 +288,14 @@ mod tests {
 
         // Test previous widget in same container.
         let actual = Container::select_widget(c, Project)?;
-        let prev = Container::previous_item(actual); //.unwrap();
-        // check_active_test(&prev, Done)?;
+        let prev = Container::previous_item(actual).unwrap();
 
         // Test return value if there is no previous item
-        // assert!(Container::previous_item(prev.clone()).is_none());
-        // assert!(Container::previous_item(prev.clone()).is_none());
-        // assert!(Container::previous_item(prev.clone()).is_none());
-        // assert_eq!(prev.borrow().act_index, 0);
-        // check_active_test(&prev, Done)?;
+        assert!(Container::previous_item(prev.clone()).is_none());
+        assert!(Container::previous_item(prev.clone()).is_none());
+        assert!(Container::previous_item(prev.clone()).is_none());
+        assert_eq!(prev.borrow().act_index, 0);
+        check_active_test(&prev, Done);
 
         Ok(())
     }

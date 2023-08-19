@@ -1,10 +1,9 @@
 use super::{widget_state::RCToDo, widget_trait::State, Widget};
-use crate::utils::get_block;
-use crate::{todo::ToDoData, CONFIG};
+use crate::{todo::ToDoData, utils::get_block};
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
-    style::{Color, Style},
+    style::Style,
     widgets::{List, ListState},
     Frame,
 };
@@ -21,7 +20,6 @@ impl StateList {
     pub fn new(data_type: ToDoData, data: RCToDo, style: Style) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
-
         Self {
             state,
             style,
@@ -43,7 +41,7 @@ impl StateList {
 impl State for StateList {
     fn handle_key(&mut self, event: &KeyEvent) {
         if self.len() == 0 {
-            return
+            return;
         }
         match event.code {
             KeyCode::Char('j') => {

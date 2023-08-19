@@ -258,15 +258,6 @@ impl Layout {
         ));
     }
 
-    #[allow(dead_code)]
-    pub fn select_widget(&mut self, widget_type: WidgetType) -> ToDoRes<()> {
-        self.actual = Container::select_widget(self.root.clone(), widget_type)?;
-        if let Item::Widget(w) = self.actual.borrow_mut().actual_item_mut() {
-            w.widget.focus();
-        }
-        Ok(())
-    }
-
     pub fn handle_key(&self, event: &KeyEvent) {
         let mut act = self.actual.borrow_mut();
         match &mut act.actual_item_mut() {
@@ -299,7 +290,7 @@ mod tests {
     fn test_basic_movement() -> ToDoRes<()> {
         let mut l = mock_layout();
         let check_type = |widget_type, l: &Layout| -> ToDoRes<()> {
-            let active = l.actual.as_ref().borrow().get_active_type()?;
+            let active = l.actual.as_ref().borrow().get_active_type();
             if active != widget_type {
                 panic!("Active widget must be {:?} not {:?}.", widget_type, active)
             }

@@ -1,6 +1,8 @@
 use crate::todo::ToDo;
+use notify::{event::{EventKind, AccessKind, AccessMode}, Config, RecommendedWatcher, RecursiveMode, Watcher, recommended_watcher};
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Read, Result as ioResult, Write};
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc, Mutex};
@@ -8,7 +10,7 @@ use std::{thread, time::Duration};
 use todo_txt::Task;
 
 pub enum FileWorkerCommands {
-    Autosave,
+    ForceSave,
     Save,
     Load,
     Exit,
@@ -26,7 +28,6 @@ impl FileWorker {
         archive_path: Option<String>,
         todo: Arc<Mutex<ToDo>>,
     ) -> FileWorker {
-        let version = todo.lock().unwrap().get_version();
         FileWorker {
             todo_path,
             archive_path,
@@ -34,7 +35,7 @@ impl FileWorker {
         }
     }
 
-    pub fn load(&self) -> ioResult<()> {
+    fn load(&self) -> ioResult<()> {
         let mut todo = ToDo::new(false);
         Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
         if let Some(path) = &self.archive_path {
@@ -44,7 +45,7 @@ impl FileWorker {
         Ok(())
     }
 
-    pub fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> ioResult<()> {
+    fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> ioResult<()> {
         for line in BufReader::new(reader).lines() {
             let line = line?;
             let line = line.trim();
@@ -59,7 +60,7 @@ impl FileWorker {
         Ok(())
     }
 
-    pub fn save(&self) -> ioResult<()> {
+    fn save(&self) -> ioResult<()> {
         let mut f = File::create(&self.todo_path)?;
         let todo = self.todo.lock().unwrap();
         log::info!(
@@ -84,17 +85,49 @@ impl FileWorker {
         Ok(())
     }
 
-    pub fn run(self, autosave_duration: Duration) -> Sender<FileWorkerCommands> {
+    pub fn run(
+        self,
+        autosave_duration: Duration,
+        handle_changes: bool,
+    ) -> Sender<FileWorkerCommands> {
         use FileWorkerCommands::*;
         let (tx, rx) = mpsc::channel::<FileWorkerCommands>();
-        let tx_auto = tx.clone();
         if !autosave_duration.is_zero() {
+            let tx_worker = tx.clone();
             log::trace!("Start autosaver");
             thread::spawn(move || loop {
                 thread::sleep(autosave_duration);
-                log::info!("Autosave with duration {}", autosave_duration.as_secs_f64());
-                if let Err(_) = tx_auto.send(Autosave) {
+                log::trace!("Autosave with duration {}", autosave_duration.as_secs_f64());
+                if tx_worker.send(Save).is_err() {
                     log::trace!("Autosave end");
+                }
+            });
+        }
+
+        if handle_changes {
+            let tx_worker = tx.clone();
+            log::trace!("Start file watcher");
+            thread::spawn(move || loop {
+                let (tx_handle, rx_handle) = std::sync::mpsc::channel();
+                let mut watcher = RecommendedWatcher::new(tx_handle, Config::default()).unwrap();
+                watcher
+                    .watch(
+                        Path::new("/home/jirka/todo.txt"),
+                        RecursiveMode::NonRecursive,
+                    )
+                    .unwrap();
+                for res in rx_handle {
+                    match res {
+                        Ok(event) => {
+                            match event.kind {
+                                EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
+                                    log::warn!("Change:")
+                                }
+                                _ => log::debug!("Change: {event:?}"),
+                            }
+                        }
+                        Err(error) => log::error!("Error: {error:?}"),
+                    }
                 }
             });
         }
@@ -103,17 +136,17 @@ impl FileWorker {
             let mut version = self.todo.lock().unwrap().get_version();
             for received in rx {
                 if let Err(e) = match received {
-                    Autosave => {
+                    Save => {
                         let act_version = self.todo.lock().unwrap().get_version();
                         if version == act_version {
-                            log::info!("File Worker: Todo list is actual.");
+                            log::trace!("File Worker: Todo list is actual.");
                             Ok(())
                         } else {
                             version = act_version;
                             self.save()
                         }
                     }
-                    Save => self.save(),
+                    ForceSave => self.save(),
                     Load => {
                         let result = self.load();
                         version = self.todo.lock().unwrap().get_version();

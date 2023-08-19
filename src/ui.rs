@@ -16,6 +16,7 @@ use std::io;
 use std::io::Result as ioResult;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tui::layout::Constraint;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -74,6 +75,7 @@ impl UI {
         terminal.hide_cursor()?;
         self.update_chunks(terminal.size()?);
 
+        self.draw(&mut terminal)?;
         self.main_loop(&mut terminal)?;
 
         // restore terminal
@@ -89,92 +91,21 @@ impl UI {
     }
 
     fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> ioResult<()> {
+        let mut version = self.data.lock().unwrap().get_version();
+        let mut new_version;
         loop {
-            self.draw(terminal)?;
-
-            match event::read()? {
-                Event::Resize(width, height) => {
-                    self.update_chunks(Rect::new(0, 0, width, height));
+            if event::poll(Duration::from_secs(1))? { // TODO refresh rate to config
+                if self.handle_event()? {
+                    break;
                 }
-                Event::Key(event) => match self.mode {
-                    Mode::Input => match event.code {
-                        KeyCode::Enter => {
-                            self.data.lock().unwrap().new_task(&self.input).unwrap(); // TODO fix
-                            self.input.clear();
-                            self.mode = Mode::Normal;
-                            self.layout.focus();
-                        }
-                        KeyCode::Char(c) => {
-                            self.input.push(c);
-                        }
-                        KeyCode::Backspace => {
-                            self.input.pop();
-                        }
-                        KeyCode::Esc => {
-                            self.mode = Mode::Normal;
-                            self.layout.focus();
-                        }
-                        KeyCode::Tab => {
-                            self.autocomplete();
-                        }
-                        _ => {}
-                    },
-                    Mode::Edit => match event.code {
-                        KeyCode::Enter => {
-                            self.data.lock().unwrap().update_active(&self.input).unwrap();
-                            self.input.clear();
-                            self.mode = Mode::Normal;
-                            self.layout.focus();
-                        }
-                        KeyCode::Char(c) => {
-                            self.input.push(c);
-                        }
-                        KeyCode::Backspace => {
-                            self.input.pop();
-                        }
-                        KeyCode::Esc => {
-                            self.input.clear();
-                            self.mode = Mode::Normal;
-                            self.layout.focus();
-                        }
-                        KeyCode::Tab => {
-                            self.autocomplete();
-                        }
-                        _ => {}
-                    },
-                    Mode::Normal => match event.code {
-                        KeyCode::Char('q') => break,
-                        KeyCode::Char('I') => {
-                            self.mode = Mode::Input;
-                            self.layout.unfocus();
-                        }
-                        KeyCode::Char('L') => self.layout.right(),
-                        KeyCode::Char('H') => self.layout.left(),
-                        KeyCode::Char('K') => self.layout.up(),
-                        KeyCode::Char('J') => self.layout.down(),
-                        KeyCode::Char('S') => {
-                            if let Err(e) = self.tx.send(FileWorkerCommands::Save) {
-                                log::error!("Error while send signal to save todo list: {}", e);
-                                // TODO show something on screen
-                            }
-                        }
-                        KeyCode::Char('U') => {
-                            if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
-                                log::error!("Error while send signal to load todo list: {}", e);
-                                // TODO show something on screen
-                            }
-                        }
-                        KeyCode::Char('E') => {
-                            if let Some(active) = self.data.lock().unwrap().get_active() {
-                                self.input = active.to_string();
-                                self.mode = Mode::Edit;
-                                self.layout.unfocus();
-                            }
-                        }
-                        _ => self.layout.handle_key(&event),
-                    },
-                },
-                _ => {}
+                version = self.data.lock().unwrap().get_version();
+                self.draw(terminal)?;
+            } else {
+                new_version = self.data.lock().unwrap().get_version();
+                if new_version != version {
+                    version = self.data.lock().unwrap().get_version();
+                    self.draw(terminal)?;
+                }
             }
         }
         Ok(())
@@ -235,5 +166,99 @@ impl UI {
             self.input += &new_act[pattern.len()..];
             self.input += " ";
         }
+    }
+
+    fn handle_event(&mut self) -> ioResult<bool> {
+        let mut ret = false;
+        match event::read()? {
+            Event::Resize(width, height) => {
+                self.update_chunks(Rect::new(0, 0, width, height));
+            }
+            Event::Key(event) => match self.mode {
+                Mode::Input => match event.code {
+                    KeyCode::Enter => {
+                        self.data.lock().unwrap().new_task(&self.input).unwrap(); // TODO fix
+                        self.input.clear();
+                        self.mode = Mode::Normal;
+                        self.layout.focus();
+                    }
+                    KeyCode::Char(c) => {
+                        self.input.push(c);
+                    }
+                    KeyCode::Backspace => {
+                        self.input.pop();
+                    }
+                    KeyCode::Esc => {
+                        self.mode = Mode::Normal;
+                        self.layout.focus();
+                    }
+                    KeyCode::Tab => {
+                        self.autocomplete();
+                    }
+                    _ => {}
+                },
+                Mode::Edit => match event.code {
+                    KeyCode::Enter => {
+                        self.data
+                            .lock()
+                            .unwrap()
+                            .update_active(&self.input)
+                            .unwrap();
+                        self.input.clear();
+                        self.mode = Mode::Normal;
+                        self.layout.focus();
+                    }
+                    KeyCode::Char(c) => {
+                        self.input.push(c);
+                    }
+                    KeyCode::Backspace => {
+                        self.input.pop();
+                    }
+                    KeyCode::Esc => {
+                        self.input.clear();
+                        self.mode = Mode::Normal;
+                        self.layout.focus();
+                    }
+                    KeyCode::Tab => {
+                        self.autocomplete();
+                    }
+                    _ => {}
+                },
+                Mode::Normal => match event.code {
+                    KeyCode::Char('q') => ret = true,
+                    KeyCode::Char('I') => {
+                        self.mode = Mode::Input;
+                        self.layout.unfocus();
+                    }
+                    KeyCode::Char('L') => self.layout.right(),
+                    KeyCode::Char('H') => self.layout.left(),
+                    KeyCode::Char('K') => self.layout.up(),
+                    KeyCode::Char('J') => self.layout.down(),
+                    KeyCode::Char('S') => {
+                        if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
+                            log::error!("Error while send signal to save todo list: {}", e);
+                            // TODO show something on screen
+                        }
+                    }
+                    KeyCode::Char('U') => {
+                        if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
+                            log::error!("Error while send signal to load todo list: {}", e);
+                            // TODO show something on screen
+                        }
+                    }
+                    KeyCode::Char('E') => {
+                        if let Some(active) = self.data.lock().unwrap().get_active() {
+                            self.input = active.to_string();
+                            self.mode = Mode::Edit;
+                            self.layout.unfocus();
+                        }
+                    }
+                    KeyCode::Char('a') => log::error!("Fake testing error."),
+                    _ => self.layout.handle_key(&event),
+                },
+            },
+            _ => {}
+        }
+        Ok(ret)
     }
 }

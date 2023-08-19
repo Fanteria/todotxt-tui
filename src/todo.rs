@@ -3,26 +3,18 @@ pub mod task_list;
 pub use self::{category_list::CategoryList, task_list::TaskList};
 
 use chrono::Utc;
-use std::collections::btree_set::BTreeSet;
-use std::convert::From;
-use std::str::FromStr;
+use std::{collections::btree_set::BTreeSet, convert::From, str::FromStr};
 use todo_txt::Task;
 
 /// Type alias for a tuple representing filter data.
 type FilterData<'a> = (&'a BTreeSet<String>, fn(&'a Task) -> &'a [String]);
-
-use ToDoData::Done;
-use ToDoData::Pending;
 
 #[derive(Clone, Copy)]
 pub enum ToDoData {
     Pending,
     Done,
 }
-
-use ToDoCategory::Contexts;
-use ToDoCategory::Hashtags;
-use ToDoCategory::Projects;
+use ToDoData::*;
 
 #[derive(Clone, Copy)]
 pub enum ToDoCategory {
@@ -30,8 +22,8 @@ pub enum ToDoCategory {
     Contexts,
     Hashtags,
 }
+use ToDoCategory::*;
 
-/// Represents a To-Do list.
 #[derive(Default)]
 pub struct ToDo {
     pub pending: Vec<Task>,
@@ -39,22 +31,12 @@ pub struct ToDo {
     use_done: bool,
     active: Option<(ToDoData, usize)>,
     version: usize,
-    pub project_filters: BTreeSet<String>,
-    pub context_filters: BTreeSet<String>,
-    pub hashtag_filters: BTreeSet<String>,
+    project_filters: BTreeSet<String>,
+    context_filters: BTreeSet<String>,
+    hashtag_filters: BTreeSet<String>,
 }
 
 impl ToDo {
-    /// Creates a new instance of `ToDo`.
-    ///
-    /// # Arguments
-    ///
-    /// * `use_done` - A boolean indicating whether to include
-    ///         completed tasks in the list.
-    ///
-    /// # Returns
-    ///
-    /// A new instance of `ToDo`.
     pub fn new(use_done: bool) -> Self {
         Self {
             pending: Vec::new(),
@@ -97,11 +79,6 @@ impl ToDo {
         self.get_filtered(data).get_actual_index(index)
     }
 
-    /// Adds a task to the To-Do list.
-    ///
-    /// # Arguments
-    ///
-    /// * `task` - The task to add.
     pub fn add_task(&mut self, task: Task) {
         self.version += 1;
         if task.finished {
@@ -111,32 +88,12 @@ impl ToDo {
         }
     }
 
-    /// Constructs a [`CategoryList`] from a list of tasks, applying the
-    /// provided filter function and checking for selected items.
-    ///
-    /// # Arguments
-    ///
-    /// * `tasks`: A vector of references to `Vec<Task>`
-    ///         containing the tasks to be categorized.
-    /// * `f`: A function that takes a reference to a `Task`
-    ///         and returns a reference to a `Vec<String>`,
-    ///         representing the category (e.g., projects,
-    ///         contexts, hashtags).
-    /// * `selected`: A reference to a `BTreeSet<String>`
-    ///         containing the selected categories.
-    ///
-    /// # Returns
-    ///
-    /// A [`CategoryList`] containing the categorized items along with
-    /// a boolean indicating whether each item is selected
-    /// (contained in `selected`).
     fn get_btree<'a>(
         tasks: Vec<&'a Vec<Task>>,
         f: fn(&Task) -> &[String],
         selected: &BTreeSet<String>,
     ) -> CategoryList<'a> {
         let mut btree = BTreeSet::<&String>::new();
-
         tasks.iter().for_each(|list| {
             list.iter().for_each(|task| {
                 f(task).iter().for_each(|project| {
@@ -152,23 +109,6 @@ impl ToDo {
         )
     }
 
-    /// Constructs a [`CategoryList`] from the current `ToDo` instance,
-    /// applying the provided filter function and checking for selected
-    /// items based on the [`ToDo::use_done`] flag.
-    ///
-    /// # Arguments
-    ///
-    /// * `f`: A function that takes a reference to a `Task`
-    ///         and returns a reference to a `Vec<String>`,
-    ///         representing the category (e.g., projects, contexts, hashtags).
-    /// * `selected`: A reference to a `BTreeSet<String>` containing
-    ///         the selected categories.
-    ///
-    /// # Returns
-    ///
-    /// A [`CategoryList`] containing the categorized items along
-    /// with a boolean indicating whether each item is selected
-    /// (contained in `selected`).
     fn get_btree_done_switch(
         &self,
         f: fn(&Task) -> &[String],
@@ -185,15 +125,6 @@ impl ToDo {
         )
     }
 
-    /// TODO rewrite comment
-    /// Returns a [`CategoryList`] of all projects available
-    /// in the current [`ToDo`] instance. If [`ToDo::use_done`] is enabled,
-    /// it includes projects from both [`ToDo::pending`] and [`ToDo::done`] lists.
-    ///
-    /// # Returns
-    ///
-    /// A [`CategoryList`] of projects along with a boolean indicating whether
-    /// each project is selected based on the applied filters.
     pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
         match category {
             Projects => self.get_btree_done_switch(|t| t.projects(), &self.project_filters),
@@ -202,20 +133,6 @@ impl ToDo {
         }
     }
 
-    /// Retrieves tasks that match a given name for a specific category
-    /// (e.g., projects, contexts, hashtags).
-    ///
-    /// # Arguments
-    ///
-    /// * `tasks`: A vector of references to `Vec<Task>` containing
-    ///         the tasks to be searched.
-    /// * `name`: The name to search for within the category.
-    /// * `f`: A function that takes a reference to a `Task` and returns a reference
-    ///         to a `Vec<String>`, representing the category (e.g., projects, contexts, hashtags).
-    ///
-    /// # Returns
-    ///
-    /// A vector of references to the matching tasks.
     #[allow(dead_code)]
     fn get_tasks<'a>(
         tasks: Vec<&'a Vec<Task>>,
@@ -234,14 +151,6 @@ impl ToDo {
         vec
     }
 
-    /// Moves a task from one list to another based on the provided index.
-    ///
-    /// # Arguments
-    ///
-    /// * `from`: A mutable reference to the source list of tasks.
-    /// * `to`: A mutable reference to the destination list of tasks.
-    /// * `index`: The index of the task to be moved from the source list
-    ///         to the destination list.
     fn move_task_logic(from: &mut Vec<Task>, to: &mut Vec<Task>, index: usize) {
         if from.len() <= index {
             return;
@@ -258,19 +167,6 @@ impl ToDo {
         };
     }
 
-    /// Retrieves tasks that match a given name for a specific category
-    /// (e.g., projects, contexts, hashtags) based on the [`ToDo::use_done`] flag.
-    ///
-    /// # Arguments
-    ///
-    /// * `name`: The name to search for within the category.
-    /// * `f`: A function that takes a reference to a `Task` and returns
-    ///         a reference to a `Vec<String>`,
-    ///         representing the category (e.g., projects, contexts, hashtags).
-    ///
-    /// # Returns
-    ///
-    /// A vector of references to the matching tasks.
     #[allow(dead_code)]
     fn get_tasks_done_switch<'a>(&'a self, name: &str, f: fn(&Task) -> &[String]) -> Vec<&'a Task> {
         Self::get_tasks(
@@ -284,22 +180,6 @@ impl ToDo {
         )
     }
 
-    /// Filters tasks based on the provided filters and returns a `TaskList`.
-    ///
-    /// # Arguments
-    ///
-    /// * `tasks`: A reference to a slice of `Task` instances to be filtered.
-    /// * `filters`: A reference to a slice of [`FilterData`] tuples containing
-    ///             filter categories and functions. Each [`FilterData`] tuple
-    ///             consists of a reference to a `BTreeSet<String>` representing
-    ///             the selected categories and a function that takes a reference
-    ///             to a `Task` and returns a reference to a `Vec<String>`,
-    ///             representing the category to be filtered (e.g., projects,
-    ///             contexts, hashtags).
-    ///
-    /// # Returns
-    ///
-    /// A `TaskList` containing the filtered tasks along with their respective indices.
     fn get_filtered_tasks<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
         TaskList(
             tasks
@@ -323,7 +203,6 @@ impl ToDo {
         if !filter_set.insert(String::from(filter)) {
             filter_set.remove(filter);
         }
-
     }
 
     pub fn get_filtered(&self, data: ToDoData) -> TaskList {
@@ -342,16 +221,6 @@ impl ToDo {
         TaskList(self.get_data(data).iter().enumerate().collect())
     }
 
-    /// Adds a new task to the `ToDo` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `task`: The new task to be added as a string.
-    ///
-    /// # Returns
-    ///
-    /// An `Ok` result if the task was successfully added, or an `Err` containing
-    /// a `todo_txt::Error` if there was a problem parsing the task.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         self.version += 1;
         let mut task = Task::from_str(task)?;
@@ -375,7 +244,6 @@ impl ToDo {
         let from = self.get_actual_index(data, from);
         let to = self.get_actual_index(data, to);
         self.get_data_mut(data).swap(from, to);
-        // TODO index out of range
     }
 
     pub fn set_active(&mut self, data: ToDoData, index: usize) {

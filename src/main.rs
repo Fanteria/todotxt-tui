@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_variables)]
+#![allow(dead_code, unused_variables, unused_imports)]
 
 mod config;
 mod error;
@@ -9,9 +9,9 @@ mod ui;
 mod utils;
 
 use crate::{config::Config, file_worker::FileWorker, todo::ToDo, ui::UI};
+use file_worker::FileWorkerCommands;
 use layout::{Layout, DEFAULT_LAYOUT};
 use lazy_static::lazy_static;
-use log::LevelFilter;
 use log4rs::{
     append::file::FileAppender,
     config::{Appender, Config as LogConfig, Root},
@@ -19,8 +19,10 @@ use log4rs::{
 };
 use std::{
     error::Error,
-    sync::{Arc, Mutex}, time::Duration,
+    sync::{Arc, Mutex},
 };
+use notify::{Watcher, RecommendedWatcher, RecursiveMode};
+use std::path::Path;
 
 #[macro_use]
 extern crate enum_dispatch;
@@ -29,38 +31,48 @@ lazy_static! {
     static ref CONFIG: Config = Config::load_default();
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    // TODO solve log file by better way
+fn init_logging() -> Result<(), Box<dyn Error>> {
     let logfile = FileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d} [{h({l})}] {M}: {m}{n}")))
-        .build("log.log")?;
+        .encoder(Box::new(PatternEncoder::new(&CONFIG.log_format)))
+        .build(&CONFIG.log_file)?;
     let config = LogConfig::builder()
         .appender(Appender::builder().build("logfile", Box::new(logfile)))
-        .build(
-            Root::builder()
-                .appender("logfile")
-                .build(LevelFilter::Trace),
-        )?;
+        .build(Root::builder().appender("logfile").build(CONFIG.log_level))?;
     log4rs::init_config(config)?;
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+
+    let mut watcher = notify::recommended_watcher(|res| {
+        match res {
+           Ok(event) => println!("event: {:?}", event),
+           Err(e) => println!("watch error: {:?}", e),
+        }
+    })?;
+
+    // Add a path to be watched. All files and directories at that path and
+    // below will be monitored for changes.
+    watcher.watch(Path::new("/home/jirka/todo.txt"), RecursiveMode::NonRecursive)?;
 
     let todo = Arc::new(Mutex::new(ToDo::new(false)));
-    let file_worker = FileWorker::new(
+    let tx = FileWorker::new(
         CONFIG.todo_path.clone(),
         CONFIG.archive_path.clone(),
         todo.clone(),
-    );
-    file_worker.load()?;
+    )
+    .run(CONFIG.autosave_duration, true);
+    tx.send(FileWorkerCommands::Load).unwrap();
 
-    // let tx = file_worker.run(CONFIG.autosave_duration);
-    let tx = file_worker.run(Duration::from_secs(5));
+    init_logging()?;
 
-    let mut ui = UI::new(
-        Layout::from_str(DEFAULT_LAYOUT, todo.clone()).unwrap(),
+    UI::new(
+        Layout::from_str(DEFAULT_LAYOUT, todo.clone())?,
         todo.clone(),
         tx.clone(),
-    );
+    )
+    .run()?;
 
-    ui.run()?;
-
+    tx.send(FileWorkerCommands::Exit).unwrap();
     Ok(())
 }
