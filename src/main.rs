@@ -42,13 +42,13 @@ fn init_logging() -> Result<(), Box<dyn Error>> {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let todo = Arc::new(Mutex::new(ToDo::new(false)));
-    let tx = FileWorker::new(
+    let file_worker = FileWorker::new(
         CONFIG.todo_path.clone(),
         CONFIG.archive_path.clone(),
         todo.clone(),
-    )
-    .run(CONFIG.autosave_duration, true);
-    tx.send(FileWorkerCommands::Load).unwrap();
+    );
+    file_worker.load()?;
+    let tx = file_worker.run(CONFIG.autosave_duration, CONFIG.file_watcher);
 
     init_logging()?;
 

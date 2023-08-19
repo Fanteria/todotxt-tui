@@ -51,6 +51,10 @@ pub struct Config {
     pub log_format: String,
     #[serde(default = "Config::default_log_level")]
     pub log_level: LevelFilter,
+    #[serde(default = "Config::default_file_watcher")]
+    pub file_watcher: bool,
+    #[serde(default = "Config::default_list_refresh_rate")]
+    pub list_refresh_rate: Duration
 }
 
 impl Config {
@@ -66,11 +70,17 @@ impl Config {
         R: Read,
     {
         let mut buf = String::default();
-        if reader.read_to_string(&mut buf).is_err() {
+        if let Err(e) = reader.read_to_string(&mut buf) {
+            log::error!("Cannot load config: {}", e);
             return Self::default();
         }
-        // TODO config cannot be loaded log
-        toml::from_str(buf.as_str()).unwrap_or(Self::default())
+        match toml::from_str(buf.as_str()) {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("Cannot parse config: {}", e);
+                Self::default()
+            }
+        }
     }
 
     pub fn default_path() -> Result<String, VarError> {
@@ -122,6 +132,14 @@ impl Config {
     fn default_log_level() -> LevelFilter {
         LevelFilter::Info
     }
+
+    fn default_file_watcher() -> bool {
+        true
+    }
+
+    fn default_list_refresh_rate() -> Duration {
+        Duration::from_secs(5)
+    }
 }
 
 impl Default for Config {
@@ -142,6 +160,8 @@ impl Default for Config {
             log_file: Self::default_log_file(),
             log_format: Self::default_log_format(),
             log_level: Self::default_log_level(),
+            file_watcher: Self::default_file_watcher(),
+            list_refresh_rate: Self::default_list_refresh_rate(),
         }
     }
 }

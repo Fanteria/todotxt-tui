@@ -38,7 +38,7 @@ impl FileWorker {
         }
     }
 
-    fn load(&self) -> ioResult<()> {
+    pub fn load(&self) -> ioResult<()> {
         let mut todo = ToDo::new(false);
         Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
         if let Some(path) = &self.archive_path {

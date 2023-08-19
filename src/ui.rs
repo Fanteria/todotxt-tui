@@ -94,7 +94,7 @@ impl UI {
         let mut version = self.data.lock().unwrap().get_version();
         let mut new_version;
         loop {
-            if event::poll(Duration::from_secs(1))? { // TODO refresh rate to config
+            if event::poll(CONFIG.list_refresh_rate)? {
                 if self.handle_event()? {
                     break;
                 }
@@ -253,7 +253,6 @@ impl UI {
                             self.layout.unfocus();
                         }
                     }
-                    KeyCode::Char('a') => log::error!("Fake testing error."),
                     _ => self.layout.handle_key(&event),
                 },
             },
