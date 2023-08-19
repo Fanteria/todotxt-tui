@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_variables, unused_imports)]
+// #![allow(dead_code, unused_variables, unused_imports)]
 
 mod config;
 mod error;
@@ -21,8 +21,6 @@ use std::{
     error::Error,
     sync::{Arc, Mutex},
 };
-use notify::{Watcher, RecommendedWatcher, RecursiveMode};
-use std::path::Path;
 
 #[macro_use]
 extern crate enum_dispatch;
@@ -43,18 +41,6 @@ fn init_logging() -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-
-    let mut watcher = notify::recommended_watcher(|res| {
-        match res {
-           Ok(event) => println!("event: {:?}", event),
-           Err(e) => println!("watch error: {:?}", e),
-        }
-    })?;
-
-    // Add a path to be watched. All files and directories at that path and
-    // below will be monitored for changes.
-    watcher.watch(Path::new("/home/jirka/todo.txt"), RecursiveMode::NonRecursive)?;
-
     let todo = Arc::new(Mutex::new(ToDo::new(false)));
     let tx = FileWorker::new(
         CONFIG.todo_path.clone(),

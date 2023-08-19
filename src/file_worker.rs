@@ -1,5 +1,8 @@
 use crate::todo::ToDo;
-use notify::{event::{EventKind, AccessKind, AccessMode}, Config, RecommendedWatcher, RecursiveMode, Watcher, recommended_watcher};
+use notify::{
+    event::{AccessKind, AccessMode, EventKind},
+    Config, RecommendedWatcher, RecursiveMode, Watcher,
+};
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Read, Result as ioResult, Write};
 use std::path::Path;
@@ -93,50 +96,23 @@ impl FileWorker {
         use FileWorkerCommands::*;
         let (tx, rx) = mpsc::channel::<FileWorkerCommands>();
         if !autosave_duration.is_zero() {
-            let tx_worker = tx.clone();
-            log::trace!("Start autosaver");
-            thread::spawn(move || loop {
-                thread::sleep(autosave_duration);
-                log::trace!("Autosave with duration {}", autosave_duration.as_secs_f64());
-                if tx_worker.send(Save).is_err() {
-                    log::trace!("Autosave end");
-                }
-            });
+            Self::spawn_autosave(tx.clone(), autosave_duration);
         }
 
         if handle_changes {
-            let tx_worker = tx.clone();
-            log::trace!("Start file watcher");
-            thread::spawn(move || loop {
-                let (tx_handle, rx_handle) = std::sync::mpsc::channel();
-                let mut watcher = RecommendedWatcher::new(tx_handle, Config::default()).unwrap();
-                watcher
-                    .watch(
-                        Path::new("/home/jirka/todo.txt"),
-                        RecursiveMode::NonRecursive,
-                    )
-                    .unwrap();
-                for res in rx_handle {
-                    match res {
-                        Ok(event) => {
-                            match event.kind {
-                                EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
-                                    log::warn!("Change:")
-                                }
-                                _ => log::debug!("Change: {event:?}"),
-                            }
-                        }
-                        Err(error) => log::error!("Error: {error:?}"),
-                    }
-                }
-            });
+            Self::spawn_watcher(tx.clone(), self.todo_path.clone());
+            if let Some(path) = &self.archive_path {
+                Self::spawn_watcher(tx.clone(), path.clone());
+            }
         }
 
         thread::spawn(move || {
             let mut version = self.todo.lock().unwrap().get_version();
+            let mut load_skip = false;
             for received in rx {
                 if let Err(e) = match received {
                     Save => {
+                        load_skip = true;
                         let act_version = self.todo.lock().unwrap().get_version();
                         if version == act_version {
                             log::trace!("File Worker: Todo list is actual.");
@@ -146,10 +122,18 @@ impl FileWorker {
                             self.save()
                         }
                     }
-                    ForceSave => self.save(),
+                    ForceSave => {
+                        load_skip = true;
+                        self.save()
+                    }
                     Load => {
+                        if load_skip {
+                            load_skip = false;
+                            continue;
+                        }
                         let result = self.load();
                         version = self.todo.lock().unwrap().get_version();
+                        log::info!("Todo list updated from file.");
                         result
                     }
                     Exit => break,
@@ -159,6 +143,44 @@ impl FileWorker {
             }
         });
         tx
+    }
+
+    fn spawn_autosave(tx: Sender<FileWorkerCommands>, duration: Duration) {
+        let tx_worker = tx.clone();
+        log::trace!("Start autosaver");
+        thread::spawn(move || loop {
+            thread::sleep(duration);
+            log::trace!("Autosave with duration {}", duration.as_secs_f64());
+            if tx_worker.send(FileWorkerCommands::Save).is_err() {
+                log::trace!("Autosave end");
+            }
+        });
+    }
+
+    fn spawn_watcher(tx: Sender<FileWorkerCommands>, path: String) {
+        log::trace!("Start file watcher");
+        thread::spawn(move || {
+            let (tx_handle, rx_handle) = std::sync::mpsc::channel();
+            let mut watcher: RecommendedWatcher =
+                Watcher::new(tx_handle, Config::default()).unwrap();
+            watcher
+                .watch(Path::new(&path), RecursiveMode::NonRecursive)
+                .unwrap();
+            for res in rx_handle {
+                match res {
+                    Ok(event) => match event.kind {
+                        EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
+                            log::trace!("File {} changed", path);
+                            if tx.send(FileWorkerCommands::Load).is_err() {
+                                break;
+                            };
+                        }
+                        _ => log::debug!("Change: {event:?}"),
+                    },
+                    Err(error) => log::error!("Error: {error:?}"),
+                }
+            }
+        });
     }
 }
 
