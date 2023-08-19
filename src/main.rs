@@ -8,21 +8,19 @@ mod todo;
 mod ui;
 mod utils;
 
-use crate::config::Config;
-use crate::file_worker::FileWorker;
-use crate::todo::ToDo;
-use crate::ui::UI;
-use file_worker::FileWorkerCommands;
+use crate::{config::Config, file_worker::FileWorker, todo::ToDo, ui::UI};
 use layout::{Layout, DEFAULT_LAYOUT};
 use lazy_static::lazy_static;
-use std::error::Error;
-use std::sync::{mpsc, Arc, Mutex};
-use std::thread;
-
 use log::LevelFilter;
-use log4rs::append::file::FileAppender;
-use log4rs::config::{Appender, Config as LogConfig, Root};
-use log4rs::encode::pattern::PatternEncoder;
+use log4rs::{
+    append::file::FileAppender,
+    config::{Appender, Config as LogConfig, Root},
+    encode::pattern::PatternEncoder,
+};
+use std::{
+    error::Error,
+    sync::{Arc, Mutex},
+};
 
 #[macro_use]
 extern crate enum_dispatch;
@@ -53,14 +51,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     file_worker.load()?;
 
-    let (tx, rx) = mpsc::channel::<FileWorkerCommands>();
-    let handle = thread::spawn(move || file_worker.run(rx));
+    let tx = file_worker.run(CONFIG.autosave_duration);
 
     let mut ui = UI::new(
         Layout::from_str(DEFAULT_LAYOUT, todo.clone()).unwrap(),
         todo.clone(),
-        tx,
+        tx.clone(),
     );
+
     ui.run()?;
 
     Ok(())

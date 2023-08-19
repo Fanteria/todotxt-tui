@@ -66,6 +66,11 @@ impl ToDo {
         }
     }
 
+    pub fn move_data(&mut self, other: Self) {
+        self.pending = other.pending;
+        self.done = other.done;
+    }
+
     pub fn get_data(&self, data: ToDoData) -> &Vec<Task> {
         match data {
             Pending => &self.pending,
@@ -171,7 +176,7 @@ impl ToDo {
         )
     }
 
-    /// TODO rewrite
+    /// TODO rewrite comment
     /// Returns a [`CategoryList`] of all projects available
     /// in the current [`ToDo`] instance. If [`ToDo::use_done`] is enabled,
     /// it includes projects from both [`ToDo::pending`] and [`ToDo::done`] lists.

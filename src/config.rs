@@ -11,6 +11,7 @@ use std::env::{var, VarError};
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
+use std::time::Duration;
 use tui::style::Color;
 
 const CONFIG_NAME: &str = "todo-tui.conf";
@@ -39,6 +40,8 @@ pub struct Config {
     pub pending_active_color: TextStyle,
     #[serde(default = "TextStyle::default")]
     pub done_active_color: TextStyle,
+    #[serde(default = "Config::default_autosave_duration")]
+    pub autosave_duration: Duration,
 }
 
 impl Config {
@@ -95,6 +98,9 @@ impl Config {
         TextStyle::default().bg(Color::LightRed)
     }
 
+    fn default_autosave_duration() -> Duration {
+        Duration::from_secs(900)
+    }
 
 }
 
@@ -112,6 +118,7 @@ impl Default for Config {
             list_active_color: Self::default_list_active_color(),
             pending_active_color: TextStyle::default(),
             done_active_color: TextStyle::default(),
+            autosave_duration: Self::default_autosave_duration(),
         }
     }
 }

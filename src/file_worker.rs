@@ -2,8 +2,9 @@ use crate::todo::ToDo;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Read, Result as ioResult, Write};
 use std::str::FromStr;
-use std::sync::mpsc::Receiver;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Sender;
+use std::sync::{mpsc, Arc, Mutex};
+use std::{thread, time::Duration};
 use todo_txt::Task;
 
 pub enum FileWorkerCommands {
@@ -37,7 +38,7 @@ impl FileWorker {
         if let Some(path) = &self.archive_path {
             Self::load_tasks(File::open(path)?, &mut todo)?;
         }
-        *self.todo.lock().unwrap() = todo;
+        self.todo.lock().unwrap().move_data(todo);
         Ok(())
     }
 
@@ -64,8 +65,7 @@ impl FileWorker {
             self.todo_path,
             self.archive_path
                 .as_ref()
-                .map_or(String::from(""), |p| String::from(" and")
-                    + &p.clone()),
+                .map_or(String::from(""), |p| String::from(" and") + &p.clone()),
         );
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.archive_path {
@@ -82,17 +82,33 @@ impl FileWorker {
         Ok(())
     }
 
-    pub fn run(&self, rx: Receiver<FileWorkerCommands>) {
+    pub fn run(self, autosave_duration: Duration) -> Sender<FileWorkerCommands>{
         use FileWorkerCommands::*;
-        for received in rx {
-            if let Err(e) = match received {
-                Save => self.save(),
-                Load => self.load(),
-                Exit => break,
-            } {
-                log::error!("File Worker: {}", e.kind());
-            }
+        let (tx, rx) = mpsc::channel::<FileWorkerCommands>();
+        let tx_auto = tx.clone();
+        if !autosave_duration.is_zero() {
+            log::trace!("Start autosaver");
+            thread::spawn(move || loop {
+                thread::sleep(autosave_duration);
+                log::info!("Autosave with duration {}", autosave_duration.as_secs_f64());
+                if let Err(_) = tx_auto.send(Save) {
+                    log::trace!("Autosave end");
+                }
+            });
         }
+
+        thread::spawn(move || {
+            for received in rx {
+                if let Err(e) = match received {
+                    Save => self.save(),
+                    Load => self.load(),
+                    Exit => break,
+                } {
+                    log::error!("File Worker: {}", e.kind());
+                }
+            }
+        });
+        tx
     }
 }
 
