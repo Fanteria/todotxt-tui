@@ -29,16 +29,37 @@ fn priority_number(s: &str) -> Option<usize> {
 }
 
 impl TextStyle {
-    pub fn default_category() -> Self {
-        Self {
-            bg: Some(Color::Blue),
-            fg: None,
-            modifier: None,
-        }
+    pub fn bg(mut self, bg: Color) -> Self {
+        self.bg = Some(bg);
+        self
+    }
+
+    pub fn fg(mut self, fg: Color) -> Self {
+        self.fg = Some(fg);
+        self
+    }
+
+    pub fn modifier(mut self, modifier: TextModifier) -> Self {
+        self.modifier = Some(modifier);
+        self
     }
 
     pub fn is_some(&self) -> bool {
         self.bg.is_some() || self.fg.is_some() || self.modifier.is_some()
+    }
+
+    pub fn combine(&self, additional: &Self) -> TextStyle {
+        let mut new = self.clone();
+        if let Some(bg) = additional.bg {
+            new.bg = Some(bg);
+        }
+        if let Some(fg) = additional.fg {
+            new.fg = Some(fg);
+        }
+        if let Some(modifier) = additional.modifier {
+            new.modifier = Some(modifier);
+        }
+        new
     }
 
     pub fn get_style(&self) -> Style {
@@ -81,27 +102,15 @@ impl Default for TextStyleList {
 
         items.insert(
             String::from("A"),
-            TextStyle {
-                bg: None,
-                fg: Some(Color::Red),
-                modifier: None,
-            },
+            TextStyle::default().fg(Color::Red),
         );
         items.insert(
             String::from("B"),
-            TextStyle {
-                bg: None,
-                fg: Some(Color::Yellow),
-                modifier: None,
-            },
+            TextStyle::default().fg(Color::Yellow),
         );
         items.insert(
             String::from("C"),
-            TextStyle {
-                bg: None,
-                fg: Some(Color::Blue),
-                modifier: None,
-            },
+            TextStyle::default().fg(Color::Blue),
         );
 
         Self(items)

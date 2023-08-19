@@ -1,9 +1,7 @@
 use super::state_preview::StatePreview;
-use super::{
-    state_categories::StateCategories, state_list::StateList,
-    widget_type::WidgetType,
-};
+use super::{state_categories::StateCategories, state_list::StateList, widget_type::WidgetType};
 use crate::todo::{ToDo, ToDoCategory, ToDoData};
+use crate::CONFIG;
 use std::sync::{Arc, Mutex};
 
 pub type RCToDo = Arc<Mutex<ToDo>>;
@@ -18,8 +16,22 @@ pub enum WidgetState {
 impl WidgetState {
     pub fn new(widget_type: &WidgetType, data: RCToDo) -> Self {
         match widget_type {
-            WidgetType::List => Self::List(StateList::new(ToDoData::Pending, data)),
-            WidgetType::Done => Self::List(StateList::new(ToDoData::Done, data)),
+            WidgetType::List => Self::List(StateList::new(
+                ToDoData::Pending,
+                data,
+                CONFIG
+                    .list_active_color
+                    .combine(&CONFIG.pending_active_color)
+                    .get_style(),
+            )),
+            WidgetType::Done => Self::List(StateList::new(
+                ToDoData::Done,
+                data,
+                CONFIG
+                    .list_active_color
+                    .combine(&CONFIG.done_active_color)
+                    .get_style(),
+            )),
             WidgetType::Project => {
                 Self::Category(StateCategories::new(ToDoCategory::Projects, data))
             }

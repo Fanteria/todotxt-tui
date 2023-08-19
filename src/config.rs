@@ -29,8 +29,16 @@ pub struct Config {
     pub archive_path: Option<String>,
     #[serde(default = "TextStyleList::default")]
     pub priority_colors: TextStyleList,
-    #[serde(default = "TextStyle::default_category")]
+    #[serde(default = "Config::default_category")]
     pub category_color: TextStyle,
+    #[serde(default = "Config::default_wrap_preview")]
+    pub wrap_preview: bool,
+    #[serde(default = "Config::default_list_active_color")]
+    pub list_active_color: TextStyle,
+    #[serde(default = "TextStyle::default")]
+    pub pending_active_color: TextStyle,
+    #[serde(default = "TextStyle::default")]
+    pub done_active_color: TextStyle,
 }
 
 impl Config {
@@ -49,17 +57,22 @@ impl Config {
         if reader.read_to_string(&mut buf).is_err() {
             return Self::default();
         }
+        // TODO config cannot be loaded log
         toml::from_str(buf.as_str()).unwrap_or(Self::default())
-    }
-
-    fn default_todo_path() -> String {
-        var("HOME").unwrap_or(String::from("~")) + "/todo.txt"
     }
 
     pub fn default_path() -> Result<String, VarError> {
         Ok(var("XDG_CONFIG_HOME")
             .or_else(|_| var("HOME").map(|home| format!("{}/.config/", home)))?
             + CONFIG_NAME)
+    }
+
+    fn default_todo_path() -> String {
+        var("HOME").unwrap_or(String::from("~")) + "/todo.txt"
+    }
+
+    fn default_category() -> TextStyle {
+        TextStyle::default().bg(Color::Blue)
     }
 
     fn default_color() -> Color {
@@ -73,6 +86,16 @@ impl Config {
     fn default_window_title() -> String {
         String::from("ToDo tui")
     }
+
+    fn default_wrap_preview() -> bool {
+        true
+    }
+    
+    fn default_list_active_color() -> TextStyle {
+        TextStyle::default().bg(Color::LightRed)
+    }
+
+
 }
 
 impl Default for Config {
@@ -84,7 +107,11 @@ impl Default for Config {
             todo_path: Self::default_todo_path(),
             archive_path: None,
             priority_colors: TextStyleList::default(),
-            category_color: TextStyle::default_category(),
+            category_color: Self::default_category(),
+            wrap_preview: true,
+            list_active_color: Self::default_list_active_color(),
+            pending_active_color: TextStyle::default(),
+            done_active_color: TextStyle::default(),
         }
     }
 }

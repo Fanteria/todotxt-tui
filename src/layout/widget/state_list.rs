@@ -1,27 +1,30 @@
 use super::{widget_state::RCToDo, widget_trait::State, Widget};
-use crate::todo::ToDoData;
 use crate::utils::get_block;
+use crate::{todo::ToDoData, CONFIG};
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
+    style::{Color, Style},
     widgets::{List, ListState},
-    Frame, style::{Style, Color},
+    Frame,
 };
 
 pub struct StateList {
     state: ListState,
+    style: Style,
     data_type: ToDoData,
     data: RCToDo,
     focus: bool,
 }
 
 impl StateList {
-    pub fn new(data_type: ToDoData, data: RCToDo) -> Self {
+    pub fn new(data_type: ToDoData, data: RCToDo, style: Style) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
         Self {
             state,
+            style,
             data_type,
             data,
             focus: false,
@@ -112,7 +115,7 @@ impl State for StateList {
         if !self.focus {
             f.render_widget(list, widget.chunk)
         } else {
-            let list = list.highlight_style(Style::default().bg(Color::LightRed)); 
+            let list = list.highlight_style(self.style);
             f.render_stateful_widget(list, widget.chunk, &mut self.state.clone());
         }
     }
@@ -120,7 +123,7 @@ impl State for StateList {
     fn focus(&mut self) {
         self.focus = true;
         let len = self.len();
-        if self.act() >= len {
+        if self.act() >= len && len > 0 {
             self.state.select(Some(len - 1));
         }
     }

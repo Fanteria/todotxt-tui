@@ -1,7 +1,7 @@
 use super::{widget_trait::State, Widget};
 use crate::{
     todo::{ToDo, ToDoData},
-    utils::get_block,
+    utils::get_block, CONFIG,
 };
 use chrono::NaiveDate;
 use crossterm::event::KeyEvent;
@@ -58,9 +58,11 @@ impl State for StatePreview {
     fn handle_key(&mut self, _: &KeyEvent) {}
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
-        let paragraph = Paragraph::new(self.get_content())
-            .block(get_block("Title", self.focus))
-            .wrap(Wrap { trim: true });
+        let mut paragraph = Paragraph::new(self.get_content())
+            .block(get_block("Title", self.focus));
+        if CONFIG.wrap_preview {
+            paragraph = paragraph.wrap(Wrap{ trim: true })
+        }
         // .style(Style::default().fg(Color::White).bg(Color::Black));
         // .alignment(Alignment::Center)
         f.render_widget(paragraph, widget.chunk);
