@@ -133,24 +133,6 @@ impl ToDo {
         }
     }
 
-    #[allow(dead_code)]
-    fn get_tasks<'a>(
-        tasks: Vec<&'a Vec<Task>>,
-        name: &str,
-        f: fn(&Task) -> &[String],
-    ) -> Vec<&'a Task> {
-        let mut vec = Vec::new();
-        tasks.iter().for_each(|list| {
-            vec.append(
-                &mut list
-                    .iter()
-                    .filter(|task| f(task).contains(&String::from(name)))
-                    .collect::<Vec<&'a Task>>(),
-            );
-        });
-        vec
-    }
-
     fn move_task_logic(from: &mut Vec<Task>, to: &mut Vec<Task>, index: usize) {
         if from.len() <= index {
             return;
@@ -166,20 +148,6 @@ impl ToDo {
             Done => Self::move_task_logic(&mut self.done, &mut self.pending, index),
         };
     }
-
-    #[allow(dead_code)]
-    fn get_tasks_done_switch<'a>(&'a self, name: &str, f: fn(&Task) -> &[String]) -> Vec<&'a Task> {
-        Self::get_tasks(
-            if self.use_done {
-                vec![&self.pending, &self.done]
-            } else {
-                vec![&self.pending]
-            },
-            name,
-            f,
-        )
-    }
-
     fn get_filtered_tasks<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
         TaskList(
             tasks
@@ -214,11 +182,6 @@ impl ToDo {
                 (&self.hashtag_filters, |t| &t.hashtags),
             ],
         )
-    }
-
-    #[allow(dead_code)]
-    pub fn get_all(&self, data: ToDoData) -> TaskList {
-        TaskList(self.get_data(data).iter().enumerate().collect())
     }
 
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {

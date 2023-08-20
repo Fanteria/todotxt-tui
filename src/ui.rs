@@ -1,9 +1,10 @@
-use crate::file_worker::FileWorkerCommands;
-use crate::todo::ToDoCategory;
-use crate::utils::some_or_return;
-use crate::ToDo;
-use crate::CONFIG;
-use crate::{layout::Layout, utils::get_block};
+use crate::{
+    file_worker::FileWorkerCommands,
+    todo::ToDoCategory,
+    utils::some_or_return,
+    ToDo, CONFIG,
+    {layout::Layout, utils::get_block},
+};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -12,15 +13,14 @@ use crossterm::{
     },
     ExecutableCommand,
 };
-use std::io;
-use std::io::Result as ioResult;
-use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use tui::layout::Constraint;
+use std::{
+    io::{self, Result as ioResult},
+    sync::mpsc::Sender,
+    sync::{Arc, Mutex},
+};
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Direction, Layout as tuiLayout, Rect},
+    layout::{Constraint, Direction, Layout as tuiLayout, Rect},
     widgets::Paragraph,
     Terminal,
 };

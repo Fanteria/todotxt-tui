@@ -1,5 +1,3 @@
-// #![allow(dead_code, unused_variables, unused_imports)]
-
 mod config;
 mod error;
 mod file_worker;
