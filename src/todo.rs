@@ -1,3 +1,4 @@
+pub mod version;
 pub mod category_list;
 pub mod task_list;
 pub use self::{category_list::CategoryList, task_list::TaskList};
