@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tui = "0.19"
+tui = { package = "ratatui", version = "0.22.0", features = ["all-widgets"]}
 log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 crossterm = "0.25"
