@@ -17,7 +17,7 @@ use std::{
 };
 use tui::style::Color;
 
-const CONFIG_NAME: &str = "todo-tui.conf";
+const CONFIG_NAME: &str = "todo-tui.toml";
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]

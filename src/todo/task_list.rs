@@ -18,6 +18,11 @@ impl<'a> TaskList<'a> {
     pub fn get_actual_index(&self, index: usize) -> usize {
         self.0[index].0
     }
+
+    pub fn range(&self, first: usize, last: usize) -> Self {
+        Self(self.0[first..last].to_vec())
+        // TODO try not copy
+    }
 }
 
 impl<'a> Index<usize> for TaskList<'a> {
