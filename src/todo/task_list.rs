@@ -5,9 +5,13 @@ use todo_txt::Task;
 use tui::text::Span;
 use tui::widgets::ListItem;
 
+type Item<'a> = (usize, &'a Task);
+
 /// Represents a list of tasks, where each task is a tuple of `(usize, &'a Task)`.
 /// The `usize` value is the index of the task in the original list.
-pub struct TaskList<'a>(pub Vec<(usize, &'a Task)>);
+pub struct TaskList<'a>(pub Vec<Item<'a>>);
+
+pub struct TaskSlice<'a>(pub &'a [Item<'a>]);
 
 impl<'a> TaskList<'a> {
     /// Returns the number of tasks in the list.
@@ -19,9 +23,11 @@ impl<'a> TaskList<'a> {
         self.0[index].0
     }
 
-    pub fn range(&self, first: usize, last: usize) -> Self {
-        Self(self.0[first..last].to_vec())
-        // TODO try not copy
+    pub fn slice(&self, first: usize, last: usize) -> TaskSlice {
+        if last > self.0.len() {
+            return TaskSlice(&self.0);
+        };
+        TaskSlice(&self.0[first..last])
     }
 }
 
@@ -36,10 +42,23 @@ impl<'a> From<TaskList<'a>> for Vec<ListItem<'a>> {
     fn from(val: TaskList<'a>) -> Self {
         val.0
             .iter()
-            .map(|task| {
-                let index = usize::from(u8::from(task.1.priority.clone()));
+            .map(|(_, task)| {
+                let index = usize::from(u8::from(task.priority.clone()));
                 let style = CONFIG.priority_colors.get_style(index);
-                ListItem::new(Span::styled(task.1.subject.clone(), style))
+                ListItem::new(Span::styled(task.subject.clone(), style))
+            })
+            .collect::<Vec<ListItem<'a>>>()
+    }
+}
+
+impl<'a> From<TaskSlice<'a>> for Vec<ListItem<'a>> {
+    fn from(val: TaskSlice<'a>) -> Self {
+        val.0
+            .iter()
+            .map(|(_, task)| {
+                let index = usize::from(u8::from(task.priority.clone()));
+                let style = CONFIG.priority_colors.get_style(index);
+                ListItem::new(Span::styled(task.subject.clone(), style))
             })
             .collect::<Vec<ListItem<'a>>>()
     }

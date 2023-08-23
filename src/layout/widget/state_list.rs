@@ -1,5 +1,8 @@
 use super::{widget_state::RCToDo, widget_trait::State, Widget};
-use crate::{todo::ToDoData, utils::get_block};
+use crate::{
+    todo::{ToDo, ToDoData},
+    utils::get_block,
+};
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
@@ -17,7 +20,7 @@ pub struct StateList {
     data: RCToDo,
     focus: bool,
     first: usize,
-    last: usize,
+    size: usize,
 }
 
 impl StateList {
@@ -31,7 +34,7 @@ impl StateList {
             data,
             focus: false,
             first: 0,
-            last: 24,
+            size: 24,
         }
     }
 
@@ -46,6 +49,64 @@ impl StateList {
     pub fn index(&self) -> usize {
         self.act() + self.first
     }
+
+    fn move_list_down(&mut self) {
+        let act = self.act();
+        let len = self.len();
+        log::trace!("List go down: act: {}, len: {}", act, len);
+        if len <= self.size {
+            if len > act + 1 {
+                self.state.select(Some(act + 1));
+            }
+        } else if self.size <= act + 1 + SHIFT {
+            if self.first + self.size + 1 < len {
+                self.first += 1;
+            } else {
+                if self.size > act + 1 {
+                    self.state.select(Some(act + 1));
+                }
+            }
+        } else {
+            self.state.select(Some(act + 1));
+        }
+    }
+
+    fn move_list_up(&mut self) {
+        let act = self.act();
+        log::trace!("List go up: act: {}", act);
+        if act <= SHIFT {
+            if self.first > 0 {
+                self.first -= 1;
+            } else {
+                if act > 0 {
+                    self.state.select(Some(act - 1));
+                }
+            }
+        } else {
+            self.state.select(Some(act - 1));
+        }
+    }
+
+    fn swap_tasks(&mut self, r#move_list: fn(&mut Self)) {
+        let index_first = self.index();
+        r#move_list(self);
+        let index_second = self.index();
+        log::trace!("Swap tasks with indexes: {}, {}", index_first, index_second);
+        self.data
+            .lock()
+            .unwrap()
+            .swap_tasks(self.data_type, index_first, index_second);
+    }
+
+    fn move_task(&mut self, r#move: fn(&mut ToDo, ToDoData, usize)) {
+        let index = self.index();
+        log::info!("Remove task with index {index}.");
+        r#move(&mut self.data.lock().unwrap(), self.data_type, index);
+        let len = self.len();
+        if len <= index && len > 0 {
+            self.state.select(Some(len - 1));
+        }
+    }
 }
 
 impl State for StateList {
@@ -54,88 +115,31 @@ impl State for StateList {
             return;
         }
         match event.code {
-            KeyCode::Char('j') => {
-                let act = self.act();
-                let len = self.len();
-                if self.last - self.first <= act + 1 + SHIFT {
-                    if self.last + 1 < len {
-                        self.first += 1;
-                        self.last += 1;
-                    } else {
-                        if self.last - self.first > act + 1 {
-                            self.state.select(Some(act + 1));
-                        }
-                    }
-                } else {
-                    self.state.select(Some(act + 1));
-                }
-            }
-            KeyCode::Char('k') => {
-                let act = self.act();
-                if act <= SHIFT {
-                    if self.first > 0 {
-                        self.first -= 1;
-                        self.last -= 1;
-                    } else {
-                        if act > 0 {
-                            self.state.select(Some(act - 1));
-                        }
-                    }
-                } else {
-                    self.state.select(Some(act - 1));
-                }
-            }
+            KeyCode::Char('j') => self.move_list_down(),
+            KeyCode::Char('k') => self.move_list_up(),
             KeyCode::Char('U') => {
                 log::info!("Swap task up");
-                let index = self.index();
-                if index > 0 {
-                    self.data
-                        .lock()
-                        .unwrap()
-                        .swap_tasks(self.data_type, index, index - 1);
-                    self.state.select(Some(self.act() - 1));
-                    // TODO what is this behavior???
+                let act = self.act();
+                if act > 0 {
+                    self.swap_tasks(Self::move_list_up)
                 }
             }
             KeyCode::Char('D') => {
                 log::info!("Swap task down");
-                let index = self.index() + 1;
-                let len = self.len();
-                if index < len {
-                    self.data
-                        .lock()
-                        .unwrap()
-                        .swap_tasks(self.data_type, index, index - 1);
-                    self.state.select(Some(self.act() + 1));
+                let act = self.act();
+                if act + 1 < self.len() {
+                    self.swap_tasks(Self::move_list_down)
                 }
             }
-            KeyCode::Char('x') => {
-                let index = self.index();
-                log::info!("Remove task with index {index}.");
-                self.data.lock().unwrap().remove_task(self.data_type, index);
-                let len = self.len();
-                if len <= index && len > 0 {
-                    self.state.select(Some(len - 1));
-                }
-            }
-            KeyCode::Char('d') => {
-                let index = self.index();
-                log::info!("Move task with index {index}.");
-                self.data.lock().unwrap().move_task(self.data_type, index);
-                let len = self.len();
-                if len <= index && len > 0 {
-                    self.state.select(Some(len - 1));
-                }
-            }
+            KeyCode::Char('x') => self.move_task(ToDo::remove_task),
+            KeyCode::Char('d') => self.move_task(ToDo::move_task),
             KeyCode::Char('g') => {
                 self.state.select(Some(0));
-                self.last -= self.first;
                 self.first = 0;
             }
             KeyCode::Char('G') => {
-                let shown_items = self.last - self.first - 1;
+                let shown_items = self.size - 1;
                 self.first = shown_items;
-                self.last = self.len() - 1;
                 self.state.select(Some(shown_items));
             }
             KeyCode::Enter => {
@@ -151,7 +155,7 @@ impl State for StateList {
     fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
         let data = self.data.lock().unwrap();
         let filtered = data.get_filtered(self.data_type);
-        let filtered = filtered.range(self.first, self.last);
+        let filtered = filtered.slice(self.first, self.first + self.size);
         let list = List::new(filtered).block(get_block(&widget.title, self.focus));
         if !self.focus {
             f.render_widget(list, widget.chunk)

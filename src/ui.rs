@@ -240,7 +240,7 @@ impl UI {
                             // TODO show something on screen
                         }
                     }
-                    KeyCode::Char('U') => {
+                    KeyCode::Char('u') => {
                         if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
                             log::error!("Error while send signal to load todo list: {}", e);
                             // TODO show something on screen

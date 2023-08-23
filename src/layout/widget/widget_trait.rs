@@ -12,3 +12,7 @@ pub trait State {
     fn focus(&mut self);
     fn unfocus(&mut self);
 }
+
+pub trait List {
+
+}
