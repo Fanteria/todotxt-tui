@@ -4,7 +4,7 @@ use crate::{
     utils::get_block,
 };
 use crossterm::event::{KeyCode, KeyEvent};
-use tui::{backend::Backend, style::Style, widgets::List, Frame};
+use tui::{backend::Backend, prelude::Rect, style::Style, widgets::List, Frame};
 
 pub struct StateList {
     state: WidgetList,
@@ -13,6 +13,7 @@ pub struct StateList {
     data: RCToDo,
     sort_type: TaskSort,
     focus: bool,
+    chunk: Rect,
 }
 
 impl StateList {
@@ -32,6 +33,7 @@ impl StateList {
             data,
             sort_type,
             focus: false,
+            chunk: Rect::default(),
         }
     }
 
@@ -103,15 +105,21 @@ impl State for StateList {
         }
     }
 
+    fn update_chunk(&mut self, chunk: Rect) {
+        self.chunk = chunk;
+        self.state.set_size(self.chunk.height);
+    }
+
+    fn get_focus(&mut self) -> &mut bool {
+        &mut self.focus
+    }
+
     fn focus(&mut self) {
         self.focus = true;
         let len = self.len();
+        // self.state.last(len);
         if self.state.act() >= len && len > 0 {
-            self.state.last()
+            self.state.last(len);
         }
-    }
-
-    fn unfocus(&mut self) {
-        self.focus = false;
     }
 }

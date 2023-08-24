@@ -6,7 +6,7 @@ use tui::{
     backend::Backend,
     style::{Color, Style},
     widgets::List,
-    Frame,
+    Frame, prelude::Rect,
 };
 
 pub struct StateCategories {
@@ -14,6 +14,7 @@ pub struct StateCategories {
     category: ToDoCategory,
     data: RCToDo,
     focus: bool,
+    chunk: Rect,
 }
 
 impl StateCategories {
@@ -23,6 +24,7 @@ impl StateCategories {
             category,
             data,
             focus: false,
+            chunk: Rect::default(),
         }
     }
 
@@ -65,11 +67,11 @@ impl State for StateCategories {
         }
     }
 
-    fn focus(&mut self) {
-        self.focus = true;
+    fn update_chunk(&mut self,chunk: Rect) {
+        self.chunk = chunk;
     }
 
-    fn unfocus(&mut self) {
-        self.focus = false;
+    fn get_focus(&mut self) ->  &mut bool {
+        &mut self.focus
     }
 }

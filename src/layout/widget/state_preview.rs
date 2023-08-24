@@ -9,13 +9,14 @@ use std::sync::{Arc, Mutex};
 use tui::{
     backend::Backend,
     widgets::{Paragraph, Wrap},
-    Frame,
+    Frame, prelude::Rect,
 };
 
 pub struct StatePreview {
     data: Arc<Mutex<ToDo>>,
     format: String,
     focus: bool,
+    chunk: Rect,
 }
 
 impl StatePreview {
@@ -24,6 +25,7 @@ impl StatePreview {
             data,
             format: String::from(format),
             focus: false,
+            chunk: Rect::default(),
         }
     }
 
@@ -67,11 +69,11 @@ impl State for StatePreview {
         f.render_widget(paragraph, widget.chunk);
     }
 
-    fn focus(&mut self) {
-        self.focus = true;
+    fn update_chunk(&mut self, chunk:Rect) {
+        self.chunk = chunk;
     }
 
-    fn unfocus(&mut self) {
-        self.focus = false;
+    fn get_focus(&mut self) ->  &mut bool {
+        &mut self.focus
     }
 }

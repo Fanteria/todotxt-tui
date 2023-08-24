@@ -26,6 +26,10 @@ impl WidgetList {
         self.shift = shift
     }
 
+    pub fn set_size(&mut self, size: u16) {
+        self.size = size as usize
+    }
+
     pub fn down(&mut self, len: usize) {
         let act = self.act();
         log::trace!("List go down: act: {}, len: {}", act, len);
@@ -84,10 +88,15 @@ impl WidgetList {
         self.first = 0;
     }
 
-    pub fn last(&mut self) {
-        let shown_items = self.size - 1;
-        self.first = shown_items;
-        self.state.select(Some(shown_items));
+    pub fn last(&mut self, len: usize) {
+        let shown_items = len - 1;
+        if self.size > shown_items {
+            self.first = 0;
+            self.state.select(Some(shown_items));
+        } else {
+            self.first = shown_items - self.size;
+            self.state.select(Some(self.size - 1));
+        }
     }
 
     /// (first, last)
@@ -100,7 +109,7 @@ impl WidgetList {
             KeyCode::Char('j') => self.down(len),
             KeyCode::Char('k') => self.up(),
             KeyCode::Char('g') => self.first(),
-            KeyCode::Char('G') => self.last(),
+            KeyCode::Char('G') => self.last(len),
             _ => return false,
         }
         true
