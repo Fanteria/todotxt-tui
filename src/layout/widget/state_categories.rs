@@ -1,16 +1,16 @@
-use super::{widget_state::RCToDo, widget_trait::State, Widget};
+use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State, Widget};
 use crate::todo::ToDoCategory;
 use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
-    style::{Style, Color},
-    widgets::{List, ListState},
+    style::{Color, Style},
+    widgets::List,
     Frame,
 };
 
 pub struct StateCategories {
-    state: ListState,
+    state: WidgetList,
     category: ToDoCategory,
     data: RCToDo,
     focus: bool,
@@ -18,11 +18,8 @@ pub struct StateCategories {
 
 impl StateCategories {
     pub fn new(category: ToDoCategory, data: RCToDo) -> Self {
-        let mut state = ListState::default();
-        state.select(Some(0));
-
         Self {
-            state,
+            state: WidgetList::default(),
             category,
             data,
             focus: false,
@@ -36,44 +33,28 @@ impl StateCategories {
             .get_categories(self.category)
             .len()
     }
-
-    pub fn act(&self) -> usize {
-        self.state.selected().unwrap_or(0)
-    }
 }
 
 impl State for StateCategories {
     fn handle_key(&mut self, event: &KeyEvent) {
-        match event.code {
-            KeyCode::Char('j') => {
-                let act = self.act() + 1;
-                if self.len() > act {
-                    self.state.select(Some(act));
+        if !self.state.handle_key(event, self.len()) {
+            match event.code {
+                KeyCode::Enter => {
+                    let name;
+                    {
+                        let todo = self.data.lock().unwrap();
+                        name = todo
+                            .get_categories(self.category)
+                            .get_name(self.state.act())
+                            .clone();
+                    }
+                    self.data
+                        .lock()
+                        .unwrap()
+                        .toggle_filter(self.category, &name);
                 }
+                _ => {}
             }
-            KeyCode::Char('k') => {
-                let act = self.act();
-                if 0 < act {
-                    self.state.select(Some(act - 1));
-                }
-            }
-            KeyCode::Char('g') => self.state.select(Some(0)),
-            KeyCode::Char('G') => self.state.select(Some(self.len() - 1)),
-            KeyCode::Enter => {
-                let name;
-                {
-                    let todo = self.data.lock().unwrap();
-                    name = todo
-                        .get_categories(self.category)
-                        .get_name(self.act())
-                        .clone();
-                }
-                self.data
-                    .lock()
-                    .unwrap()
-                    .toggle_filter(self.category, &name);
-            }
-            _ => {}
         }
     }
 
@@ -85,7 +66,7 @@ impl State for StateCategories {
             f.render_widget(list, widget.chunk)
         } else {
             let list = list.highlight_style(Style::default().bg(Color::LightRed)); // TODO add to config
-            f.render_stateful_widget(list, widget.chunk, &mut self.state.clone());
+            f.render_stateful_widget(list, widget.chunk, &mut self.state.state());
         }
     }
 

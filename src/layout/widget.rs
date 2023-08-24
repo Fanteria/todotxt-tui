@@ -3,6 +3,7 @@ mod state_list;
 mod state_preview;
 mod widget_state;
 mod widget_trait;
+mod widget_list;
 pub mod widget_type;
 
 use crate::todo::ToDo;
