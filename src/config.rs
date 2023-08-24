@@ -54,7 +54,9 @@ pub struct Config {
     #[serde(default = "Config::default_file_watcher")]
     pub file_watcher: bool,
     #[serde(default = "Config::default_list_refresh_rate")]
-    pub list_refresh_rate: Duration
+    pub list_refresh_rate: Duration,
+    #[serde(default = "Config::default_list_shift")]
+    pub list_shift: usize,
 }
 
 impl Config {
@@ -140,6 +142,10 @@ impl Config {
     fn default_list_refresh_rate() -> Duration {
         Duration::from_secs(5)
     }
+
+    fn default_list_shift() -> usize {
+        4
+    }
 }
 
 impl Default for Config {
@@ -162,6 +168,7 @@ impl Default for Config {
             log_level: Self::default_log_level(),
             file_watcher: Self::default_file_watcher(),
             list_refresh_rate: Self::default_list_refresh_rate(),
+            list_shift: Self::default_list_shift(),
         }
     }
 }
