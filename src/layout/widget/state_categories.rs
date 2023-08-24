@@ -37,24 +37,19 @@ impl StateCategories {
 
 impl State for StateCategories {
     fn handle_key(&mut self, event: &KeyEvent) {
-        if !self.state.handle_key(event, self.len()) {
-            match event.code {
-                KeyCode::Enter => {
-                    let name;
-                    {
-                        let todo = self.data.lock().unwrap();
-                        name = todo
-                            .get_categories(self.category)
-                            .get_name(self.state.act())
-                            .clone();
-                    }
-                    self.data
-                        .lock()
-                        .unwrap()
-                        .toggle_filter(self.category, &name);
-                }
-                _ => {}
+        if !self.state.handle_key(event, self.len()) && event.code == KeyCode::Enter {
+            let name;
+            {
+                let todo = self.data.lock().unwrap();
+                name = todo
+                    .get_categories(self.category)
+                    .get_name(self.state.act())
+                    .clone();
             }
+            self.data
+                .lock()
+                .unwrap()
+                .toggle_filter(self.category, &name);
         }
     }
 

@@ -1,7 +1,6 @@
+use crate::CONFIG;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::widgets::ListState;
-
-const SHIFT: usize = 4;
 
 pub struct WidgetList {
     state: ListState,
@@ -29,13 +28,11 @@ impl WidgetList {
             if len > act + 1 {
                 self.state.select(Some(act + 1));
             }
-        } else if self.size <= act + 1 + SHIFT {
+        } else if self.size <= act + 1 + CONFIG.list_shift {
             if self.first + self.size + 1 < len {
                 self.first += 1;
-            } else {
-                if self.size > act + 1 {
-                    self.state.select(Some(act + 1));
-                }
+            } else if self.size > act + 1 {
+                self.state.select(Some(act + 1));
             }
         } else {
             self.state.select(Some(act + 1));
@@ -45,13 +42,11 @@ impl WidgetList {
     pub fn up(&mut self) {
         let act = self.act();
         log::trace!("List go up: act: {}", act);
-        if act <= SHIFT {
+        if act <= CONFIG.list_shift {
             if self.first > 0 {
                 self.first -= 1;
-            } else {
-                if act > 0 {
-                    self.state.select(Some(act - 1));
-                }
+            } else if act > 0 {
+                self.state.select(Some(act - 1));
             }
         } else {
             self.state.select(Some(act - 1));
@@ -60,7 +55,7 @@ impl WidgetList {
 
     /// (old, new)
     pub fn next(&mut self, len: usize) -> Option<(usize, usize)> {
-        if (len <= self.size) && !(len > self.act() + 1) {
+        if (len <= self.size) && len <= self.act() + 1 {
             None
         } else {
             let old = self.index();
@@ -70,7 +65,7 @@ impl WidgetList {
     }
 
     pub fn prev(&mut self) -> Option<(usize, usize)> {
-        if self.act() <= 0 {
+        if self.act() == 0 {
             None
         } else {
             let old = self.index();
