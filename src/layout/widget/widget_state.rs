@@ -23,6 +23,8 @@ impl WidgetState {
                     .list_active_color
                     .combine(&CONFIG.pending_active_color)
                     .get_style(),
+                CONFIG.list_shift,
+                CONFIG.pending_sort,
             )),
             WidgetType::Done => Self::List(StateList::new(
                 ToDoData::Done,
@@ -31,6 +33,8 @@ impl WidgetState {
                     .list_active_color
                     .combine(&CONFIG.done_active_color)
                     .get_style(),
+                CONFIG.list_shift,
+                CONFIG.done_sort,
             )),
             WidgetType::Project => {
                 Self::Category(StateCategories::new(ToDoCategory::Projects, data))

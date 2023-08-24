@@ -6,6 +6,7 @@ pub struct WidgetList {
     state: ListState,
     first: usize,
     size: usize,
+    shift: usize,
 }
 
 impl WidgetList {
@@ -19,6 +20,10 @@ impl WidgetList {
 
     pub fn state(&self) -> ListState {
         self.state.clone()
+    }
+
+    pub fn set_shift(&mut self, shift: usize) {
+        self.shift = shift
     }
 
     pub fn down(&mut self, len: usize) {
@@ -108,6 +113,7 @@ impl Default for WidgetList {
             state: ListState::default(),
             first: 0,
             size: 24,
+            shift: 0,
         };
         def.state.select(Some(0));
         def

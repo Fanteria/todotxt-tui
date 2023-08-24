@@ -1,6 +1,6 @@
 use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State, Widget};
 use crate::{
-    todo::{ToDo, ToDoData},
+    todo::{task_list::TaskSort, ToDo, ToDoData},
     utils::get_block,
 };
 use crossterm::event::{KeyCode, KeyEvent};
@@ -11,16 +11,26 @@ pub struct StateList {
     style: Style,
     data_type: ToDoData,
     data: RCToDo,
+    sort_type: TaskSort,
     focus: bool,
 }
 
 impl StateList {
-    pub fn new(data_type: ToDoData, data: RCToDo, style: Style) -> Self {
+    pub fn new(
+        data_type: ToDoData,
+        data: RCToDo,
+        style: Style,
+        list_shift: usize,
+        sort_type: TaskSort,
+    ) -> Self {
+        let mut state = WidgetList::default();
+        state.set_shift(list_shift);
         Self {
-            state: WidgetList::default(),
+            state,
             style,
             data_type,
             data,
+            sort_type,
             focus: false,
         }
     }
@@ -44,7 +54,6 @@ impl StateList {
         let len = self.len();
         if len <= index && len > 0 {
             self.state.up();
-            // self.state.select(Some(len - 1));
         }
     }
 }
@@ -81,7 +90,8 @@ impl State for StateList {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
         let data = self.data.lock().unwrap();
-        let filtered = data.get_filtered(self.data_type);
+        let mut filtered = data.get_filtered(self.data_type);
+        filtered.sort(self.sort_type);
         let (first, last) = self.state.range();
         let filtered = filtered.slice(first, last);
         let list = List::new(filtered).block(get_block(&widget.title, self.focus));

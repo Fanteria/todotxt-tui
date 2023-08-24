@@ -58,7 +58,7 @@ impl State for StatePreview {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
         let mut paragraph = Paragraph::new(self.get_content())
-            .block(get_block("Title", self.focus));
+            .block(get_block("Preview", self.focus));
         if CONFIG.wrap_preview {
             paragraph = paragraph.wrap(Wrap{ trim: true })
         }

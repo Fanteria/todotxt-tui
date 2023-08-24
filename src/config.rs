@@ -5,7 +5,7 @@ mod text_style;
 pub use self::colors::OptionalColor;
 
 use self::{colors::*, text_style::*};
-use crate::layout::widget::widget_type::WidgetType;
+use crate::{layout::widget::widget_type::WidgetType, todo::task_list::TaskSort};
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -57,6 +57,10 @@ pub struct Config {
     pub list_refresh_rate: Duration,
     #[serde(default = "Config::default_list_shift")]
     pub list_shift: usize,
+    #[serde(default = "Config::default_pending_sort")]
+    pub pending_sort: TaskSort,
+    #[serde(default = "Config::default_done_sort")]
+    pub done_sort: TaskSort,
 }
 
 impl Config {
@@ -146,6 +150,14 @@ impl Config {
     fn default_list_shift() -> usize {
         4
     }
+
+    fn default_pending_sort() -> TaskSort {
+        TaskSort::None
+    }
+
+    fn default_done_sort() -> TaskSort {
+        TaskSort::None
+    }
 }
 
 impl Default for Config {
@@ -169,6 +181,8 @@ impl Default for Config {
             file_watcher: Self::default_file_watcher(),
             list_refresh_rate: Self::default_list_refresh_rate(),
             list_shift: Self::default_list_shift(),
+            pending_sort: Self::default_pending_sort(),
+            done_sort: Self::default_done_sort(),
         }
     }
 }

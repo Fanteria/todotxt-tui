@@ -1,4 +1,5 @@
 use crate::CONFIG;
+use serde::{Deserialize, Serialize};
 use std::convert::From;
 use std::ops::Index;
 use todo_txt::Task;
@@ -6,6 +7,16 @@ use tui::text::Span;
 use tui::widgets::ListItem;
 
 type Item<'a> = (usize, &'a Task);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq, Debug))]
+pub enum TaskSort {
+    None,
+    Reverse,
+    Priority,
+    Alphanumeric,
+    AlphanumericReverse,
+}
 
 /// Represents a list of tasks, where each task is a tuple of `(usize, &'a Task)`.
 /// The `usize` value is the index of the task in the original list.
@@ -28,6 +39,23 @@ impl<'a> TaskList<'a> {
             return TaskSlice(&self.0);
         };
         TaskSlice(&self.0[first..last])
+    }
+
+    pub fn sort(&mut self, sort: TaskSort) {
+        use TaskSort::*;
+        match sort {
+            None => {}
+            Reverse => self.0.reverse(),
+            Priority => self
+                .0
+                .sort_by(|(_, a_task), (_, b_task)| b_task.priority.cmp(&a_task.priority)),
+            Alphanumeric => self
+                .0
+                .sort_by(|(_, a_task), (_, b_task)| a_task.subject.cmp(&b_task.subject)),
+            AlphanumericReverse => self
+                .0
+                .sort_by(|(_, a_task), (_, b_task)| b_task.subject.cmp(&a_task.subject)),
+        }
     }
 }
 
