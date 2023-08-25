@@ -3,9 +3,7 @@ pub mod widget;
 
 use self::{
     container::{Container, InitItem, Item, RcCon},
-    widget::widget_type::WidgetType,
-    widget::Widget,
-    widget::widget_trait::State,
+    widget::{widget_trait::State, widget_type::WidgetType, Widget},
 };
 use crate::{
     error::{ErrorToDo, ErrorType, ToDoRes},
@@ -13,32 +11,16 @@ use crate::{
     CONFIG,
 };
 use crossterm::event::KeyEvent;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-use std::{cell::RefCell, str::FromStr};
+use std::{
+    rc::Rc,
+    sync::{Arc, Mutex},
+    {cell::RefCell, str::FromStr},
+};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Direction::Horizontal, Direction::Vertical, Rect},
     Frame,
 };
-
-pub const DEFAULT_LAYOUT: &str = r#"
-[
-    Direction: Horizontal,
-    Size: 50%,
-    [
-        List: 50%,
-        Preview,
-    ],
-    [ Direction: Vertical,
-      Done,
-      [ 
-        Contexts,
-        Projects,
-      ],
-    ],
-]
-"#;
 
 pub struct Layout {
     root: Rc<RefCell<Container>>,
@@ -164,10 +146,8 @@ impl Layout {
                         _ => {
                             let widget_type = WidgetType::from_str(&item)?;
                             let cont = container.last_mut().unwrap();
-                            cont.2.push(InitItem::InitWidget(Widget::new(
-                                widget_type,
-                                data.clone(),
-                            )));
+                            cont.2
+                                .push(InitItem::InitWidget(Widget::new(widget_type, data.clone())));
                             cont.3.push(Self::value_from_string(&string)?);
                         }
                     }
@@ -283,7 +263,7 @@ mod tests {
     use super::*;
 
     fn mock_layout() -> Layout {
-        Layout::from_str(DEFAULT_LAYOUT, Arc::new(Mutex::new(ToDo::new(false)))).unwrap()
+        Layout::from_str(&CONFIG.layout, Arc::new(Mutex::new(ToDo::new(false)))).unwrap()
     }
 
     #[test]

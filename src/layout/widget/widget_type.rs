@@ -1,4 +1,7 @@
-use crate::{error::ErrorType::ParseWidgetType, todo::{ToDoCategory, ToDoData}};
+use crate::{
+    error::ErrorType::ParseWidgetType,
+    todo::{ToDoCategory, ToDoData},
+};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 

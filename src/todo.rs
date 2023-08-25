@@ -1,6 +1,6 @@
-pub mod version;
 pub mod category_list;
 pub mod task_list;
+pub mod version;
 pub use self::{category_list::CategoryList, task_list::TaskList};
 
 use chrono::Utc;

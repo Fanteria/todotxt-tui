@@ -8,7 +8,7 @@ mod utils;
 
 use crate::{config::Config, file_worker::FileWorker, todo::ToDo, ui::UI};
 use file_worker::FileWorkerCommands;
-use layout::{Layout, DEFAULT_LAYOUT};
+use layout::Layout;
 use lazy_static::lazy_static;
 use log4rs::{
     append::file::FileAppender,
@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     init_logging()?;
 
     UI::new(
-        Layout::from_str(DEFAULT_LAYOUT, todo.clone())?,
+        Layout::from_str(&CONFIG.layout, todo.clone())?,
         todo.clone(),
         tx.clone(),
     )

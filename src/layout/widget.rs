@@ -3,20 +3,19 @@ mod state_list;
 mod state_preview;
 mod widget_base;
 mod widget_list;
-// mod widget_state;
 pub mod widget_trait;
 pub mod widget_type;
 
-use crate::layout::widget::widget_base::WidgetBase;
-use crate::todo::{ToDo, ToDoCategory, ToDoData};
-use crate::CONFIG;
+use crate::{
+    todo::{ToDo, ToDoCategory, ToDoData},
+    CONFIG,
+};
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
-use std::sync::MutexGuard;
-use std::sync::{Arc, Mutex};
-use tui::widgets::Block;
-use tui::{backend::Backend, prelude::Rect, Frame};
+use std::sync::{Arc, Mutex, MutexGuard};
+use tui::{backend::Backend, prelude::Rect, widgets::Block, Frame};
+use widget_base::WidgetBase;
 use widget_trait::State;
 use widget_type::WidgetType;
 
@@ -59,18 +58,15 @@ impl Widget {
             Project => Self::Category(StateCategories::new(base, ToDoCategory::Projects)),
             Context => Self::Category(StateCategories::new(base, ToDoCategory::Contexts)),
             Hashtag => Self::Category(StateCategories::new(base, ToDoCategory::Hashtags)),
-            Preview => Self::Preview(StatePreview::new(
-                base,
-                "Pending: {n}   Done: {N}\nSubject: {s}\nPriority: {p}\nCreate date: {c}",
-            )),
+            Preview => Self::Preview(StatePreview::new(base, CONFIG.preview_format.clone())),
         }
     }
 
     pub fn widget_type(&self) -> WidgetType {
         use WidgetType::*;
         match self {
-            Widget::List(list) => Into::<WidgetType>::into(list.data_type),
-            Widget::Category(categories) => Into::<WidgetType>::into(categories.category),
+            Widget::List(list) => list.data_type.into(),
+            Widget::Category(categories) => categories.category.into(),
             Widget::Preview(_) => Preview,
         }
     }

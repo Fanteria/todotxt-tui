@@ -61,6 +61,10 @@ pub struct Config {
     pub pending_sort: TaskSort,
     #[serde(default = "Config::default_done_sort")]
     pub done_sort: TaskSort,
+    #[serde(default = "Config::default_preview_format")]
+    pub preview_format: String,
+    #[serde(default = "Config::default_layout")]
+    pub layout: String,
 }
 
 impl Config {
@@ -158,6 +162,32 @@ impl Config {
     fn default_done_sort() -> TaskSort {
         TaskSort::None
     }
+
+    fn default_preview_format() -> String {
+        String::from("Pending: {n}   Done: {N}\nSubject: {s}\nPriority: {p}\nCreate date: {c}")
+    }
+
+    fn default_layout() -> String {
+        String::from(
+            r#"
+[
+    Direction: Horizontal,
+    Size: 50%,
+    [
+        List: 50%,
+        Preview,
+    ],
+    [ Direction: Vertical,
+      Done,
+      [ 
+        Contexts,
+        Projects,
+      ],
+    ],
+]
+"#,
+        )
+    }
 }
 
 impl Default for Config {
@@ -183,6 +213,8 @@ impl Default for Config {
             list_shift: Self::default_list_shift(),
             pending_sort: Self::default_pending_sort(),
             done_sort: Self::default_done_sort(),
+            preview_format: Self::default_preview_format(),
+            layout: Self::default_layout(),
         }
     }
 }

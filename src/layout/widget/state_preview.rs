@@ -14,11 +14,8 @@ pub struct StatePreview {
 }
 
 impl StatePreview {
-    pub fn new(base: WidgetBase, format: &str) -> Self {
-        StatePreview {
-            format: String::from(format),
-            base,
-        }
+    pub fn new(base: WidgetBase, format: String) -> Self {
+        StatePreview { format, base }
     }
 
     fn get_content(&self) -> String {

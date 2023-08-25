@@ -1,14 +1,13 @@
 use super::widget_base::WidgetBase;
 use crate::todo::ToDo;
 use crate::CONFIG;
+use crossterm::event::KeyEvent;
 use std::sync::MutexGuard;
+use tui::{backend::Backend, prelude::Rect, Frame};
 use tui::{
     style::Style,
     widgets::{Block, BorderType, Borders},
 };
-
-use crossterm::event::KeyEvent;
-use tui::{backend::Backend, prelude::Rect, Frame};
 
 #[enum_dispatch]
 pub trait State {
@@ -17,7 +16,7 @@ pub trait State {
     fn get_base(&self) -> &WidgetBase;
     fn get_base_mut(&mut self) -> &mut WidgetBase;
 
-    fn data<'a>(&'a self) -> MutexGuard<'a, ToDo> {
+    fn data(&self) -> MutexGuard<'_, ToDo> {
         self.get_base().data.lock().unwrap()
     }
 
