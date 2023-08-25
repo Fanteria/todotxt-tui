@@ -1,4 +1,4 @@
-use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State};
+use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State, widget_base::WidgetBase};
 use crate::todo::{task_list::TaskSort, ToDo, ToDoData};
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{backend::Backend, prelude::Rect, style::Style, widgets::List, Frame};
@@ -9,9 +9,7 @@ pub struct StateList {
     data_type: ToDoData,
     data: RCToDo,
     sort_type: TaskSort,
-    focus: bool,
-    chunk: Rect,
-    title: String,
+    base: WidgetBase,
 }
 
 impl StateList {
@@ -29,11 +27,9 @@ impl StateList {
             state,
             style,
             data_type,
-            data,
+            data: data.clone(),
             sort_type,
-            focus: false,
-            chunk: Rect::default(),
-            title: String::from(title),
+            base: WidgetBase::new(title, data),
         }
     }
 
@@ -97,29 +93,21 @@ impl State for StateList {
         let (first, last) = self.state.range();
         let filtered = filtered.slice(first, last);
         let list = List::new(filtered).block(self.get_block());
-        if !self.focus {
-            f.render_widget(list, self.chunk)
+        if !self.base.focus {
+            f.render_widget(list, self.base.chunk)
         } else {
             let list = list.highlight_style(self.style);
-            f.render_stateful_widget(list, self.chunk, &mut self.state.state());
+            f.render_stateful_widget(list, self.base.chunk, &mut self.state.state());
         }
     }
 
     fn update_chunk(&mut self, chunk: Rect) {
-        self.chunk = chunk;
-        self.state.set_size(self.chunk.height);
-    }
-
-    fn get_focus_mut(&mut self) -> &mut bool {
-        &mut self.focus
-    }
-
-    fn get_focus(&self) -> bool {
-        self.focus
+        self.base.chunk = chunk;
+        self.state.set_size(self.base.chunk.height);
     }
 
     fn focus(&mut self) {
-        self.focus = true;
+        self.base.focus = true;
         let len = self.len();
         // self.state.last(len);
         if self.state.act() >= len && len > 0 {
@@ -127,7 +115,11 @@ impl State for StateList {
         }
     }
 
-    fn get_title(&self) -> &str {
-        &self.title
+    fn get_base(&self) -> &WidgetBase {
+        &self.base
+    }
+
+    fn get_base_mut(&mut self) -> &mut WidgetBase {
+        &mut self.base
     }
 }

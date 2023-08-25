@@ -1,7 +1,7 @@
 use crate::CONFIG;
 use super::{
     state_categories::StateCategories, state_list::StateList, state_preview::StatePreview,
-    widget_state::WidgetState,
+    widget_state::WidgetState, widget_base::WidgetBase,
 };
 use tui::{
     style::Style,
@@ -15,25 +15,27 @@ use tui::{backend::Backend, prelude::Rect, Frame};
 pub trait State {
     fn handle_key(&mut self, event: &KeyEvent);
     fn render<B: Backend>(&self, f: &mut Frame<B>);
-    fn update_chunk(&mut self, chunk: Rect);
-    fn get_focus_mut(&mut self) -> &mut bool;
-    fn get_focus(&self) -> bool;
-    fn get_title(&self) -> &str;
+    fn get_base(&self) -> &WidgetBase;
+    fn get_base_mut(&mut self) -> &mut WidgetBase;
 
     fn focus(&mut self) {
-        *self.get_focus_mut() = true;
+        self.get_base_mut().focus = true;
     }
 
     fn unfocus(&mut self) {
-        *self.get_focus_mut() = false;
+        self.get_base_mut().focus = false;
+    }
+
+    fn update_chunk(&mut self, chunk: Rect) {
+        self.get_base_mut().chunk = chunk;
     }
 
     fn get_block(&self) -> Block {
         let mut block = Block::default()
             .borders(Borders::ALL)
-            .title(self.get_title())
+            .title(self.get_base().title.clone())
             .border_type(BorderType::Rounded);
-        if self.get_focus() {
+        if self.get_base().focus {
             block = block.border_style(Style::default().fg(CONFIG.active_color));
         }
         block

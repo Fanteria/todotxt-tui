@@ -1,4 +1,4 @@
-use super::widget_trait::State;
+use super::{widget_base::WidgetBase, widget_trait::State};
 use crate::{
     todo::{ToDo, ToDoData},
     CONFIG,
@@ -8,7 +8,6 @@ use crossterm::event::KeyEvent;
 use std::sync::{Arc, Mutex};
 use tui::{
     backend::Backend,
-    prelude::Rect,
     widgets::{Paragraph, Wrap},
     Frame,
 };
@@ -16,19 +15,15 @@ use tui::{
 pub struct StatePreview {
     data: Arc<Mutex<ToDo>>,
     format: String,
-    focus: bool,
-    chunk: Rect,
-    title: String,
+    base: WidgetBase,
 }
 
 impl StatePreview {
     pub fn new(format: &str, data: Arc<Mutex<ToDo>>, title: &str) -> Self {
         StatePreview {
-            data,
+            data: data.clone(),
             format: String::from(format),
-            focus: false,
-            chunk: Rect::default(),
-            title: String::from(title),
+            base: WidgetBase::new(title, data),
         }
     }
 
@@ -68,22 +63,14 @@ impl State for StatePreview {
         }
         // .style(Style::default().fg(Color::White).bg(Color::Black));
         // .alignment(Alignment::Center)
-        f.render_widget(paragraph, self.chunk);
+        f.render_widget(paragraph, self.base.chunk);
     }
 
-    fn update_chunk(&mut self, chunk: Rect) {
-        self.chunk = chunk;
+    fn get_base(&self) -> &WidgetBase {
+        &self.base
     }
 
-    fn get_focus_mut(&mut self) -> &mut bool {
-        &mut self.focus
-    }
-
-    fn get_focus(&self) -> bool {
-        self.focus
-    }
-        
-    fn get_title(&self) -> &str {
-        &self.title
+    fn get_base_mut(&mut self) -> &mut WidgetBase {
+        &mut self.base
     }
 }

@@ -1,9 +1,10 @@
-use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State};
+use super::{
+    widget_base::WidgetBase, widget_list::WidgetList, widget_state::RCToDo, widget_trait::State,
+};
 use crate::todo::ToDoCategory;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
-    prelude::Rect,
     style::{Color, Style},
     widgets::List,
     Frame,
@@ -13,9 +14,7 @@ pub struct StateCategories {
     state: WidgetList,
     category: ToDoCategory,
     data: RCToDo,
-    focus: bool,
-    chunk: Rect,
-    title: String,
+    base: WidgetBase,
 }
 
 impl StateCategories {
@@ -23,10 +22,8 @@ impl StateCategories {
         Self {
             state: WidgetList::default(),
             category,
-            data,
-            focus: false,
-            chunk: Rect::default(),
-            title: String::from(title),
+            data: data.clone(),
+            base: WidgetBase::new(title, data),
         }
     }
 
@@ -61,27 +58,19 @@ impl State for StateCategories {
         let todo = self.data.lock().unwrap();
         let data = todo.get_categories(self.category);
         let list = List::new(data).block(self.get_block());
-        if !self.focus {
-            f.render_widget(list, self.chunk)
+        if !self.base.focus {
+            f.render_widget(list, self.base.chunk)
         } else {
             let list = list.highlight_style(Style::default().bg(Color::LightRed)); // TODO add to config
-            f.render_stateful_widget(list, self.chunk, &mut self.state.state());
+            f.render_stateful_widget(list, self.base.chunk, &mut self.state.state());
         }
     }
 
-    fn update_chunk(&mut self, chunk: Rect) {
-        self.chunk = chunk;
+    fn get_base(&self) -> &WidgetBase {
+        &self.base
     }
 
-    fn get_focus_mut(&mut self) -> &mut bool {
-        &mut self.focus
-    }
-
-    fn get_focus(&self) -> bool {
-        self.focus
-    }
-
-    fn get_title(&self) -> &str {
-        &self.title
+    fn get_base_mut(&mut self) -> &mut WidgetBase {
+        &mut self.base
     }
 }
