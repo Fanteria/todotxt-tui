@@ -3,7 +3,11 @@ use crate::{
     todo::ToDoCategory,
     utils::some_or_return,
     ToDo, CONFIG,
-    {layout::Layout, utils::get_block},
+    layout::Layout,
+};
+use tui::{
+    style::Style,
+    widgets::{Block, BorderType, Borders},
 };
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -112,10 +116,17 @@ impl UI {
     }
 
     fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> ioResult<()> {
+        let mut block = Block::default()
+            .borders(Borders::ALL)
+            .title("Input")
+            .border_type(BorderType::Rounded);
+        if self.mode == Mode::Input {
+            block = block.border_style(Style::default().fg(CONFIG.active_color));
+        }
         terminal.draw(|f| {
             f.render_widget(
                 Paragraph::new(self.input.clone())
-                    .block(get_block("Input", self.mode == Mode::Input)),
+                    .block(block),
                 self.input_chunk,
             );
             self.layout.render(f);

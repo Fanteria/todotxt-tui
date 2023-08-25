@@ -1,15 +1,16 @@
-use super::{widget_trait::State, Widget};
+use super::widget_trait::State;
 use crate::{
     todo::{ToDo, ToDoData},
-    utils::get_block, CONFIG,
+    CONFIG,
 };
 use chrono::NaiveDate;
 use crossterm::event::KeyEvent;
 use std::sync::{Arc, Mutex};
 use tui::{
     backend::Backend,
+    prelude::Rect,
     widgets::{Paragraph, Wrap},
-    Frame, prelude::Rect,
+    Frame,
 };
 
 pub struct StatePreview {
@@ -17,15 +18,17 @@ pub struct StatePreview {
     format: String,
     focus: bool,
     chunk: Rect,
+    title: String,
 }
 
 impl StatePreview {
-    pub fn new(format: &str, data: Arc<Mutex<ToDo>>) -> Self {
+    pub fn new(format: &str, data: Arc<Mutex<ToDo>>, title: &str) -> Self {
         StatePreview {
             data,
             format: String::from(format),
             focus: false,
             chunk: Rect::default(),
+            title: String::from(title),
         }
     }
 
@@ -58,22 +61,29 @@ impl StatePreview {
 impl State for StatePreview {
     fn handle_key(&mut self, _: &KeyEvent) {}
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
-        let mut paragraph = Paragraph::new(self.get_content())
-            .block(get_block("Preview", self.focus));
+    fn render<B: Backend>(&self, f: &mut Frame<B>) {
+        let mut paragraph = Paragraph::new(self.get_content()).block(self.get_block());
         if CONFIG.wrap_preview {
-            paragraph = paragraph.wrap(Wrap{ trim: true })
+            paragraph = paragraph.wrap(Wrap { trim: true })
         }
         // .style(Style::default().fg(Color::White).bg(Color::Black));
         // .alignment(Alignment::Center)
-        f.render_widget(paragraph, widget.chunk);
+        f.render_widget(paragraph, self.chunk);
     }
 
-    fn update_chunk(&mut self, chunk:Rect) {
+    fn update_chunk(&mut self, chunk: Rect) {
         self.chunk = chunk;
     }
 
-    fn get_focus(&mut self) ->  &mut bool {
+    fn get_focus_mut(&mut self) -> &mut bool {
         &mut self.focus
+    }
+
+    fn get_focus(&self) -> bool {
+        self.focus
+    }
+        
+    fn get_title(&self) -> &str {
+        &self.title
     }
 }

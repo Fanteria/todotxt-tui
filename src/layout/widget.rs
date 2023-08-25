@@ -4,6 +4,7 @@ mod state_preview;
 mod widget_state;
 mod widget_trait;
 mod widget_list;
+mod widget_base;
 pub mod widget_type;
 
 use crate::todo::ToDo;
@@ -25,19 +26,14 @@ impl Widget {
     pub fn new(widget_type: WidgetType, title: &str, data: Arc<Mutex<ToDo>>) -> Widget {
         Widget {
             widget_type,
-            chunk: Rect {
-                width: 0,
-                height: 0,
-                x: 0,
-                y: 0,
-            },
+            chunk: Rect::default(),
             title: title.to_string(),
             state: WidgetState::new(&widget_type, data),
         }
     }
 
     pub fn update_chunk(&mut self, chunk: Rect) {
-        self.chunk = chunk;
+        self.state.update_chunk(chunk);
     }
 
     pub fn handle_key(&mut self, event: &KeyEvent) {
@@ -52,7 +48,7 @@ impl Widget {
         self.state.unfocus();
     }
 
-    pub fn draw<B: Backend>(&self, f: &mut Frame<B>, active: bool) {
-        self.state.render(f, active, self);
+    pub fn draw<B: Backend>(&self, f: &mut Frame<B>, _: bool) {
+        self.state.render(f);
     }
 }

@@ -1,12 +1,12 @@
-use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State, Widget};
+use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State};
 use crate::todo::ToDoCategory;
-use crate::utils::get_block;
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{
     backend::Backend,
+    prelude::Rect,
     style::{Color, Style},
     widgets::List,
-    Frame, prelude::Rect,
+    Frame,
 };
 
 pub struct StateCategories {
@@ -15,16 +15,18 @@ pub struct StateCategories {
     data: RCToDo,
     focus: bool,
     chunk: Rect,
+    title: String,
 }
 
 impl StateCategories {
-    pub fn new(category: ToDoCategory, data: RCToDo) -> Self {
+    pub fn new(category: ToDoCategory, data: RCToDo, title: &str) -> Self {
         Self {
             state: WidgetList::default(),
             category,
             data,
             focus: false,
             chunk: Rect::default(),
+            title: String::from(title),
         }
     }
 
@@ -55,23 +57,31 @@ impl State for StateCategories {
         }
     }
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
+    fn render<B: Backend>(&self, f: &mut Frame<B>) {
         let todo = self.data.lock().unwrap();
         let data = todo.get_categories(self.category);
-        let list = List::new(data).block(get_block(&widget.title, self.focus));
+        let list = List::new(data).block(self.get_block());
         if !self.focus {
-            f.render_widget(list, widget.chunk)
+            f.render_widget(list, self.chunk)
         } else {
             let list = list.highlight_style(Style::default().bg(Color::LightRed)); // TODO add to config
-            f.render_stateful_widget(list, widget.chunk, &mut self.state.state());
+            f.render_stateful_widget(list, self.chunk, &mut self.state.state());
         }
     }
 
-    fn update_chunk(&mut self,chunk: Rect) {
+    fn update_chunk(&mut self, chunk: Rect) {
         self.chunk = chunk;
     }
 
-    fn get_focus(&mut self) ->  &mut bool {
+    fn get_focus_mut(&mut self) -> &mut bool {
         &mut self.focus
+    }
+
+    fn get_focus(&self) -> bool {
+        self.focus
+    }
+
+    fn get_title(&self) -> &str {
+        &self.title
     }
 }

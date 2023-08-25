@@ -25,6 +25,7 @@ impl WidgetState {
                     .get_style(),
                 CONFIG.list_shift,
                 CONFIG.pending_sort,
+                "Pending",
             )),
             WidgetType::Done => Self::List(StateList::new(
                 ToDoData::Done,
@@ -35,19 +36,27 @@ impl WidgetState {
                     .get_style(),
                 CONFIG.list_shift,
                 CONFIG.done_sort,
+                "Done",
             )),
-            WidgetType::Project => {
-                Self::Category(StateCategories::new(ToDoCategory::Projects, data))
-            }
-            WidgetType::Context => {
-                Self::Category(StateCategories::new(ToDoCategory::Contexts, data))
-            }
-            WidgetType::Hashtag => {
-                Self::Category(StateCategories::new(ToDoCategory::Hashtags, data))
-            }
+            WidgetType::Project => Self::Category(StateCategories::new(
+                ToDoCategory::Projects,
+                data,
+                "Projects",
+            )),
+            WidgetType::Context => Self::Category(StateCategories::new(
+                ToDoCategory::Contexts,
+                data,
+                "Contexts",
+            )),
+            WidgetType::Hashtag => Self::Category(StateCategories::new(
+                ToDoCategory::Hashtags,
+                data,
+                "Hashtags",
+            )),
             WidgetType::Preview => Self::Preview(StatePreview::new(
                 "Pending: {n}   Done: {N}\nSubject: {s}\nPriority: {p}\nCreate date: {c}",
                 data,
+                "Preview",
             )),
         }
     }

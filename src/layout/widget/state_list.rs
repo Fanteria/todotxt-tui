@@ -1,8 +1,5 @@
-use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State, Widget};
-use crate::{
-    todo::{task_list::TaskSort, ToDo, ToDoData},
-    utils::get_block,
-};
+use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State};
+use crate::todo::{task_list::TaskSort, ToDo, ToDoData};
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{backend::Backend, prelude::Rect, style::Style, widgets::List, Frame};
 
@@ -14,6 +11,7 @@ pub struct StateList {
     sort_type: TaskSort,
     focus: bool,
     chunk: Rect,
+    title: String,
 }
 
 impl StateList {
@@ -23,6 +21,7 @@ impl StateList {
         style: Style,
         list_shift: usize,
         sort_type: TaskSort,
+        title: &str,
     ) -> Self {
         let mut state = WidgetList::default();
         state.set_shift(list_shift);
@@ -34,6 +33,7 @@ impl StateList {
             sort_type,
             focus: false,
             chunk: Rect::default(),
+            title: String::from(title),
         }
     }
 
@@ -90,18 +90,18 @@ impl State for StateList {
         }
     }
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>, _: bool, widget: &Widget) {
+    fn render<B: Backend>(&self, f: &mut Frame<B>) {
         let data = self.data.lock().unwrap();
         let mut filtered = data.get_filtered(self.data_type);
         filtered.sort(self.sort_type);
         let (first, last) = self.state.range();
         let filtered = filtered.slice(first, last);
-        let list = List::new(filtered).block(get_block(&widget.title, self.focus));
+        let list = List::new(filtered).block(self.get_block());
         if !self.focus {
-            f.render_widget(list, widget.chunk)
+            f.render_widget(list, self.chunk)
         } else {
             let list = list.highlight_style(self.style);
-            f.render_stateful_widget(list, widget.chunk, &mut self.state.state());
+            f.render_stateful_widget(list, self.chunk, &mut self.state.state());
         }
     }
 
@@ -110,8 +110,12 @@ impl State for StateList {
         self.state.set_size(self.chunk.height);
     }
 
-    fn get_focus(&mut self) -> &mut bool {
+    fn get_focus_mut(&mut self) -> &mut bool {
         &mut self.focus
+    }
+
+    fn get_focus(&self) -> bool {
+        self.focus
     }
 
     fn focus(&mut self) {
@@ -121,5 +125,9 @@ impl State for StateList {
         if self.state.act() >= len && len > 0 {
             self.state.last(len);
         }
+    }
+
+    fn get_title(&self) -> &str {
+        &self.title
     }
 }
