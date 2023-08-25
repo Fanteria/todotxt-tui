@@ -1,8 +1,10 @@
-use crate::CONFIG;
+use std::sync::MutexGuard;
 use super::{
     state_categories::StateCategories, state_list::StateList, state_preview::StatePreview,
-    widget_state::WidgetState, widget_base::WidgetBase,
+    widget_base::WidgetBase, widget_state::WidgetState,
 };
+use crate::CONFIG;
+use crate::todo::ToDo;
 use tui::{
     style::Style,
     widgets::{Block, BorderType, Borders},
@@ -17,6 +19,10 @@ pub trait State {
     fn render<B: Backend>(&self, f: &mut Frame<B>);
     fn get_base(&self) -> &WidgetBase;
     fn get_base_mut(&mut self) -> &mut WidgetBase;
+
+    fn data<'a>(&'a self) -> MutexGuard<'a, ToDo>{
+        self.get_base().data.lock().unwrap()
+    }
 
     fn focus(&mut self) {
         self.get_base_mut().focus = true;

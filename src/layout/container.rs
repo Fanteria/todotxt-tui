@@ -199,9 +199,9 @@ mod tests {
 
     fn create_testing_container() -> RcCon {
         let todo = Arc::new(Mutex::new(ToDo::new(false)));
-        let list_widget = Widget::new(WidgetType::List, "List", todo.clone());
-        let done_widget = Widget::new(WidgetType::Done, "Done", todo.clone());
-        let project_widget = Widget::new(WidgetType::Project, "Project", todo);
+        let list_widget = Widget::new(WidgetType::List, todo.clone());
+        let done_widget = Widget::new(WidgetType::Done, todo.clone());
+        let project_widget = Widget::new(WidgetType::Project, todo);
         Container::new(
             vec![InitItem::InitContainer(Container::new(
                 vec![

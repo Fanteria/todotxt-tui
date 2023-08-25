@@ -1,11 +1,7 @@
-use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{
-    todo::{ToDo, ToDoData},
-    CONFIG,
-};
+use super::{widget_base::WidgetBase, widget_state::RCToDo, widget_trait::State};
+use crate::{todo::ToDoData, CONFIG};
 use chrono::NaiveDate;
 use crossterm::event::KeyEvent;
-use std::sync::{Arc, Mutex};
 use tui::{
     backend::Backend,
     widgets::{Paragraph, Wrap},
@@ -13,22 +9,20 @@ use tui::{
 };
 
 pub struct StatePreview {
-    data: Arc<Mutex<ToDo>>,
-    format: String,
     base: WidgetBase,
+    format: String,
 }
 
 impl StatePreview {
-    pub fn new(format: &str, data: Arc<Mutex<ToDo>>, title: &str) -> Self {
+    pub fn new(base: WidgetBase, format: &str) -> Self {
         StatePreview {
-            data: data.clone(),
             format: String::from(format),
-            base: WidgetBase::new(title, data),
+            base,
         }
     }
 
     fn get_content(&self) -> String {
-        let data = self.data.lock().unwrap();
+        let data = self.data();
         let task = match data.get_active() {
             Some(s) => s,
             None => return String::from(""),

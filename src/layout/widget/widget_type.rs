@@ -1,6 +1,5 @@
-use crate::error::ErrorType::ParseWidgetType;
+use crate::{error::ErrorType::ParseWidgetType, todo::{ToDoCategory, ToDoData}};
 use serde::{Deserialize, Serialize};
-use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use crate::error::ErrorToDo;
@@ -15,21 +14,38 @@ pub enum WidgetType {
     Preview,
 }
 
-impl Display for WidgetType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl ToString for WidgetType {
+    fn to_string(&self) -> String {
         use WidgetType::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                List => "List",
-                Done => "Done",
-                Project => "Projects",
-                Context => "Contexts",
-                Hashtag => "Hashtags",
-                Preview => "Preview",
-            }
-        )
+        match self {
+            List => String::from("List"),
+            Done => String::from("Done"),
+            Project => String::from("Projects"),
+            Context => String::from("Contexts"),
+            Hashtag => String::from("Hashtags"),
+            Preview => String::from("Preview"),
+        }
+    }
+}
+
+impl From<ToDoCategory> for WidgetType {
+    fn from(value: ToDoCategory) -> Self {
+        use ToDoCategory::*;
+        match value {
+            Projects => WidgetType::Project,
+            Contexts => WidgetType::Context,
+            Hashtags => WidgetType::Hashtag,
+        }
+    }
+}
+
+impl From<ToDoData> for WidgetType {
+    fn from(value: ToDoData) -> Self {
+        use ToDoData::*;
+        match value {
+            Pending => WidgetType::List,
+            Done => WidgetType::Done,
+        }
     }
 }
 

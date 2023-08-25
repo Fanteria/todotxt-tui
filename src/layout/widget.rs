@@ -17,17 +17,13 @@ use widget_type::WidgetType;
 
 pub struct Widget {
     pub widget_type: WidgetType,
-    pub chunk: Rect,
-    pub title: String,
     state: WidgetState,
 }
 
 impl Widget {
-    pub fn new(widget_type: WidgetType, title: &str, data: Arc<Mutex<ToDo>>) -> Widget {
+    pub fn new(widget_type: WidgetType, data: Arc<Mutex<ToDo>>) -> Widget {
         Widget {
             widget_type,
-            chunk: Rect::default(),
-            title: title.to_string(),
             state: WidgetState::new(&widget_type, data),
         }
     }

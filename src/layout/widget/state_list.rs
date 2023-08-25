@@ -1,4 +1,6 @@
-use super::{widget_list::WidgetList, widget_state::RCToDo, widget_trait::State, widget_base::WidgetBase};
+use super::{
+    widget_base::WidgetBase, widget_list::WidgetList, widget_state::RCToDo, widget_trait::State,
+};
 use crate::todo::{task_list::TaskSort, ToDo, ToDoData};
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{backend::Backend, prelude::Rect, style::Style, widgets::List, Frame};
@@ -7,19 +9,17 @@ pub struct StateList {
     state: WidgetList,
     style: Style,
     data_type: ToDoData,
-    data: RCToDo,
     sort_type: TaskSort,
     base: WidgetBase,
 }
 
 impl StateList {
     pub fn new(
+        base: WidgetBase,
         data_type: ToDoData,
-        data: RCToDo,
         style: Style,
         list_shift: usize,
         sort_type: TaskSort,
-        title: &str,
     ) -> Self {
         let mut state = WidgetList::default();
         state.set_shift(list_shift);
@@ -27,28 +27,24 @@ impl StateList {
             state,
             style,
             data_type,
-            data: data.clone(),
             sort_type,
-            base: WidgetBase::new(title, data),
+            base,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.data.lock().unwrap().len(self.data_type)
+        self.data().len(self.data_type)
     }
 
     fn swap_tasks(&mut self, first: usize, second: usize) {
         log::trace!("Swap tasks with indexes: {}, {}", first, second);
-        self.data
-            .lock()
-            .unwrap()
-            .swap_tasks(self.data_type, first, second);
+        self.data().swap_tasks(self.data_type, first, second);
     }
 
     fn move_task(&mut self, r#move: fn(&mut ToDo, ToDoData, usize)) {
         let index = self.state.index();
         log::info!("Remove task with index {index}.");
-        r#move(&mut self.data.lock().unwrap(), self.data_type, index);
+        r#move(&mut self.data(), self.data_type, index);
         let len = self.len();
         if len <= index && len > 0 {
             self.state.up();
@@ -76,10 +72,7 @@ impl State for StateList {
                 KeyCode::Char('x') => self.move_task(ToDo::remove_task),
                 KeyCode::Char('d') => self.move_task(ToDo::move_task),
                 KeyCode::Enter => {
-                    self.data
-                        .lock()
-                        .unwrap()
-                        .set_active(self.data_type, self.state.index());
+                    self.data().set_active(self.data_type, self.state.index());
                 }
                 _ => {}
             }
@@ -87,7 +80,7 @@ impl State for StateList {
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
-        let data = self.data.lock().unwrap();
+        let data = self.data();
         let mut filtered = data.get_filtered(self.data_type);
         filtered.sort(self.sort_type);
         let (first, last) = self.state.range();

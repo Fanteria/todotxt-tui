@@ -1,5 +1,6 @@
 use super::state_preview::StatePreview;
 use super::{state_categories::StateCategories, state_list::StateList, widget_type::WidgetType};
+use crate::layout::widget::widget_base::WidgetBase;
 use crate::todo::{ToDo, ToDoCategory, ToDoData};
 use crate::CONFIG;
 use std::sync::{Arc, Mutex};
@@ -15,48 +16,35 @@ pub enum WidgetState {
 
 impl WidgetState {
     pub fn new(widget_type: &WidgetType, data: RCToDo) -> Self {
+        use WidgetType::*;
+        let base = WidgetBase::new(widget_type.to_string(), data);
         match widget_type {
-            WidgetType::List => Self::List(StateList::new(
+            List => Self::List(StateList::new(
+                base,
                 ToDoData::Pending,
-                data,
                 CONFIG
                     .list_active_color
                     .combine(&CONFIG.pending_active_color)
                     .get_style(),
                 CONFIG.list_shift,
                 CONFIG.pending_sort,
-                "Pending",
             )),
-            WidgetType::Done => Self::List(StateList::new(
+            Done => Self::List(StateList::new(
+                base,
                 ToDoData::Done,
-                data,
                 CONFIG
                     .list_active_color
                     .combine(&CONFIG.done_active_color)
                     .get_style(),
                 CONFIG.list_shift,
                 CONFIG.done_sort,
-                "Done",
             )),
-            WidgetType::Project => Self::Category(StateCategories::new(
-                ToDoCategory::Projects,
-                data,
-                "Projects",
-            )),
-            WidgetType::Context => Self::Category(StateCategories::new(
-                ToDoCategory::Contexts,
-                data,
-                "Contexts",
-            )),
-            WidgetType::Hashtag => Self::Category(StateCategories::new(
-                ToDoCategory::Hashtags,
-                data,
-                "Hashtags",
-            )),
-            WidgetType::Preview => Self::Preview(StatePreview::new(
+            Project => Self::Category(StateCategories::new(base, ToDoCategory::Projects)),
+            Context => Self::Category(StateCategories::new(base, ToDoCategory::Contexts)),
+            Hashtag => Self::Category(StateCategories::new(base, ToDoCategory::Hashtags)),
+            Preview => Self::Preview(StatePreview::new(
+                base,
                 "Pending: {n}   Done: {N}\nSubject: {s}\nPriority: {p}\nCreate date: {c}",
-                data,
-                "Preview",
             )),
         }
     }

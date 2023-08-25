@@ -165,7 +165,6 @@ impl Layout {
                             let cont = container.last_mut().unwrap();
                             cont.2.push(InitItem::InitWidget(Widget::new(
                                 widget_type,
-                                &widget_type.to_string(),
                                 data.clone(),
                             )));
                             cont.3.push(Self::value_from_string(&string)?);

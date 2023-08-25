@@ -9,9 +9,9 @@ pub struct WidgetBase {
 }
 
 impl WidgetBase {
-    pub fn new(title: &str, data: RCToDo) -> Self {
+    pub fn new(title: String, data: RCToDo) -> Self {
         Self {
-            title: String::from(title),
+            title,
             focus: false,
             chunk: Rect::default(),
             data,
