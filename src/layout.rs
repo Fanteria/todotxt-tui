@@ -5,6 +5,7 @@ use self::{
     container::{Container, InitItem, Item, RcCon},
     widget::widget_type::WidgetType,
     widget::Widget,
+    widget::widget_trait::State,
 };
 use crate::{
     error::{ErrorToDo, ErrorType, ToDoRes},

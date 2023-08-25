@@ -1,4 +1,4 @@
-use super::{widget_base::WidgetBase, widget_state::RCToDo, widget_trait::State};
+use super::{widget_base::WidgetBase, widget_trait::State};
 use crate::{todo::ToDoData, CONFIG};
 use chrono::NaiveDate;
 use crossterm::event::KeyEvent;

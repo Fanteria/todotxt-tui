@@ -1,6 +1,4 @@
-use super::{
-    widget_base::WidgetBase, widget_list::WidgetList, widget_state::RCToDo, widget_trait::State,
-};
+use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::todo::{task_list::TaskSort, ToDo, ToDoData};
 use crossterm::event::{KeyCode, KeyEvent};
 use tui::{backend::Backend, prelude::Rect, style::Style, widgets::List, Frame};
@@ -8,7 +6,7 @@ use tui::{backend::Backend, prelude::Rect, style::Style, widgets::List, Frame};
 pub struct StateList {
     state: WidgetList,
     style: Style,
-    data_type: ToDoData,
+    pub data_type: ToDoData,
     sort_type: TaskSort,
     base: WidgetBase,
 }

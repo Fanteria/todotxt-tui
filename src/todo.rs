@@ -17,7 +17,7 @@ pub enum ToDoData {
 }
 use ToDoData::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum ToDoCategory {
     Projects,
     Contexts,

@@ -1,4 +1,4 @@
-use super::widget_state::RCToDo;
+use super::RCToDo;
 use tui::prelude::Rect;
 
 pub struct WidgetBase {

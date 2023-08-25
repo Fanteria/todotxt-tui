@@ -1,4 +1,4 @@
-use super::widget::{widget_type::WidgetType, Widget};
+use super::widget::{widget_trait::State, widget_type::WidgetType, Widget};
 use crate::error::{ErrorToDo, ErrorType, ToDoRes};
 use std::{cell::RefCell, rc::Rc};
 use tui::{
@@ -142,7 +142,7 @@ impl Container {
         for (index, item) in borrowed.items.iter().enumerate() {
             match item {
                 Item::Widget(holder) => {
-                    if holder.widget.widget_type == widget_type {
+                    if holder.widget.widget_type() == widget_type {
                         borrowed.active = true;
                         borrowed.act_index = index;
                         return Ok(container.clone());
@@ -168,11 +168,9 @@ impl Container {
     where
         B: Backend,
     {
-        for (index, item) in self.items.iter().enumerate() {
+        for item in self.items.iter() {
             match item {
-                Item::Widget(holder) => holder
-                    .widget
-                    .draw(f, self.active && self.act_index == index),
+                Item::Widget(holder) => holder.widget.render(f),
                 Item::Container(container) => container.borrow().render_recursive(f),
             }
         }
@@ -183,7 +181,7 @@ impl Container {
 impl Container {
     pub fn get_active_type(&self) -> WidgetType {
         if let Item::Widget(w) = self.actual_item() {
-            return w.widget.widget_type;
+            return w.widget.widget_type();
         };
         panic!("The current item is expected to be a widget.");
     }

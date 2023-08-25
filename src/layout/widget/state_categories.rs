@@ -11,7 +11,7 @@ use tui::{
 pub struct StateCategories {
     base: WidgetBase,
     state: WidgetList,
-    category: ToDoCategory,
+    pub category: ToDoCategory,
 }
 
 impl StateCategories {
