@@ -1,13 +1,6 @@
 use crate::{
-    file_worker::FileWorkerCommands,
-    todo::ToDoCategory,
-    utils::some_or_return,
-    ToDo, CONFIG,
-    layout::Layout,
-};
-use tui::{
-    style::Style,
-    widgets::{Block, BorderType, Borders},
+    file_worker::FileWorkerCommands, layout::Layout, layout::Render, todo::ToDoCategory,
+    utils::some_or_return, ToDo, CONFIG,
 };
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -27,6 +20,10 @@ use tui::{
     layout::{Constraint, Direction, Layout as tuiLayout, Rect},
     widgets::Paragraph,
     Terminal,
+};
+use tui::{
+    style::Style,
+    widgets::{Block, BorderType, Borders},
 };
 
 #[derive(PartialEq, Eq)]
@@ -57,13 +54,13 @@ impl UI {
         }
     }
 
-    fn update_chunks(&mut self, main_chunk: Rect) {
+    fn update_chunk(&mut self, main_chunk: Rect) {
         let layout = tuiLayout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Min(1)])
             .split(main_chunk);
         self.input_chunk = layout[0];
-        self.layout.update_chunks(layout[1]);
+        self.layout.update_chunk(layout[1]);
     }
 
     pub fn run(&mut self) -> ioResult<()> {
@@ -77,7 +74,7 @@ impl UI {
 
         let mut terminal = Terminal::new(backend)?;
         terminal.hide_cursor()?;
-        self.update_chunks(terminal.size()?);
+        self.update_chunk(terminal.size()?);
 
         self.draw(&mut terminal)?;
         self.main_loop(&mut terminal)?;
@@ -125,8 +122,7 @@ impl UI {
         }
         terminal.draw(|f| {
             f.render_widget(
-                Paragraph::new(self.input.clone())
-                    .block(block),
+                Paragraph::new(self.input.clone()).block(block),
                 self.input_chunk,
             );
             self.layout.render(f);
@@ -183,7 +179,7 @@ impl UI {
         let mut ret = false;
         match event::read()? {
             Event::Resize(width, height) => {
-                self.update_chunks(Rect::new(0, 0, width, height));
+                self.update_chunk(Rect::new(0, 0, width, height));
             }
             Event::Key(event) => match self.mode {
                 Mode::Input => match event.code {

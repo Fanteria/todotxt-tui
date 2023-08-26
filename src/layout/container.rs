@@ -1,5 +1,12 @@
-use super::widget::{widget_trait::State, widget_type::WidgetType, Widget};
+mod holder;
+mod item;
+
+use self::holder::Holder;
+use super::render_trait::Render;
+use super::widget::{widget_type::WidgetType, Widget};
 use crate::error::{ErrorToDo, ErrorType, ToDoRes};
+use item::IItem;
+pub use item::Item;
 use std::{cell::RefCell, rc::Rc};
 use tui::{
     backend::Backend,
@@ -9,33 +16,17 @@ use tui::{
 
 pub type RcCon = Rc<RefCell<Container>>;
 
-pub enum Item {
-    Container(RcCon),
-    Widget(Holder),
-}
-
-pub enum InitItem {
-    InitContainer(RcCon),
-    InitWidget(Widget),
-}
-
-pub struct Holder {
-    pub widget: Widget,
-    pub parent: RcCon,
-}
-
 pub struct Container {
-    pub items: Vec<Item>,
-    pub layout: Layout,
+    items: Vec<IItem>,
+    layout: Layout,
     pub direction: Direction,
     pub parent: Option<RcCon>,
-    pub act_index: usize,
-    pub active: bool,
+    act_index: usize,
 }
 
 impl Container {
     pub fn new(
-        items: Vec<InitItem>,
+        items: Vec<Item>,
         constraints: Vec<Constraint>,
         direction: Direction,
         parent: Option<RcCon>,
@@ -48,53 +39,42 @@ impl Container {
             direction,
             parent,
             act_index: 0,
-            active: false,
         }));
 
-        for item in items {
-            match item {
-                InitItem::InitWidget(widget) => {
-                    container.borrow_mut().items.push(Item::Widget(Holder {
-                        widget,
-                        parent: Rc::clone(&container),
-                    }));
-                }
-                InitItem::InitContainer(cont) => {
-                    cont.borrow_mut().parent = Some(Rc::clone(&container));
-                    container.borrow_mut().items.push(Item::Container(cont))
-                }
-            }
-        }
-
+        items.into_iter().for_each(|item| {
+            container
+                .borrow_mut()
+                .items
+                .push(IItem::new(item, container.clone()))
+        });
         container
     }
 
-    pub fn update_chunks(&mut self, chunk: Rect) {
-        let chunks = self.layout.split(chunk);
-        for (i, item) in self.items.iter_mut().enumerate() {
-            match item {
-                Item::Widget(holder) => holder.widget.update_chunk(chunks[i]),
-                Item::Container(container) => container.borrow_mut().update_chunks(chunks[i]),
-            }
-        }
-    }
-
-    pub fn actual_item(&self) -> &Item {
+    fn actual_item(&self) -> &IItem {
         &self.items[self.act_index]
     }
 
-    pub fn actual_item_mut(&mut self) -> &mut Item {
+    fn actual_item_mut(&mut self) -> &mut IItem {
         &mut self.items[self.act_index]
+    }
+
+    #[allow(dead_code)]
+    pub fn actual(&self) -> ToDoRes<&Widget> {
+        self.actual_item().actual()
+    }
+
+    pub fn actual_mut(&mut self) -> ToDoRes<&mut Widget> {
+        self.actual_item_mut().actual_mut()
     }
 
     fn update_actual(container: &RcCon) -> RcCon {
         let mut borrow = container.borrow_mut();
         match borrow.actual_item() {
-            Item::Widget(_) => {
-                borrow.active = true;
+            IItem::Widget(_) => {
+                borrow.focus();
                 Rc::clone(container)
             }
-            Item::Container(cont) => Container::update_actual(cont),
+            IItem::Container(cont) => Container::update_actual(cont),
         }
     }
 
@@ -106,7 +86,6 @@ impl Container {
         if condition(&container.borrow()) {
             return None;
         }
-        // let mut borrowed = container.borrow_mut();
         container.borrow_mut().unfocus();
         change(&mut container.borrow_mut());
         container.borrow_mut().focus();
@@ -125,33 +104,19 @@ impl Container {
         Container::change_item(&container, |c| c.act_index == 0, |c| c.act_index -= 1)
     }
 
-    pub fn focus(&mut self) {
-        if let Item::Widget(w) = self.actual_item_mut() {
-            w.widget.focus();
-        }
-    }
-
-    pub fn unfocus(&mut self) {
-        if let Item::Widget(w) = self.actual_item_mut() {
-            w.widget.unfocus();
-        }
-    }
-
     pub fn select_widget(container: RcCon, widget_type: WidgetType) -> ToDoRes<RcCon> {
         let mut borrowed = container.borrow_mut();
         for (index, item) in borrowed.items.iter().enumerate() {
             match item {
-                Item::Widget(holder) => {
-                    if holder.widget.widget_type() == widget_type {
-                        borrowed.active = true;
+                IItem::Widget(w) => {
+                    if w.widget_type() == widget_type {
                         borrowed.act_index = index;
                         return Ok(container.clone());
                     }
                 }
-                Item::Container(container) => {
+                IItem::Container(container) => {
                     let cont = Container::select_widget(container.clone(), widget_type);
                     if cont.is_ok() {
-                        borrowed.active = true;
                         borrowed.act_index = index;
                         return cont;
                     }
@@ -163,25 +128,35 @@ impl Container {
             "Selected widgent is not in layout",
         ))
     }
+}
 
-    pub fn render_recursive<B>(&self, f: &mut Frame<B>)
-    where
-        B: Backend,
-    {
-        for item in self.items.iter() {
-            match item {
-                Item::Widget(holder) => holder.widget.render(f),
-                Item::Container(container) => container.borrow().render_recursive(f),
-            }
-        }
+impl Render for Container {
+    fn render<B: Backend>(&self, f: &mut Frame<B>) {
+        self.items.iter().for_each(|i| i.render(f));
+    }
+
+    fn focus(&mut self) {
+        self.actual_item_mut().focus();
+    }
+
+    fn unfocus(&mut self) {
+        self.actual_item_mut().unfocus();
+    }
+
+    fn update_chunk(&mut self, chunk: Rect) {
+        let chunks = self.layout.split(chunk);
+        self.items
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, item)| item.update_chunk(chunks[i]));
     }
 }
 
 #[cfg(test)]
 impl Container {
     pub fn get_active_type(&self) -> WidgetType {
-        if let Item::Widget(w) = self.actual_item() {
-            return w.widget.widget_type();
+        if let IItem::Widget(w) = self.actual_item() {
+            return w.data.widget_type();
         };
         panic!("The current item is expected to be a widget.");
     }
@@ -201,14 +176,11 @@ mod tests {
         let done_widget = Widget::new(WidgetType::Done, todo.clone());
         let project_widget = Widget::new(WidgetType::Project, todo);
         Container::new(
-            vec![InitItem::InitContainer(Container::new(
+            vec![Item::Container(Container::new(
                 vec![
-                    InitItem::InitWidget(list_widget),
-                    InitItem::InitContainer(Container::new(
-                        vec![
-                            InitItem::InitWidget(done_widget),
-                            InitItem::InitWidget(project_widget),
-                        ],
+                    Item::Widget(list_widget),
+                    Item::Container(Container::new(
+                        vec![Item::Widget(done_widget), Item::Widget(project_widget)],
                         vec![Constraint::Percentage(50), Constraint::Percentage(50)],
                         Vertical,
                         None,

@@ -14,6 +14,7 @@ pub enum ErrorType {
     ParseNotStart,
     ParseNotEnd,
     ParseInvalidDirection,
+    ActiveIsNotWidget,
 }
 
 #[derive(Debug)]

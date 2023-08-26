@@ -1,16 +1,19 @@
 pub mod container;
+mod render_trait;
 pub mod widget;
 
 use self::{
-    container::{Container, InitItem, Item, RcCon},
-    widget::{widget_trait::State, widget_type::WidgetType, Widget},
+    container::{Container, Item, RcCon},
+    widget::{widget_type::WidgetType, Widget},
 };
+use crate::layout::widget::widget_trait::State;
 use crate::{
     error::{ErrorToDo, ErrorType, ToDoRes},
     todo::ToDo,
     CONFIG,
 };
 use crossterm::event::KeyEvent;
+pub use render_trait::Render;
 use std::{
     rc::Rc,
     sync::{Arc, Mutex},
@@ -70,8 +73,7 @@ impl Layout {
         let mut string = String::new();
         let mut item = String::new();
 
-        let mut container: Vec<(Direction, Constraint, Vec<InitItem>, Vec<Constraint>)> =
-            Vec::new();
+        let mut container: Vec<(Direction, Constraint, Vec<Item>, Vec<Constraint>)> = Vec::new();
         container.push((
             Direction::Vertical,
             Constraint::Percentage(50),
@@ -102,12 +104,13 @@ impl Layout {
                         let root = Container::new(cont.2, cont.3, cont.0, None);
                         let actual =
                             Container::select_widget(root.clone(), CONFIG.init_widget).unwrap();
-                        if let Item::Widget(w) = actual.borrow_mut().actual_item_mut() {
-                            w.widget.focus();
-                        }
+                        actual.borrow_mut().actual_mut()?.focus();
+                        // if let IItem::Widget(w) = actual.borrow_mut().actual_item_mut() {
+                        //     w.widget.focus();
+                        // } TODO remove comment
                         return Ok(Layout { root, actual });
                     }
-                    let c = InitItem::InitContainer(Container::new(cont.2, cont.3, cont.0, None));
+                    let c = Item::Container(Container::new(cont.2, cont.3, cont.0, None));
                     container.last_mut().unwrap().2.push(c);
                     container.last_mut().unwrap().3.push(cont.1);
                     string.clear();
@@ -147,7 +150,7 @@ impl Layout {
                             let widget_type = WidgetType::from_str(&item)?;
                             let cont = container.last_mut().unwrap();
                             cont.2
-                                .push(InitItem::InitWidget(Widget::new(widget_type, data.clone())));
+                                .push(Item::Widget(Widget::new(widget_type, data.clone())));
                             cont.3.push(Self::value_from_string(&string)?);
                         }
                     }
@@ -174,7 +177,7 @@ impl Layout {
             let mut c = container.borrow_mut();
             if let Some(parent) = &c.parent {
                 return Layout::move_focus(parent.clone(), direction, f).map(|ret| {
-                    c.active = false;
+                    c.unfocus();
                     ret
                 });
             }
@@ -196,14 +199,6 @@ impl Layout {
         self.actual.borrow_mut().unfocus();
         next.borrow_mut().focus();
         self.actual = next;
-    }
-
-    pub fn unfocus(&mut self) {
-        self.actual.borrow_mut().unfocus();
-    }
-
-    pub fn focus(&mut self) {
-        self.actual.borrow_mut().focus();
     }
 
     pub fn left(&mut self) {
@@ -239,22 +234,29 @@ impl Layout {
     }
 
     pub fn handle_key(&self, event: &KeyEvent) {
-        let mut act = self.actual.borrow_mut();
-        match &mut act.actual_item_mut() {
-            Item::Widget(w) => w.widget.handle_key(event),
-            Item::Container(_) => log::error!("Something went wrong, actual item is container."),
-        }
+        self.actual
+            .borrow_mut()
+            .actual_mut()
+            .unwrap() // TODO remove
+            .handle_key(event);
+    }
+}
+
+impl Render for Layout {
+    fn render<B: Backend>(&self, f: &mut Frame<B>) {
+        self.root.borrow().render(f);
     }
 
-    pub fn update_chunks(&mut self, chunk: Rect) {
-        self.root.borrow_mut().update_chunks(chunk);
+    fn unfocus(&mut self) {
+        self.actual.borrow_mut().unfocus();
     }
 
-    pub fn render<B>(&self, f: &mut Frame<B>)
-    where
-        B: Backend,
-    {
-        self.root.borrow().render_recursive(f);
+    fn focus(&mut self) {
+        self.actual.borrow_mut().focus();
+    }
+
+    fn update_chunk(&mut self, chunk: Rect) {
+        self.root.borrow_mut().update_chunk(chunk);
     }
 }
 
@@ -263,7 +265,24 @@ mod tests {
     use super::*;
 
     fn mock_layout() -> Layout {
-        Layout::from_str(&CONFIG.layout, Arc::new(Mutex::new(ToDo::new(false)))).unwrap()
+        let mock_layout  = r#"
+        [
+            Direction: Horizontal,
+            Size: 50%,
+            [
+                List: 50%,
+                Preview,
+            ],
+            [ Direction: Vertical,
+              Done,
+              [ 
+                Contexts,
+                Projects,
+              ],
+            ],
+        ]
+        "#;
+        Layout::from_str(mock_layout, Arc::new(Mutex::new(ToDo::new(false)))).unwrap()
     }
 
     #[test]

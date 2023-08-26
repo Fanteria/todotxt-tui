@@ -10,16 +10,16 @@ use crate::{
     todo::{ToDo, ToDoCategory, ToDoData},
     CONFIG,
 };
+use crossterm::event::KeyEvent;
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
 use std::sync::{Arc, Mutex, MutexGuard};
-use tui::{backend::Backend, prelude::Rect, widgets::Block, Frame};
+use tui::{backend::Backend, Frame};
+use tui::widgets::Block;
 use widget_base::WidgetBase;
-use widget_trait::State;
+pub use widget_trait::State;
 use widget_type::WidgetType;
-
-use crossterm::event::KeyEvent;
 
 pub type RCToDo = Arc<Mutex<ToDo>>;
 

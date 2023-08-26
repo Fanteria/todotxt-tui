@@ -31,6 +31,7 @@ impl FileWorker {
         archive_path: Option<String>,
         todo: Arc<Mutex<ToDo>>,
     ) -> FileWorker {
+        log::info!("Init file worker: file: {}, archive: {:?}", todo_path, archive_path);
         FileWorker {
             todo_path,
             archive_path,
@@ -41,9 +42,13 @@ impl FileWorker {
     pub fn load(&self) -> ioResult<()> {
         let mut todo = ToDo::new(false);
         Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
+        log::info!("Load tasks from file {}", self.todo_path);
         if let Some(path) = &self.archive_path {
+            log::info!("Load tasks from achive file {}", path);
             Self::load_tasks(File::open(path)?, &mut todo)?;
         }
+        log::debug!("Loaded pending {}x tasks", todo.pending.len());
+        log::debug!("Loaded done {}x tasks", todo.done.len());
         self.todo.lock().unwrap().move_data(todo);
         Ok(())
     }
@@ -75,7 +80,7 @@ impl FileWorker {
         );
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.archive_path {
-            Some(s) => Self::save_tasks(&mut File::create(s)?, &todo.pending),
+            Some(s) => Self::save_tasks(&mut File::create(s)?, &todo.done),
             None => Self::save_tasks(&mut f, &todo.done),
         }
     }
@@ -101,9 +106,10 @@ impl FileWorker {
 
         if handle_changes {
             Self::spawn_watcher(tx.clone(), self.todo_path.clone());
-            if let Some(path) = &self.archive_path {
-                Self::spawn_watcher(tx.clone(), path.clone());
-            }
+            // TODO watcher update only one file
+            // if let Some(path) = &self.archive_path {
+            //     Self::spawn_watcher(tx.clone(), path.clone());
+            // }
         }
 
         thread::spawn(move || {

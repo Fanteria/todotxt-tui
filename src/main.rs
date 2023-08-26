@@ -39,17 +39,19 @@ fn init_logging() -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    init_logging()?;
+    log::trace!("===== PROGRAM START =====");
     let todo = Arc::new(Mutex::new(ToDo::new(false)));
     let file_worker = FileWorker::new(
         CONFIG.todo_path.clone(),
         CONFIG.archive_path.clone(),
         todo.clone(),
     );
+
     file_worker.load()?;
     let tx = file_worker.run(CONFIG.autosave_duration, CONFIG.file_watcher);
 
-    init_logging()?;
-
+    log::trace!("Starting UI...");
     UI::new(
         Layout::from_str(&CONFIG.layout, todo.clone())?,
         todo.clone(),

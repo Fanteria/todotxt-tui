@@ -1,7 +1,7 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::todo::{task_list::TaskSort, ToDo, ToDoData};
 use crossterm::event::{KeyCode, KeyEvent};
-use tui::{backend::Backend, prelude::Rect, style::Style, widgets::List, Frame};
+use tui::{backend::Backend, style::Style, widgets::List, Frame};
 
 pub struct StateList {
     state: WidgetList,
@@ -92,19 +92,6 @@ impl State for StateList {
         }
     }
 
-    fn update_chunk(&mut self, chunk: Rect) {
-        self.base.chunk = chunk;
-        self.state.set_size(self.base.chunk.height);
-    }
-
-    fn focus(&mut self) {
-        self.base.focus = true;
-        let len = self.len();
-        // self.state.last(len);
-        if self.state.act() >= len && len > 0 {
-            self.state.last(len);
-        }
-    }
 
     fn get_base(&self) -> &WidgetBase {
         &self.base
@@ -112,5 +99,16 @@ impl State for StateList {
 
     fn get_base_mut(&mut self) -> &mut WidgetBase {
         &mut self.base
+    }
+
+    fn focus_event(&mut self) {
+        let len = self.len();
+        if self.state.act() >= len && len > 0 {
+            self.state.last(len);
+        }
+    }
+
+    fn update_chunk_event(&mut self) {
+        self.state.set_size(self.base.chunk.height);
     }
 }
