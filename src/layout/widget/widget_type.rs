@@ -1,11 +1,9 @@
 use crate::{
-    error::ErrorType::ParseWidgetType,
+    error::ToDoError,
     todo::{ToDoCategory, ToDoData},
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-
-use crate::error::ErrorToDo;
 
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum WidgetType {
@@ -53,8 +51,7 @@ impl From<ToDoData> for WidgetType {
 }
 
 impl FromStr for WidgetType {
-    type Err = ErrorToDo;
-
+    type Err = ToDoError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use WidgetType::*;
         match s.to_lowercase().as_str() {
@@ -64,7 +61,7 @@ impl FromStr for WidgetType {
             "contexts" => Ok(Context),
             "hashtags" => Ok(Hashtag),
             "preview" => Ok(Preview),
-            _ => Err(ErrorToDo::new(ParseWidgetType, "Unknown widget type.")),
+            _ => Err(ToDoError::ParseWidgetType),
         }
     }
 }

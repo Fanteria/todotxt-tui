@@ -1,7 +1,7 @@
 use super::super::Widget;
 use super::Holder;
 use super::RcCon;
-use crate::error::{ErrorToDo, ErrorType, ToDoRes};
+use crate::error::{ToDoError, ToDoRes};
 
 use super::super::render_trait::Render;
 use tui::{backend::Backend, layout::Rect, Frame};
@@ -31,20 +31,14 @@ impl IItem {
     pub fn actual(&self) -> ToDoRes<&Widget> {
         match self {
             Self::Widget(w) => Ok(w),
-            Self::Container(_) => Err(ErrorToDo::new(
-                ErrorType::ActiveIsNotWidget,
-                "Invalid state, active container is not widget.",
-            )),
+            Self::Container(_) => Err(ToDoError::ActiveIsNotWidget),
         }
     }
 
     pub fn actual_mut(&mut self) -> ToDoRes<&mut Widget> {
         match self {
             Self::Widget(w) => Ok(w),
-            Self::Container(_) => Err(ErrorToDo::new(
-                ErrorType::ActiveIsNotWidget,
-                "Invalid state, active container is not widget.",
-            )),
+            Self::Container(_) => Err(ToDoError::ActiveIsNotWidget),
         }
     }
 }

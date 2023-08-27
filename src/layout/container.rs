@@ -4,7 +4,7 @@ mod item;
 use self::holder::Holder;
 use super::render_trait::Render;
 use super::widget::{widget_type::WidgetType, Widget};
-use crate::error::{ErrorToDo, ErrorType, ToDoRes};
+use crate::error::{ToDoError, ToDoRes};
 use item::IItem;
 pub use item::Item;
 use std::{cell::RefCell, rc::Rc};
@@ -123,10 +123,7 @@ impl Container {
                 }
             }
         }
-        Err(ErrorToDo::new(
-            ErrorType::WidgetDoesNotExist,
-            "Selected widgent is not in layout",
-        ))
+        Err(ToDoError::WidgetDoesNotExist)
     }
 }
 

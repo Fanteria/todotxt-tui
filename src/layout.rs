@@ -8,7 +8,7 @@ use self::{
 };
 use crate::layout::widget::widget_trait::State;
 use crate::{
-    error::{ErrorToDo, ErrorType, ToDoRes},
+    error::{ToDoError, ToDoRes},
     todo::ToDo,
     CONFIG,
 };
@@ -39,10 +39,7 @@ impl Layout {
         match value.find('%') {
             Some(i) => {
                 if i + 1 < value.len() {
-                    Err(ErrorToDo::new(
-                        ErrorType::ParseValueError,
-                        "Value can constraint only unsigned integer and %.",
-                    ))
+                    Err(ToDoError::ParseUnknownValue)
                 } else {
                     Ok(Constraint::Percentage(value[..i].parse()?))
                 }
@@ -55,12 +52,7 @@ impl Layout {
         // Find first '[' and move start of template to it (start of first container)
         let index = match template.find('[') {
             Some(i) => i,
-            None => {
-                return Err(ErrorToDo::new(
-                    ErrorType::ParseNotStart,
-                    "There must be almost one container.",
-                ))
-            }
+            None => return Err(ToDoError::ParseNotStart),
         };
         let template = &template[index + 1..];
 
@@ -141,7 +133,7 @@ impl Layout {
                                 let direction = &mut container.last_mut().unwrap().0;
                                 *direction = Direction::Horizontal;
                             }
-                            _ => return Err(ErrorToDo::new(ErrorType::ParseInvalidDirection, "")),
+                            _ => return Err(ToDoError::ParseInvalidDirection(string)),
                         },
                         "size" => {
                             container.last_mut().unwrap().1 = Self::value_from_string(&string)?;
@@ -162,10 +154,7 @@ impl Layout {
                 _ => string.push(ch),
             };
         }
-        Err(ErrorToDo::new(
-            ErrorType::ParseNotEnd,
-            "All containers must be closed",
-        ))
+        Err(ToDoError::ParseNotEnd)
     }
 
     fn move_focus(
@@ -265,7 +254,7 @@ mod tests {
     use super::*;
 
     fn mock_layout() -> Layout {
-        let mock_layout  = r#"
+        let mock_layout = r#"
         [
             Direction: Horizontal,
             Size: 50%,
