@@ -1,6 +1,9 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
-use crate::todo::ToDoCategory;
-use crossterm::event::{KeyCode, KeyEvent};
+use crate::{
+    todo::ToDoCategory,
+    ui::{HandleEvent, UIEvent},
+};
+use crossterm::event::KeyCode;
 use tui::{
     backend::Backend,
     style::{Color, Style},
@@ -23,24 +26,32 @@ impl StateCategories {
         }
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.data().get_categories(self.category).len()
     }
 }
 
 impl State for StateCategories {
-    fn handle_key(&mut self, event: &KeyEvent) {
-        if !self.state.handle_key(event, self.len()) && event.code == KeyCode::Enter {
-            let name;
-            {
-                let todo = self.data();
-                name = todo
-                    .get_categories(self.category)
-                    .get_name(self.state.act())
-                    .clone();
-            }
-            self.data().toggle_filter(self.category, &name);
+    fn handle_event_state(&mut self, event: UIEvent) -> bool {
+        if self.state.handle_event(event) {
+            return true;
         }
+        match event {
+            UIEvent::Select => {
+                let name;
+                {
+                    let todo = self.data();
+                    name = todo
+                        .get_categories(self.category)
+                        .get_name(self.state.act())
+                        .clone();
+                }
+                self.data().toggle_filter(self.category, &name);
+            }
+            _ => return false,
+        }
+        true
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
@@ -61,5 +72,9 @@ impl State for StateCategories {
 
     fn get_base_mut(&mut self) -> &mut WidgetBase {
         &mut self.base
+    }
+
+    fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
+        self.state.get_event(key)
     }
 }

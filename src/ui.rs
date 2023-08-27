@@ -1,3 +1,7 @@
+mod ui_event;
+
+pub use ui_event::*;
+
 use crate::{
     file_worker::FileWorkerCommands, layout::Layout, layout::Render, todo::ToDoCategory,
     utils::some_or_return, ToDo, CONFIG,

@@ -1,6 +1,9 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
-use crate::todo::{task_list::TaskSort, ToDo, ToDoData};
-use crossterm::event::{KeyCode, KeyEvent};
+use crate::{
+    todo::{task_list::TaskSort, ToDo, ToDoData},
+    ui::{HandleEvent, UIEvent},
+};
+use crossterm::event::KeyCode;
 use tui::{backend::Backend, style::Style, widgets::List, Frame};
 
 pub struct StateList {
@@ -51,30 +54,29 @@ impl StateList {
 }
 
 impl State for StateList {
-    fn handle_key(&mut self, event: &KeyEvent) {
-        if self.len() == 0 {
-            return;
+    fn handle_event_state(&mut self, event: UIEvent) -> bool {
+        if self.state.handle_event(event) {
+            return true;
         }
-        if !self.state.handle_key(event, self.len()) {
-            match event.code {
-                KeyCode::Char('U') => {
-                    if let Some((first, second)) = self.state.prev() {
-                        self.swap_tasks(first, second)
-                    }
+        match event {
+            UIEvent::SwapUpItem => {
+                if let Some((first, second)) = self.state.prev() {
+                    self.swap_tasks(first, second)
                 }
-                KeyCode::Char('D') => {
-                    if let Some((first, second)) = self.state.next(self.len()) {
-                        self.swap_tasks(first, second)
-                    }
-                }
-                KeyCode::Char('x') => self.move_task(ToDo::remove_task),
-                KeyCode::Char('d') => self.move_task(ToDo::move_task),
-                KeyCode::Enter => {
-                    self.data().set_active(self.data_type, self.state.index());
-                }
-                _ => {}
             }
+            UIEvent::SwapDownItem => {
+                if let Some((first, second)) = self.state.next(self.len()) {
+                    self.swap_tasks(first, second)
+                }
+            }
+            UIEvent::RemoveItem => self.move_task(ToDo::remove_task),
+            UIEvent::MoveItem => self.move_task(ToDo::move_task),
+            UIEvent::Select => {
+                self.data().set_active(self.data_type, self.state.index());
+            }
+            _ => return false,
         }
+        true
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
@@ -91,7 +93,6 @@ impl State for StateList {
             f.render_stateful_widget(list, self.base.chunk, &mut self.state.state());
         }
     }
-
 
     fn get_base(&self) -> &WidgetBase {
         &self.base
@@ -110,5 +111,9 @@ impl State for StateList {
 
     fn update_chunk_event(&mut self) {
         self.state.set_size(self.base.chunk.height);
+    }
+
+    fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
+        self.state.get_event(key)
     }
 }

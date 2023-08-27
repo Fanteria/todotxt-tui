@@ -1,5 +1,6 @@
-use crate::CONFIG;
-use crossterm::event::{KeyCode, KeyEvent};
+use crate::{CONFIG, ui::EventHandler};
+use crate::ui::{UIEvent, HandleEvent};
+use crossterm::event::KeyCode;
 use tui::widgets::ListState;
 
 pub struct WidgetList {
@@ -7,6 +8,7 @@ pub struct WidgetList {
     first: usize,
     size: usize,
     shift: usize,
+    event_handler: EventHandler,
 }
 
 impl WidgetList {
@@ -103,17 +105,6 @@ impl WidgetList {
     pub fn range(&self) -> (usize, usize) {
         (self.first, self.first + self.size)
     }
-
-    pub fn handle_key(&mut self, event: &KeyEvent, len: usize) -> bool {
-        match event.code {
-            KeyCode::Char('j') => self.down(len),
-            KeyCode::Char('k') => self.up(),
-            KeyCode::Char('g') => self.first(),
-            KeyCode::Char('G') => self.last(len),
-            _ => return false,
-        }
-        true
-    }
 }
 
 impl Default for WidgetList {
@@ -123,8 +114,26 @@ impl Default for WidgetList {
             first: 0,
             size: 24,
             shift: 0,
+            event_handler: CONFIG.list_keybind.clone(),
         };
         def.state.select(Some(0));
         def
+    }
+}
+
+impl HandleEvent for WidgetList {
+    fn get_event(&self, key: &KeyCode) -> UIEvent {
+        self.event_handler.get_event(key)
+    }
+
+    fn handle_event(&mut self, event: UIEvent) -> bool {
+        match event {
+            UIEvent::ListDown => self.down(50),
+            UIEvent::ListUp => self.up(),
+            UIEvent::ListFirst => self.first(),
+            UIEvent::ListLast => self.last(50),
+            _ => return false,
+        }
+        true
     }
 }

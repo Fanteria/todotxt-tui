@@ -8,15 +8,16 @@ pub mod widget_type;
 
 use crate::{
     todo::{ToDo, ToDoCategory, ToDoData},
+    ui::UIEvent,
     CONFIG,
 };
-use crossterm::event::KeyEvent;
+use crossterm::event::KeyCode;
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
 use std::sync::{Arc, Mutex, MutexGuard};
-use tui::{backend::Backend, Frame};
 use tui::widgets::Block;
+use tui::{backend::Backend, Frame};
 use widget_base::WidgetBase;
 pub use widget_trait::State;
 use widget_type::WidgetType;
@@ -33,7 +34,7 @@ pub enum Widget {
 impl Widget {
     pub fn new(widget_type: WidgetType, data: RCToDo) -> Self {
         use WidgetType::*;
-        let base = WidgetBase::new(widget_type.to_string(), data);
+        let base = WidgetBase::new(&widget_type, data);
         match widget_type {
             List => Self::List(StateList::new(
                 base,

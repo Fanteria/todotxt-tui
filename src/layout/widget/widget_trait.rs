@@ -1,8 +1,9 @@
 use super::super::Render;
 use super::widget_base::WidgetBase;
 use crate::todo::ToDo;
+use crate::ui::{HandleEvent, UIEvent};
 use crate::CONFIG;
-use crossterm::event::KeyEvent;
+use crossterm::event::KeyCode;
 use std::sync::MutexGuard;
 use tui::{
     backend::Backend,
@@ -13,8 +14,9 @@ use tui::{
 };
 
 #[enum_dispatch]
-pub trait State: Render {
-    fn handle_key(&mut self, event: &KeyEvent);
+pub trait State {
+    // fn handle_key(&mut self, event: &KeyEvent);
+    fn handle_event_state(&mut self, event: UIEvent) -> bool;
     fn render<B: Backend>(&self, f: &mut Frame<B>);
     fn get_base(&self) -> &WidgetBase;
     fn get_base_mut(&mut self) -> &mut WidgetBase;
@@ -37,6 +39,24 @@ pub trait State: Render {
     fn focus_event(&mut self) {}
     fn unfocus_event(&mut self) {}
     fn update_chunk_event(&mut self) {}
+    fn get_internal_event(&self, _: &KeyCode) -> UIEvent {
+        UIEvent::None
+    }
+}
+
+impl<S: State> HandleEvent for S {
+    fn get_event(&self, key: &KeyCode) -> UIEvent {
+        let event = self.get_internal_event(key);
+        if event == UIEvent::None {
+            self.get_base().event_handler.get_event(key)
+        } else {
+            event
+        }
+    }
+
+    fn handle_event(&mut self, event: UIEvent) -> bool {
+        self.handle_event_state(event)
+    }
 }
 
 impl<S: State> Render for S {

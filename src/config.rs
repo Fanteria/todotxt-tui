@@ -1,11 +1,18 @@
 mod colors;
+mod keycode;
 mod text_modifier;
 mod text_style;
 
 pub use self::colors::OptionalColor;
+pub use self::keycode::KeyCodeDef;
 
 use self::{colors::*, text_style::*};
-use crate::{layout::widget::widget_type::WidgetType, todo::task_list::TaskSort};
+use crate::{
+    layout::widget::widget_type::WidgetType,
+    todo::task_list::TaskSort,
+    ui::{EventHandler, UIEvent},
+};
+use crossterm::event::KeyCode;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -65,6 +72,15 @@ pub struct Config {
     pub preview_format: String,
     #[serde(default = "Config::default_layout")]
     pub layout: String,
+    #[serde(default = "Config::default_tasks_keybind")]
+    pub tasks_keybind: EventHandler,
+    // pub preview_keybind: EventHandler,
+    #[serde(default = "Config::default_category_keybind")]
+    pub category_keybind: EventHandler,
+    #[serde(default = "Config::default_list_keybind")]
+    pub list_keybind: EventHandler,
+    #[serde(default = "Config::default_window_keybind")]
+    pub window_keybind: EventHandler,
 }
 
 impl Config {
@@ -188,6 +204,32 @@ impl Config {
 "#,
         )
     }
+
+    fn default_tasks_keybind() -> EventHandler {
+        EventHandler::new(&[
+            (KeyCode::Char('U'), UIEvent::SwapUpItem),
+            (KeyCode::Char('D'), UIEvent::SwapDownItem),
+            (KeyCode::Char('x'), UIEvent::RemoveItem),
+            (KeyCode::Char('d'), UIEvent::MoveItem),
+        ])
+    }
+
+    pub fn default_category_keybind() -> EventHandler {
+        EventHandler::new(&[(KeyCode::Enter, UIEvent::Select)])
+    }
+
+    pub fn default_list_keybind() -> EventHandler {
+        EventHandler::new(&[
+            (KeyCode::Char('j'), UIEvent::ListDown),
+            (KeyCode::Char('k'), UIEvent::ListUp),
+            (KeyCode::Char('g'), UIEvent::ListFirst),
+            (KeyCode::Char('G'), UIEvent::ListLast),
+        ])
+    }
+
+    pub fn default_window_keybind() -> EventHandler {
+        EventHandler::new(&[(KeyCode::Char('q'), UIEvent::Quit)])
+    }
 }
 
 impl Default for Config {
@@ -215,6 +257,10 @@ impl Default for Config {
             done_sort: Self::default_done_sort(),
             preview_format: Self::default_preview_format(),
             layout: Self::default_layout(),
+            tasks_keybind: Self::default_tasks_keybind(),
+            category_keybind: Self::default_category_keybind(),
+            list_keybind: Self::default_list_keybind(),
+            window_keybind: Self::default_window_keybind(),
         }
     }
 }

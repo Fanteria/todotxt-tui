@@ -6,10 +6,10 @@ use self::{
     container::{Container, Item, RcCon},
     widget::{widget_type::WidgetType, Widget},
 };
-use crate::layout::widget::widget_trait::State;
 use crate::{
     error::{ToDoError, ToDoRes},
     todo::ToDo,
+    ui::HandleEvent,
     CONFIG,
 };
 use crossterm::event::KeyEvent;
@@ -227,7 +227,7 @@ impl Layout {
             .borrow_mut()
             .actual_mut()
             .unwrap() // TODO remove
-            .handle_key(event);
+            .handle_key(&event.code); // TODO return bool value
     }
 }
 

@@ -1,7 +1,6 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{todo::ToDoData, CONFIG};
+use crate::{todo::ToDoData, CONFIG, ui::UIEvent};
 use chrono::NaiveDate;
-use crossterm::event::KeyEvent;
 use tui::{
     backend::Backend,
     widgets::{Paragraph, Wrap},
@@ -45,7 +44,9 @@ impl StatePreview {
 }
 
 impl State for StatePreview {
-    fn handle_key(&mut self, _: &KeyEvent) {}
+    fn handle_event_state(&mut self, _: UIEvent) -> bool {
+        false
+    }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
         let mut paragraph = Paragraph::new(self.get_content()).block(self.get_block());
