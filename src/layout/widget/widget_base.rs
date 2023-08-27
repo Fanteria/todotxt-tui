@@ -1,5 +1,7 @@
-use super::{RCToDo, widget_type::WidgetType};
+use super::{widget_type::WidgetType, RCToDo};
+use crate::todo::ToDo;
 use crate::{ui::EventHandler, CONFIG};
+use std::sync::MutexGuard;
 use tui::prelude::Rect;
 
 pub struct WidgetBase {
@@ -27,5 +29,9 @@ impl WidgetBase {
             data,
             event_handler,
         }
+    }
+
+    pub fn data(&self) -> MutexGuard<'_, ToDo> {
+        self.data.lock().unwrap()
     }
 }

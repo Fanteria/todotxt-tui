@@ -12,42 +12,40 @@ use tui::{
 };
 
 pub struct StateCategories {
-    base: WidgetBase,
-    state: WidgetList,
+    base: WidgetList,
     pub category: ToDoCategory,
 }
 
 impl StateCategories {
-    pub fn new(base: WidgetBase, category: ToDoCategory) -> Self {
+    pub fn new(base: WidgetList, category: ToDoCategory) -> Self {
         Self {
             base,
-            state: WidgetList::default(),
             category,
         }
     }
 
     #[allow(dead_code)]
     pub fn len(&self) -> usize {
-        self.data().get_categories(self.category).len()
+        self.base.data().get_categories(self.category).len()
     }
 }
 
 impl State for StateCategories {
     fn handle_event_state(&mut self, event: UIEvent) -> bool {
-        if self.state.handle_event(event) {
+        if self.base.handle_event(event) {
             return true;
         }
         match event {
             UIEvent::Select => {
                 let name;
                 {
-                    let todo = self.data();
+                    let todo = self.base.data();
                     name = todo
                         .get_categories(self.category)
-                        .get_name(self.state.act())
+                        .get_name(self.base.act())
                         .clone();
                 }
-                self.data().toggle_filter(self.category, &name);
+                self.base.data().toggle_filter(self.category, &name);
             }
             _ => return false,
         }
@@ -55,14 +53,14 @@ impl State for StateCategories {
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
-        let todo = self.data();
+        let todo = self.base.data();
         let data = todo.get_categories(self.category);
         let list = List::new(data).block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {
             let list = list.highlight_style(Style::default().bg(Color::LightRed)); // TODO add to config
-            f.render_stateful_widget(list, self.base.chunk, &mut self.state.state());
+            f.render_stateful_widget(list, self.base.chunk, &mut self.base.state());
         }
     }
 
@@ -75,6 +73,6 @@ impl State for StateCategories {
     }
 
     fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
-        self.state.get_event(key)
+        self.base.get_event(key)
     }
 }

@@ -18,7 +18,7 @@ impl StatePreview {
     }
 
     fn get_content(&self) -> String {
-        let data = self.data();
+        let data = self.base.data();
         let task = match data.get_active() {
             Some(s) => s,
             None => return String::from(""),

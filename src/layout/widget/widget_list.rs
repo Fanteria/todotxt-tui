@@ -1,9 +1,12 @@
-use crate::{CONFIG, ui::EventHandler};
-use crate::ui::{UIEvent, HandleEvent};
+use super::{RCToDo, WidgetBase, WidgetType};
+use crate::ui::{EventHandler, HandleEvent, UIEvent};
+use crate::CONFIG;
 use crossterm::event::KeyCode;
+use std::ops::{Deref, DerefMut};
 use tui::widgets::ListState;
 
 pub struct WidgetList {
+    base: WidgetBase,
     state: ListState,
     first: usize,
     size: usize,
@@ -12,6 +15,19 @@ pub struct WidgetList {
 }
 
 impl WidgetList {
+    pub fn new(widget_type: &WidgetType, data: RCToDo) -> Self {
+        let mut def = Self {
+            base: WidgetBase::new(widget_type, data),
+            state: ListState::default(),
+            first: 0,
+            size: 24,
+            shift: 0,
+            event_handler: CONFIG.list_keybind.clone(),
+        };
+        def.state.select(Some(0));
+        def
+    }
+
     pub fn act(&self) -> usize {
         self.state.selected().unwrap_or(0)
     }
@@ -107,20 +123,6 @@ impl WidgetList {
     }
 }
 
-impl Default for WidgetList {
-    fn default() -> Self {
-        let mut def = Self {
-            state: ListState::default(),
-            first: 0,
-            size: 24,
-            shift: 0,
-            event_handler: CONFIG.list_keybind.clone(),
-        };
-        def.state.select(Some(0));
-        def
-    }
-}
-
 impl HandleEvent for WidgetList {
     fn get_event(&self, key: &KeyCode) -> UIEvent {
         self.event_handler.get_event(key)
@@ -135,5 +137,19 @@ impl HandleEvent for WidgetList {
             _ => return false,
         }
         true
+    }
+}
+
+impl Deref for WidgetList {
+    type Target = WidgetBase;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+impl DerefMut for WidgetList {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
     }
 }

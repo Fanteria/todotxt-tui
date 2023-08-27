@@ -7,6 +7,7 @@ pub mod widget_trait;
 pub mod widget_type;
 
 use crate::{
+    layout::widget::widget_list::WidgetList,
     todo::{ToDo, ToDoCategory, ToDoData},
     ui::UIEvent,
     CONFIG,
@@ -34,10 +35,9 @@ pub enum Widget {
 impl Widget {
     pub fn new(widget_type: WidgetType, data: RCToDo) -> Self {
         use WidgetType::*;
-        let base = WidgetBase::new(&widget_type, data);
         match widget_type {
             List => Self::List(StateList::new(
-                base,
+                WidgetList::new(&widget_type, data),
                 ToDoData::Pending,
                 CONFIG
                     .list_active_color
@@ -47,7 +47,7 @@ impl Widget {
                 CONFIG.pending_sort,
             )),
             Done => Self::List(StateList::new(
-                base,
+                WidgetList::new(&widget_type, data),
                 ToDoData::Done,
                 CONFIG
                     .list_active_color
@@ -56,10 +56,22 @@ impl Widget {
                 CONFIG.list_shift,
                 CONFIG.done_sort,
             )),
-            Project => Self::Category(StateCategories::new(base, ToDoCategory::Projects)),
-            Context => Self::Category(StateCategories::new(base, ToDoCategory::Contexts)),
-            Hashtag => Self::Category(StateCategories::new(base, ToDoCategory::Hashtags)),
-            Preview => Self::Preview(StatePreview::new(base, CONFIG.preview_format.clone())),
+            Project => Self::Category(StateCategories::new(
+                WidgetList::new(&widget_type, data),
+                ToDoCategory::Projects,
+            )),
+            Context => Self::Category(StateCategories::new(
+                WidgetList::new(&widget_type, data),
+                ToDoCategory::Contexts,
+            )),
+            Hashtag => Self::Category(StateCategories::new(
+                WidgetList::new(&widget_type, data),
+                ToDoCategory::Hashtags,
+            )),
+            Preview => Self::Preview(StatePreview::new(
+                WidgetBase::new(&widget_type, data),
+                CONFIG.preview_format.clone(),
+            )),
         }
     }
 

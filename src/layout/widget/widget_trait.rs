@@ -1,10 +1,8 @@
 use super::super::Render;
 use super::widget_base::WidgetBase;
-use crate::todo::ToDo;
 use crate::ui::{HandleEvent, UIEvent};
 use crate::CONFIG;
 use crossterm::event::KeyCode;
-use std::sync::MutexGuard;
 use tui::{
     backend::Backend,
     prelude::Rect,
@@ -20,10 +18,6 @@ pub trait State {
     fn render<B: Backend>(&self, f: &mut Frame<B>);
     fn get_base(&self) -> &WidgetBase;
     fn get_base_mut(&mut self) -> &mut WidgetBase;
-
-    fn data(&self) -> MutexGuard<'_, ToDo> {
-        self.get_base().data.lock().unwrap()
-    }
 
     fn get_block(&self) -> Block {
         let mut block = Block::default()
