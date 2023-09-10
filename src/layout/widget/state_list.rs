@@ -48,6 +48,7 @@ impl StateList {
         if len <= index && len > 0 {
             self.base.up();
         }
+        self.base.len = len;
     }
 }
 
@@ -63,7 +64,7 @@ impl State for StateList {
                 }
             }
             UIEvent::SwapDownItem => {
-                if let Some((first, second)) = self.base.next(self.len()) {
+                if let Some((first, second)) = self.base.next() {
                     self.swap_tasks(first, second)
                 }
             }
@@ -102,8 +103,9 @@ impl State for StateList {
 
     fn focus_event(&mut self) {
         let len = self.len();
+        self.base.len = len;
         if self.base.act() >= len && len > 0 {
-            self.base.last(len);
+            self.base.last();
         }
     }
 

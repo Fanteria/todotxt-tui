@@ -16,7 +16,7 @@ use crossterm::event::KeyCode;
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 use tui::widgets::Block;
 use tui::{backend::Backend, Frame};
 use widget_base::WidgetBase;

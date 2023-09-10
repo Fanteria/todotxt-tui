@@ -8,6 +8,7 @@ use tui::widgets::ListState;
 pub struct WidgetList {
     base: WidgetBase,
     state: ListState,
+    pub len: usize,
     first: usize,
     size: usize,
     shift: usize,
@@ -19,6 +20,7 @@ impl WidgetList {
         let mut def = Self {
             base: WidgetBase::new(widget_type, data),
             state: ListState::default(),
+            len: 0,
             first: 0,
             size: 24,
             shift: 0,
@@ -41,22 +43,22 @@ impl WidgetList {
     }
 
     pub fn set_shift(&mut self, shift: usize) {
-        self.shift = shift
+        self.shift = shift;
     }
 
     pub fn set_size(&mut self, size: u16) {
-        self.size = size as usize
+        self.size = size as usize;
     }
 
-    pub fn down(&mut self, len: usize) {
+    pub fn down(&mut self) {
         let act = self.act();
-        log::trace!("List go down: act: {}, len: {}", act, len);
-        if len <= self.size {
-            if len > act + 1 {
+        log::trace!("List go down: act: {}, len: {}", act, self.len);
+        if self.len <= self.size {
+            if self.len > act + 1 {
                 self.state.select(Some(act + 1));
             }
         } else if self.size <= act + 1 + CONFIG.list_shift {
-            if self.first + self.size + 1 < len {
+            if self.first + self.size + 1 < self.len {
                 self.first += 1;
             } else if self.size > act + 1 {
                 self.state.select(Some(act + 1));
@@ -81,12 +83,12 @@ impl WidgetList {
     }
 
     /// (old, new)
-    pub fn next(&mut self, len: usize) -> Option<(usize, usize)> {
-        if (len <= self.size) && len <= self.act() + 1 {
+    pub fn next(&mut self) -> Option<(usize, usize)> {
+        if (self.len <= self.size) && self.len <= self.act() + 1 {
             None
         } else {
             let old = self.index();
-            self.down(len);
+            self.down();
             Some((old, self.index()))
         }
     }
@@ -106,8 +108,8 @@ impl WidgetList {
         self.first = 0;
     }
 
-    pub fn last(&mut self, len: usize) {
-        let shown_items = len - 1;
+    pub fn last(&mut self) {
+        let shown_items = self.len - 1;
         if self.size > shown_items {
             self.first = 0;
             self.state.select(Some(shown_items));
@@ -130,10 +132,10 @@ impl HandleEvent for WidgetList {
 
     fn handle_event(&mut self, event: UIEvent) -> bool {
         match event {
-            UIEvent::ListDown => self.down(50),
+            UIEvent::ListDown => self.down(),
             UIEvent::ListUp => self.up(),
             UIEvent::ListFirst => self.first(),
-            UIEvent::ListLast => self.last(50),
+            UIEvent::ListLast => self.last(),
             _ => return false,
         }
         true

@@ -46,6 +46,7 @@ impl State for StateCategories {
                         .clone();
                 }
                 self.base.data().toggle_filter(self.category, &name);
+                self.base.len = self.len();
             }
             _ => return false,
         }
@@ -70,6 +71,10 @@ impl State for StateCategories {
 
     fn get_base_mut(&mut self) -> &mut WidgetBase {
         &mut self.base
+    }
+
+    fn focus_event(&mut self) {
+        self.base.len = self.len();
     }
 
     fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
