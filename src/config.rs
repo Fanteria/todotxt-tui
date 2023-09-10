@@ -211,6 +211,7 @@ impl Config {
             (KeyCode::Char('D'), UIEvent::SwapDownItem),
             (KeyCode::Char('x'), UIEvent::RemoveItem),
             (KeyCode::Char('d'), UIEvent::MoveItem),
+            (KeyCode::Enter, UIEvent::Select),
         ])
     }
 

@@ -71,7 +71,10 @@ impl State for StateList {
             UIEvent::RemoveItem => self.move_task(ToDo::remove_task),
             UIEvent::MoveItem => self.move_task(ToDo::move_task),
             UIEvent::Select => {
-                self.base.data().set_active(self.data_type, self.base.index());
+                log::trace!("Set item on index {} active.", self.base.index());
+                self.base
+                    .data()
+                    .set_active(self.data_type, self.base.index());
             }
             _ => return false,
         }
@@ -110,7 +113,7 @@ impl State for StateList {
     }
 
     fn update_chunk_event(&mut self) {
-        self.base.set_size(self.base.chunk.height);
+        self.base.set_size(self.base.chunk.height - 2); // Two chars are borders.
     }
 
     fn get_internal_event(&self, key: &KeyCode) -> UIEvent {

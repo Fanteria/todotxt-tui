@@ -52,7 +52,6 @@ impl WidgetList {
 
     pub fn down(&mut self) {
         let act = self.act();
-        log::trace!("List go down: act: {}, len: {}", act, self.len);
         if self.len <= self.size {
             if self.len > act + 1 {
                 self.state.select(Some(act + 1));
@@ -66,11 +65,17 @@ impl WidgetList {
         } else {
             self.state.select(Some(act + 1));
         }
+        log::trace!(
+            "List go down: act: {}, size: {} len: {}, shift: {}",
+            act,
+            self.size,
+            self.len,
+            CONFIG.list_shift
+        );
     }
 
     pub fn up(&mut self) {
         let act = self.act();
-        log::trace!("List go up: act: {}", act);
         if act <= CONFIG.list_shift {
             if self.first > 0 {
                 self.first -= 1;
@@ -80,6 +85,7 @@ impl WidgetList {
         } else {
             self.state.select(Some(act - 1));
         }
+        log::trace!("List go up: act: {}", act);
     }
 
     /// (old, new)

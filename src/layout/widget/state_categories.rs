@@ -77,6 +77,10 @@ impl State for StateCategories {
         self.base.len = self.len();
     }
 
+    fn update_chunk_event(&mut self) {
+        self.base.set_size(self.base.chunk.height - 2); // Two chars are borders.
+    }
+
     fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
         self.base.get_event(key)
     }
