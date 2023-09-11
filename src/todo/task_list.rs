@@ -88,23 +88,33 @@ impl<'a> TaskList<'a> {
 
         indexes.sort_by(|a, b| a.0.cmp(&b.0));
 
+        let get_style = |category: &str| {
+            let style_category = match category.chars().next().unwrap() {
+                '+' => CONFIG.projects_style.combine(&CONFIG.category_style),
+                '@' => CONFIG.contexts_style.combine(&CONFIG.category_style),
+                '#' => CONFIG.hashtags_style.combine(&CONFIG.category_style),
+                _ => CONFIG.category_style,
+            };
+            match CONFIG.custom_category_style.get(category) {
+                Some(style_custom) => {
+                    style_category.combine(style_custom).get_style()
+                }
+                None => style_category.get_style(),
+            }
+        };
+
         let mut parsed = vec![Span::styled(&task.subject[0..indexes[0].0], style)];
-        indexes.iter().zip(indexes.iter().skip(1)).for_each(|((act_index, act_len), (next_index, _))| {
-            let end_index = act_index + act_len;
-            parsed.push(Span::styled(
-                &task.subject[*act_index..end_index],
-                style.fg(tui::style::Color::DarkGray),
-            ));
-            parsed.push(Span::styled(
-                &task.subject[end_index..*next_index],
-                style,
-            ));
-        });
+        indexes.iter().zip(indexes.iter().skip(1)).for_each(
+            |((act_index, act_len), (next_index, _))| {
+                let end_index = act_index + act_len;
+                let s = &task.subject[*act_index..end_index];
+                parsed.push(Span::styled(s, get_style(s)));
+                parsed.push(Span::styled(&task.subject[end_index..*next_index], style));
+            },
+        );
         let (last_index, last_len) = indexes.last().unwrap();
-        parsed.push(Span::styled(
-            &task.subject[*last_index..last_index + last_len],
-            style.fg(tui::style::Color::DarkGray),
-        ));
+        let s = &task.subject[*last_index..last_index + last_len];
+        parsed.push(Span::styled(s, get_style(s)));
 
         parsed
     }

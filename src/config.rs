@@ -16,6 +16,7 @@ use crossterm::event::KeyCode;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     env::{var, VarError},
     error::Error,
     fs::File,
@@ -81,6 +82,16 @@ pub struct Config {
     pub list_keybind: EventHandler,
     #[serde(default = "Config::default_window_keybind")]
     pub window_keybind: EventHandler,
+    #[serde(default = "Config::default_category_stype")]
+    pub category_style: TextStyle,
+    #[serde(default = "TextStyle::default")]
+    pub projects_style: TextStyle,
+    #[serde(default = "TextStyle::default")]
+    pub contexts_style: TextStyle,
+    #[serde(default = "TextStyle::default")]
+    pub hashtags_style: TextStyle,
+    #[serde(default = "Config::default_custom_category_style")]
+    pub custom_category_style: HashMap<String, TextStyle>,
 }
 
 impl Config {
@@ -231,6 +242,20 @@ impl Config {
     pub fn default_window_keybind() -> EventHandler {
         EventHandler::new(&[(KeyCode::Char('q'), UIEvent::Quit)])
     }
+
+    pub fn default_category_stype() -> TextStyle {
+        TextStyle::default().fg(Color::DarkGray)
+    }
+
+    pub fn default_custom_category_style() -> HashMap<String, TextStyle> {
+        let mut custom_category_style = HashMap::new();
+        custom_category_style.insert(
+            String::from("+todo-tui"),
+            TextStyle::default().fg(Color::LightBlue),
+        );
+
+        custom_category_style
+    }
 }
 
 impl Default for Config {
@@ -262,6 +287,11 @@ impl Default for Config {
             category_keybind: Self::default_category_keybind(),
             list_keybind: Self::default_list_keybind(),
             window_keybind: Self::default_window_keybind(),
+            category_style: Self::default_category_stype(),
+            projects_style: TextStyle::default(),
+            contexts_style: TextStyle::default(),
+            hashtags_style: TextStyle::default(),
+            custom_category_style: Self::default_custom_category_style(),
         }
     }
 }
