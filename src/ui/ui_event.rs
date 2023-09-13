@@ -48,7 +48,7 @@ impl EventHandler {
     #[allow(dead_code)]
     pub fn get_event(&self, key: &KeyCode) -> UIEvent {
         match self.events.binary_search_by(|a| Self::compare(&a.key, key)) {
-            Ok(index) => self.events[index].event.clone(),
+            Ok(index) => self.events[index].event,
             Err(_) => UIEvent::None,
         }
     }

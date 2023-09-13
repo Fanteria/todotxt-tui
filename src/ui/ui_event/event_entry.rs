@@ -48,7 +48,7 @@ impl From<&(KeyCode, UIEvent)> for EventEntry {
     fn from(value: &(KeyCode, UIEvent)) -> Self {
         Self{
             key: value.0,
-            event: value.1.clone(),
+            event: value.1,
         }
     }
 }

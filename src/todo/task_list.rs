@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::convert::From;
 use std::ops::Index;
 use todo_txt::Task;
-use tui::style::Style;
 use tui::text::Line;
 use tui::text::Span;
 use tui::widgets::ListItem;
