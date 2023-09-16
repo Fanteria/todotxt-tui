@@ -3,6 +3,9 @@ use crossterm::event::MediaKeyCode;
 use crossterm::event::KeyCode;
 use serde::{Deserialize, Serialize};
 
+/// Serialization and deserialization support for the TUI keycode type.
+///
+/// This enum is used to serialize and deserialize TUI `KeyCode` objects.
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "KeyCode")]
 pub enum KeyCodeDef {

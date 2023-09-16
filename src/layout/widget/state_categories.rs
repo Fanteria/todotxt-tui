@@ -11,20 +11,32 @@ use tui::{
     Frame,
 };
 
+/// Represents the state for a widget that displays categories.
 pub struct StateCategories {
     base: WidgetList,
     pub category: ToDoCategory,
 }
 
 impl StateCategories {
+    /// Creates a new `StateCategories` instance.
+    ///
+    /// # Parameters
+    ///
+    /// - `base`: The base properties shared among different widget types.
+    /// - `category`: The category of tasks to display.
+    ///
+    /// # Returns
+    ///
+    /// A new `StateCategories` instance.
     pub fn new(base: WidgetList, category: ToDoCategory) -> Self {
-        Self {
-            base,
-            category,
-        }
+        Self { base, category }
     }
 
-    #[allow(dead_code)]
+    /// Returns the number of items in the category associated with this widget.
+    ///
+    /// # Returns
+    ///
+    /// The number of items in the category.
     pub fn len(&self) -> usize {
         self.base.data().get_categories(self.category).len()
     }

@@ -5,6 +5,8 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+/// An enumeration representing different types of widgets used in the application.
+/// Widgets are UI components with specific functionalities, such as task lists, project lists, and previews.
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum WidgetType {
     List,
@@ -16,6 +18,11 @@ pub enum WidgetType {
 }
 
 impl ToString for WidgetType {
+    /// Converts a `WidgetType` variant into its string representation.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the string name of the `WidgetType` variant.
     fn to_string(&self) -> String {
         use WidgetType::*;
         match self {

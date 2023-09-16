@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tui::style::Color;
 
+/// Serialization and deserialization support for the TUI color type.
+///
+/// This enum is used to serialize and deserialize TUI `Color` objects.
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 #[serde(remote = "Color")]
@@ -26,6 +29,12 @@ pub enum ColorDef {
     Indexed(u8),
 }
 
+/// A wrapper enum to represent optional colors.
+///
+/// This enum is used to represent optional TUI `Color` values.
+///
+/// - `Some(Color)`: Represents a specific color.
+/// - `Default`: Represents the default color (e.g., when no color is specified).
 #[derive(Serialize, Deserialize, Clone, Copy)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub enum OptionalColor {
@@ -36,9 +45,9 @@ pub enum OptionalColor {
 
 pub mod opt_color {
     use super::{Color, ColorDef};
-    use serde::{Serialize, Serializer, Deserialize, Deserializer};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-    pub fn serialize<S>(value: &Option<Color>, serializer: S) -> Result<S::Ok, S::Error>
+   pub fn serialize<S>(value: &Option<Color>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -59,4 +68,3 @@ pub mod opt_color {
         Ok(helper.map(|Helper(external)| external))
     }
 }
-

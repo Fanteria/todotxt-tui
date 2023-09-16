@@ -9,6 +9,7 @@ use todo_txt::Task;
 /// Type alias for a tuple representing filter data.
 type FilterData<'a> = (&'a BTreeSet<String>, fn(&'a Task) -> &'a [String]);
 
+/// Enum to represent the state of ToDo data (pending or done).
 #[derive(Clone, Copy)]
 pub enum ToDoData {
     Pending,
@@ -16,6 +17,7 @@ pub enum ToDoData {
 }
 use ToDoData::*;
 
+/// Enum to represent different categories.
 #[derive(Clone, Copy, PartialEq)]
 pub enum ToDoCategory {
     Projects,
@@ -24,6 +26,7 @@ pub enum ToDoCategory {
 }
 use ToDoCategory::*;
 
+/// Struct to manage ToDo tasks and theirs state.
 #[derive(Default)]
 pub struct ToDo {
     pub pending: Vec<Task>,
@@ -37,6 +40,11 @@ pub struct ToDo {
 }
 
 impl ToDo {
+    /// Creates a new ToDo instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `use_done` - A boolean indicating whether to include done tasks in the ToDo data.
     pub fn new(use_done: bool) -> Self {
         Self {
             pending: Vec::new(),
@@ -50,12 +58,22 @@ impl ToDo {
         }
     }
 
+    /// Moves data from another ToDo instance into this one.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - The other ToDo instance to move data from.
     pub fn move_data(&mut self, other: Self) {
         self.pending = other.pending;
         self.done = other.done;
         self.version += 1;
     }
 
+    /// Gets a reference to the specified ToDo data.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data to retrieve.
     pub fn get_data(&self, data: ToDoData) -> &Vec<Task> {
         match data {
             Pending => &self.pending,
@@ -63,6 +81,11 @@ impl ToDo {
         }
     }
 
+    /// Gets a mutable reference to the specified ToDo data (pending or done).
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data to retrieve (Pending or Done).
     fn get_data_mut(&mut self, data: ToDoData) -> &mut Vec<Task> {
         self.version += 1;
         match data {
@@ -71,14 +94,31 @@ impl ToDo {
         }
     }
 
+    /// Gets the current version of the ToDo data.
+    /// Version is increased on every data change.
     pub fn get_version(&self) -> usize {
         self.version
     }
 
+    /// Gets the actual index of an item in the ToDo data without filters.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data (Pending or Done).
+    /// * `index` - The index of the item in the filtered data.
+    ///
+    /// # Returns
+    ///
+    /// The actual index of the item in ToDo data without filtering.
     fn get_actual_index(&self, data: ToDoData, index: usize) -> usize {
         self.get_filtered(data).get_actual_index(index)
     }
 
+    /// Adds a new task to the ToDo list.
+    ///
+    /// # Arguments
+    ///
+    /// * `task` - The `Task` to be added to the ToDo list.
     pub fn add_task(&mut self, task: Task) {
         self.version += 1;
         if task.finished {
@@ -88,6 +128,15 @@ impl ToDo {
         }
     }
 
+    /// Gets a filtered list of categories from the ToDo data.
+    ///
+    /// # Arguments
+    ///
+    /// * `category` - The type of category to retrieve (Projects, Contexts, or Hashtags).
+    ///
+    /// # Returns
+    ///
+    /// A `CategoryList` containing the filtered categories and their selection status.
     fn get_btree<'a>(
         tasks: Vec<&'a Vec<Task>>,
         f: fn(&Task) -> &[String],
@@ -109,6 +158,15 @@ impl ToDo {
         )
     }
 
+    /// Gets a filtered list of categories from the ToDo data.
+    ///
+    /// # Arguments
+    ///
+    /// * `category` - The type of category to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// A `CategoryList` containing the filtered categories and their selection status.
     pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
         let get_btree_done_switch = |f, selected| {
             Self::get_btree(
@@ -128,6 +186,12 @@ impl ToDo {
         }
     }
 
+    /// Moves a task from one section (Pending or Done) to the other.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data from which to move the task.
+    /// * `index` - The index of the task to be moved in the specified data.
     pub fn move_task(&mut self, data: ToDoData, index: usize) {
         self.version += 1;
         let index = self.get_actual_index(data, index);
@@ -147,6 +211,12 @@ impl ToDo {
         self.fix_active(index)
     }
 
+    /// Toggles a filter for a specific category.
+    ///
+    /// # Arguments
+    ///
+    /// * `category` - The type of category to which the filter applies (Projects, Contexts, or Hashtags).
+    /// * `filter` - The filter string to toggle.
     pub fn toggle_filter(&mut self, category: ToDoCategory, filter: &str) {
         let filter_set = match category {
             Projects => &mut self.project_filters,
@@ -158,6 +228,15 @@ impl ToDo {
         }
     }
 
+    /// Gets a filtered list of tasks based on active filters.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data to filter.
+    ///
+    /// # Returns
+    ///
+    /// A `TaskList` containing the filtered tasks.
     pub fn get_filtered(&self, data: ToDoData) -> TaskList {
         fn get_filtered_tasks<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
             TaskList(
@@ -182,6 +261,15 @@ impl ToDo {
         )
     }
 
+    /// Adds a new task to the ToDo list using a task string.
+    ///
+    /// # Arguments
+    ///
+    /// * `task` - The task string to parse and add to the ToDo list.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an error if the task string cannot be parsed.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         self.version += 1;
         let mut task = Task::from_str(task)?;
@@ -196,12 +284,25 @@ impl ToDo {
         Ok(())
     }
 
+    /// Removes a task from the ToDo list.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data from which to remove the task.
+    /// * `index` - The index of the task to be removed in the specified data.
     pub fn remove_task(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
         self.get_data_mut(data).remove(index);
         self.fix_active(index);
     }
 
+    /// Swaps the positions of two tasks in the ToDo list.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data (Pending or Done) in which to swap the tasks.
+    /// * `from` - The index of the first task to be swapped.
+    /// * `to` - The index of the second task to be swapped.
     pub fn swap_tasks(&mut self, data: ToDoData, from: usize, to: usize) {
         let from = self.get_actual_index(data, from);
         let to = self.get_actual_index(data, to);
@@ -215,11 +316,22 @@ impl ToDo {
         }
     }
 
+    /// Sets a task as the active task for potential editing.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data where the task is located.
+    /// * `index` - The index of the task to be set as active in the specified data.
     pub fn set_active(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
         self.active = Some((data, index));
     }
 
+    /// Gets the currently active task for potential editing.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a reference to the active `Task`, or `None` if no task is active.
     pub fn get_active(&self) -> Option<&Task> {
         match self.active {
             Some((data, index)) => Some(&self.get_data(data)[index]),
@@ -227,6 +339,15 @@ impl ToDo {
         }
     }
 
+    /// Updates the content of the active task.
+    ///
+    /// # Arguments
+    ///
+    /// * `task` - The updated task string.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or an error if the updated task string cannot be parsed.
     pub fn update_active(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         if let Some((data, index)) = self.active {
             self.get_data_mut(data)[index] = Task::from_str(task)?;
@@ -234,6 +355,14 @@ impl ToDo {
         Ok(())
     }
 
+    /// Fixes the active task index in case of task movements or removals.
+    ///
+    /// This method is used internally to ensure that the active task index remains valid
+    /// after tasks are moved or removed.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of a task that was moved or removed.
     fn fix_active(&mut self, index: usize) {
         if let Some((_, act_index)) = &mut self.active {
             log::trace!("act: {}, moved: {}", act_index, index);
@@ -245,6 +374,15 @@ impl ToDo {
         }
     }
 
+    /// Gets the number of tasks in the specified ToDo data (Pending or Done).
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data for which to count the tasks.
+    ///
+    /// # Returns
+    ///
+    /// The number of tasks in the specified ToDo data.
     pub fn len(&self, data: ToDoData) -> usize {
         self.get_filtered(data).len()
     }

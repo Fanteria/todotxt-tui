@@ -4,14 +4,17 @@ use std::{
     num::{IntErrorKind, ParseIntError},
 };
 
+/// Define a custom result type for ToDo related operations.
 pub type ToDoRes<T> = Result<T, ToDoError>;
 
+// Define error messages.
 const WIDGET_DOES_NOT_EXIST: &str = "Selected widgent is not in layout";
 const PARSE_WIDGET_TYPE: &str = "Unknown widget type.";
 const PARSE_NOT_START: &str = "There must be almost one container.";
 const PARSE_NOT_END: &str = "All containers must be closed";
 const ACTIVE_IS_NOT_WIDGET: &str = "Invalid state, active container is not widget.";
 
+/// Enum representing ToDo-related errors.
 #[derive(Debug)]
 pub enum ToDoError {
     WidgetDoesNotExist,
@@ -24,8 +27,10 @@ pub enum ToDoError {
     ActiveIsNotWidget,
 }
 
+/// Implement the Error trait for ToDoError.
 impl Error for ToDoError {}
 
+/// Implement the Display trait for ToDoError to format error messages.
 impl Display for ToDoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut msg = match self {
@@ -48,6 +53,7 @@ impl Display for ToDoError {
 }
 
 impl ToDoError {
+    /// Get a error name.
     pub fn name(&self) -> String {
         match self {
             Self::WidgetDoesNotExist => String::from("widget does not exists"),
@@ -64,6 +70,7 @@ impl ToDoError {
     }
 }
 
+/// Conversion from ParseIntError to ToDoError.
 impl From<ParseIntError> for ToDoError {
     fn from(e: ParseIntError) -> Self {
         Self::ParseValue(e.kind().clone())

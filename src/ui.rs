@@ -30,6 +30,7 @@ use tui::{
     widgets::{Block, BorderType, Borders},
 };
 
+/// Enum representing the different modes of the UI.
 #[derive(PartialEq, Eq)]
 enum Mode {
     Input,
@@ -37,6 +38,7 @@ enum Mode {
     Normal,
 }
 
+/// The struct representing the UI for the application.
 pub struct UI {
     input: String,
     input_chunk: Rect,
@@ -47,6 +49,17 @@ pub struct UI {
 }
 
 impl UI {
+    /// Creates a new instance of the UI.
+    ///
+    /// # Arguments
+    ///
+    /// * `layout` - The initial layout configuration for the UI.
+    /// * `data` - Shared data representing the to-do list.
+    /// * `tx` - Sender for communicating with the file worker.
+    ///
+    /// # Returns
+    ///
+    /// A new `UI` instance.
     pub fn new(layout: Layout, data: Arc<Mutex<ToDo>>, tx: Sender<FileWorkerCommands>) -> UI {
         UI {
             input: String::new(),
@@ -58,6 +71,14 @@ impl UI {
         }
     }
 
+    /// Updates the input chunk of the UI based on the main chunk's dimensions.
+    ///
+    /// This method recalculates the position and size of the input chunk based on the dimensions
+    /// of the main chunk, ensuring proper rendering of the input field.
+    ///
+    /// # Arguments
+    ///
+    /// * `main_chunk` - The main chunk's dimensions, typically representing the entire terminal window.
     fn update_chunk(&mut self, main_chunk: Rect) {
         let layout = tuiLayout::default()
             .direction(Direction::Vertical)
@@ -67,6 +88,13 @@ impl UI {
         self.layout.update_chunk(layout[1]);
     }
 
+    /// Runs the user interface, handling setup and cleanup of terminal interactions.
+    ///
+    /// This method enables raw mode, sets up the terminal, and enters the main event loop.
+    ///
+    /// # Returns
+    ///
+    /// An `ioResult` indicating the success of running the user interface.
     pub fn run(&mut self) -> ioResult<()> {
         // setup terminal
         enable_raw_mode()?;
@@ -95,6 +123,15 @@ impl UI {
         Ok(())
     }
 
+    /// Handles the main event loop of the UI.
+    ///
+    /// # Arguments
+    ///
+    /// * `terminal` - The TUI Terminal.
+    ///
+    /// # Returns
+    ///
+    /// An `ioResult` indicating the success of the main loop.
     fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> ioResult<()> {
         let mut version = self.data.lock().unwrap().get_version();
         let mut new_version;
@@ -116,6 +153,15 @@ impl UI {
         Ok(())
     }
 
+    /// Draws the UI on the terminal.
+    ///
+    /// # Arguments
+    ///
+    /// * `terminal` - The TUI Terminal.
+    ///
+    /// # Returns
+    ///
+    /// An `ioResult` indicating the success of drawing.
     fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> ioResult<()> {
         let mut block = Block::default()
             .borders(Borders::ALL)
@@ -134,6 +180,7 @@ impl UI {
         Ok(())
     }
 
+    /// Handles autocompletion based on user input.
     fn autocomplete(&mut self) {
         macro_rules! some_or_return {
             ($message:expr) => {
@@ -188,6 +235,11 @@ impl UI {
         }
     }
 
+    /// Handles various user events.
+    ///
+    /// # Returns
+    ///
+    /// An `ioResult` indicating whether the application should exit.
     fn handle_event(&mut self) -> ioResult<bool> {
         let mut ret = false;
         match event::read()? {

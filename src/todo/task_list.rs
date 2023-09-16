@@ -9,6 +9,7 @@ use tui::widgets::ListItem;
 
 type Item<'a> = (usize, &'a Task);
 
+/// Represents the possible sorting options for tasks.
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub enum TaskSort {
@@ -31,10 +32,29 @@ impl<'a> TaskList<'a> {
         self.0.len()
     }
 
+    /// Retrieves the actual index of a task based on its position in the list.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of the task in the list.
+    ///
+    /// # Returns
+    ///
+    /// The actual index of the task in the original list.
     pub fn get_actual_index(&self, index: usize) -> usize {
         self.0[index].0
     }
 
+    /// Slices the task list from `first` (inclusive) to `last` (exclusive).
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - The index of the first task to include in the slice.
+    /// * `last` - The index of the first task to exclude from the slice.
+    ///
+    /// # Returns
+    ///
+    /// A `TaskSlice` containing the sliced tasks.
     pub fn slice(&self, first: usize, last: usize) -> TaskSlice {
         if last > self.0.len() {
             return TaskSlice(&self.0);
@@ -42,6 +62,11 @@ impl<'a> TaskList<'a> {
         TaskSlice(&self.0[first..last])
     }
 
+    /// Sorts the task list based on the specified sorting criteria.
+    ///
+    /// # Arguments
+    ///
+    /// * `sort` - The sorting criteria to apply.
     pub fn sort(&mut self, sort: TaskSort) {
         use TaskSort::*;
         match sort {
@@ -59,6 +84,15 @@ impl<'a> TaskList<'a> {
         }
     }
 
+    /// Parses a task's string representation into a vector of `Span` elements for rendering.
+    ///
+    /// # Arguments
+    ///
+    /// * `task` - The task to parse.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `Span` elements representing the parsed task.
     pub fn parse_task_string(task: &Task) -> Vec<Span> {
         let mut indexes = Vec::new();
 
@@ -95,9 +129,7 @@ impl<'a> TaskList<'a> {
                 _ => CONFIG.category_style,
             };
             match CONFIG.custom_category_style.get(category) {
-                Some(style_custom) => {
-                    style_category.combine(style_custom).get_style()
-                }
+                Some(style_custom) => style_category.combine(style_custom).get_style(),
                 None => style_category.get_style(),
             }
         };

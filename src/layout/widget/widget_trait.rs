@@ -13,12 +13,32 @@ use tui::{
 
 #[enum_dispatch]
 pub trait State {
-    // fn handle_key(&mut self, event: &KeyEvent);
+    /// Handles a UI event specific to the state and returns a boolean indicating
+    /// whether the event was handled successfully.
+    ///
+    /// # Parameters
+    ///
+    /// - `event`: The UI event to be handled.
+    ///
+    /// # Returns
+    ///
+    /// A boolean indicating whether the event was successfully handled.
     fn handle_event_state(&mut self, event: UIEvent) -> bool;
+
+    /// Renders the widget's state using the provided TUI frame.
+    ///
+    /// # Parameters
+    ///
+    /// - `f`: A mutable reference to the TUI frame used for rendering.
     fn render<B: Backend>(&self, f: &mut Frame<B>);
+
+    /// Retrieves a reference to the widget's base.
     fn get_base(&self) -> &WidgetBase;
+
+    /// Retrieves a mutable reference to the widget's base.
     fn get_base_mut(&mut self) -> &mut WidgetBase;
 
+    // Retrieves the block (border and title) for rendering the widget.
     fn get_block(&self) -> Block {
         let mut block = Block::default()
             .borders(Borders::ALL)
@@ -30,9 +50,25 @@ pub trait State {
         block
     }
 
+    /// Called when the widget receives focus.
     fn focus_event(&mut self) {}
+
+    /// Called when the widget loses focus.
     fn unfocus_event(&mut self) {}
+
+    /// Called when the widget's rendering area (chunk) is updated.
     fn update_chunk_event(&mut self) {}
+
+    /// Retrieves an internal UI event based on a key code.
+    /// This can be used for custom event handling within a state.
+    ///
+    /// # Parameters
+    ///
+    /// - `key`: The key code for which to generate an internal event.
+    ///
+    /// # Returns
+    ///
+    /// An internal UI event generated based on the provided key code.
     fn get_internal_event(&self, _: &KeyCode) -> UIEvent {
         UIEvent::None
     }

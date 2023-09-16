@@ -12,6 +12,7 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::{thread, time::Duration};
 use todo_txt::Task;
 
+/// Commands that can be sent to the `FileWorker` for various file-related operations.
 pub enum FileWorkerCommands {
     ForceSave,
     Save,
@@ -19,6 +20,7 @@ pub enum FileWorkerCommands {
     Exit,
 }
 
+/// Manages file operations for the todo list and archive.
 pub struct FileWorker {
     todo_path: String,
     archive_path: Option<String>,
@@ -26,12 +28,27 @@ pub struct FileWorker {
 }
 
 impl FileWorker {
+    /// Creates a new `FileWorker` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `todo_path` - The path to the todo list file.
+    /// * `archive_path` - The optional path to the archive file.
+    /// * `todo` - A shared reference to the `ToDo` data structure.
+    ///
+    /// # Returns
+    ///
+    /// A `FileWorker` instance.
     pub fn new(
         todo_path: String,
         archive_path: Option<String>,
         todo: Arc<Mutex<ToDo>>,
     ) -> FileWorker {
-        log::info!("Init file worker: file: {}, archive: {:?}", todo_path, archive_path);
+        log::info!(
+            "Init file worker: file: {}, archive: {:?}",
+            todo_path,
+            archive_path
+        );
         FileWorker {
             todo_path,
             archive_path,
@@ -39,6 +56,13 @@ impl FileWorker {
         }
     }
 
+    /// Loads todo list data from the file(s).
+    ///
+    /// This method loads data from the main todo list file and optionally from an archive file.
+    ///
+    /// # Returns
+    ///
+    /// An `ioResult` indicating success or an error if file operations fail.
     pub fn load(&self) -> ioResult<()> {
         let mut todo = ToDo::new(false);
         Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
@@ -53,6 +77,16 @@ impl FileWorker {
         Ok(())
     }
 
+    /// Loads tasks from a given reader and adds them to the provided `ToDo` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - A readable source (e.g., a file) to load tasks from.
+    /// * `todo` - A mutable reference to the `ToDo` instance where tasks will be added.
+    ///
+    /// # Returns
+    ///
+    /// An `ioResult` indicating success or an error if file operations fail.
     fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> ioResult<()> {
         for line in BufReader::new(reader).lines() {
             let line = line?;
@@ -68,6 +102,13 @@ impl FileWorker {
         Ok(())
     }
 
+    /// Saves todo list data to the file(s).
+    ///
+    /// This method saves data to the main todo list file and optionally to an archive file.
+    ///
+    /// # Returns
+    ///
+    /// An `ioResult` indicating success or an error if file operations fail.
     fn save(&self) -> ioResult<()> {
         let mut f = File::create(&self.todo_path)?;
         let todo = self.todo.lock().unwrap();
@@ -85,6 +126,16 @@ impl FileWorker {
         }
     }
 
+    /// Saves a list of tasks to the provided writer.
+    ///
+    /// # Arguments
+    ///
+    /// * `writer` - A writable destination (e.g., a file) where tasks will be saved.
+    /// * `tasks` - A reference to a slice of tasks to be saved.
+    ///
+    /// # Returns
+    ///
+    /// An `ioResult` indicating success or an error if file operations fail.
     fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> ioResult<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
@@ -93,6 +144,19 @@ impl FileWorker {
         Ok(())
     }
 
+    /// Runs the `FileWorker` thread.
+    ///
+    /// This method starts the `FileWorker` thread and handles file-related operations and
+    /// synchronization with other parts of the application.
+    ///
+    /// # Arguments
+    ///
+    /// * `autosave_duration` - The duration between automatic saves of todo data.
+    /// * `handle_changes` - A flag indicating whether to handle file change events.
+    ///
+    /// # Returns
+    ///
+    /// A `Sender` that can be used to send commands to the `FileWorker` thread.
     pub fn run(
         self,
         autosave_duration: Duration,
@@ -106,10 +170,9 @@ impl FileWorker {
 
         if handle_changes {
             Self::spawn_watcher(tx.clone(), self.todo_path.clone());
-            // TODO watcher update only one file
-            // if let Some(path) = &self.archive_path {
-            //     Self::spawn_watcher(tx.clone(), path.clone());
-            // }
+            if let Some(path) = &self.archive_path {
+                Self::spawn_watcher(tx.clone(), path.clone());
+            }
         }
 
         thread::spawn(move || {
@@ -151,6 +214,12 @@ impl FileWorker {
         tx
     }
 
+    /// Spawns an autosave thread that periodically saves the todo list data.
+    ///
+    /// # Arguments
+    ///
+    /// * `tx` - A sender for sending `FileWorkerCommands` to the `FileWorker` thread.
+    /// * `duration` - The duration between automatic saves of todo data.
     fn spawn_autosave(tx: Sender<FileWorkerCommands>, duration: Duration) {
         let tx_worker = tx.clone();
         log::trace!("Start autosaver");
@@ -163,6 +232,12 @@ impl FileWorker {
         });
     }
 
+    /// Spawns a file watcher thread to monitor changes to a specific file.
+    ///
+    /// # Arguments
+    ///
+    /// * `tx` - A sender for sending `FileWorkerCommands` to the `FileWorker` thread.
+    /// * `path` - The path to the file to be watched for changes.
     fn spawn_watcher(tx: Sender<FileWorkerCommands>, path: String) {
         log::trace!("Start file watcher");
         thread::spawn(move || {

@@ -27,6 +27,7 @@ use tui::style::Color;
 
 const CONFIG_NAME: &str = "todo-tui.toml";
 
+/// Configuration struct for the ToDo TUI application.
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct Config {
@@ -95,6 +96,13 @@ pub struct Config {
 }
 
 impl Config {
+    /// Loads the default configuration settings.
+    ///
+    /// This function first attempts to load the configuration file, and if it fails, it returns the default configuration.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the loaded configuration (`Ok`) or an error (`Err`) if loading fails.
     pub fn load_default() -> Self {
         let load = || -> Result<Self, Box<dyn Error>> {
             Ok(Self::load_config(File::open(Self::default_path()?)?))
@@ -102,6 +110,15 @@ impl Config {
         load().unwrap_or(Self::default())
     }
 
+    /// Loads a configuration from a provided reader.
+    ///
+    /// # Parameters
+    ///
+    /// - `reader`: A reader implementing the `Read` trait.
+    ///
+    /// # Returns
+    ///
+    /// The loaded configuration.
     pub fn load_config<R>(mut reader: R) -> Self
     where
         R: Read,
@@ -120,6 +137,13 @@ impl Config {
         }
     }
 
+    /// Returns the default configuration file path based on environment variables.
+    ///
+    /// The configuration file path is determined based on the XDG_CONFIG_HOME and HOME environment variables.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the default configuration file path (`Ok`) or an error (`Err`) if the path cannot be determined.
     pub fn default_path() -> Result<String, VarError> {
         Ok(var("XDG_CONFIG_HOME")
             .or_else(|_| var("HOME").map(|home| format!("{}/.config/", home)))?

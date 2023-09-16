@@ -1,5 +1,5 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{todo::ToDoData, CONFIG, ui::UIEvent};
+use crate::{todo::ToDoData, ui::UIEvent, CONFIG};
 use chrono::NaiveDate;
 use tui::{
     backend::Backend,
@@ -7,16 +7,32 @@ use tui::{
     Frame,
 };
 
+/// Represents the state for a preview widget that displays task details.
 pub struct StatePreview {
     base: WidgetBase,
     format: String,
 }
 
 impl StatePreview {
+    /// Creates a new `StatePreview` instance.
+    ///
+    /// # Parameters
+    ///
+    /// - `base`: The base properties shared among different widget types.
+    /// - `format`: The format string used to generate the content for the preview.
+    ///
+    /// # Returns
+    ///
+    /// A new `StatePreview` instance.
     pub fn new(base: WidgetBase, format: String) -> Self {
         StatePreview { format, base }
     }
 
+    /// Generates the content for the preview based on the current task data.
+    ///
+    /// # Returns
+    ///
+    /// A string containing the formatted task details.
     fn get_content(&self) -> String {
         let data = self.base.data();
         let task = match data.get_active() {

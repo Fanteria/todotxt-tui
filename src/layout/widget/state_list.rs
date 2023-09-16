@@ -6,6 +6,7 @@ use crate::{
 use crossterm::event::KeyCode;
 use tui::{backend::Backend, style::Style, widgets::List, Frame};
 
+/// Represents the state for a list widget that displays tasks.
 pub struct StateList {
     base: WidgetList,
     style: Style,
@@ -14,6 +15,19 @@ pub struct StateList {
 }
 
 impl StateList {
+    /// Creates a new `StateList` instance.
+    ///
+    /// # Parameters
+    ///
+    /// - `base`: The base properties shared among different widget types.
+    /// - `data_type`: The type of task data to display (e.g., Pending or Done tasks).
+    /// - `style`: The style used to render the list widget.
+    /// - `list_shift`: The number of items to shift when navigating the list.
+    /// - `sort_type`: The sorting criteria for the tasks in the list.
+    ///
+    /// # Returns
+    ///
+    /// A new `StateList` instance.
     pub fn new(
         base: WidgetList,
         data_type: ToDoData,
@@ -31,15 +45,31 @@ impl StateList {
         s
     }
 
+    /// Gets the number of tasks in the list.
+    ///
+    /// # Returns
+    ///
+    /// The number of tasks in the list.
     pub fn len(&self) -> usize {
         self.base.data().len(self.data_type)
     }
 
+    /// Swaps tasks in the list at the selected and previous indices.
+    ///
+    /// # Parameters
+    ///
+    /// - `first`: The index of the first task to swap.
+    /// - `second`: The index of the second task to swap.
     fn swap_tasks(&mut self, first: usize, second: usize) {
         log::trace!("Swap tasks with indexes: {}, {}", first, second);
         self.base.data().swap_tasks(self.data_type, first, second);
     }
 
+    /// Moves the currently selected task using the specified function.
+    ///
+    /// # Parameters
+    ///
+    /// - `move_fn`: The function to move the task (e.g., remove or move).
     fn move_task(&mut self, r#move: fn(&mut ToDo, ToDoData, usize)) {
         let index = self.base.index();
         log::info!("Remove task with index {index}.");

@@ -16,6 +16,11 @@ use tui::{
 
 pub type RcCon = Rc<RefCell<Container>>;
 
+/// Represents a container that can hold widgets and other containers.
+///
+/// A `Container` is a component that can hold a collection of `Item`s, which can be either
+/// widgets or nested containers. It provides methods for rendering, focusing, and updating
+/// the contained items.
 pub struct Container {
     items: Vec<IItem>,
     layout: Layout,
@@ -25,6 +30,20 @@ pub struct Container {
 }
 
 impl Container {
+    /// Creates a new container with the given items, constraints, direction, and parent.
+    ///
+    /// # Parameters
+    ///
+    /// - `items`: A vector of items (widgets or containers) to be placed within the container.
+    /// - `constraints`: A vector of constraints defining how items should be laid out within
+    ///   the container.
+    /// - `direction`: The layout direction of the container (Vertical or Horizontal).
+    /// - `parent`: An optional reference to the parent container, if this container is nested
+    ///   within another container.
+    ///
+    /// # Returns
+    ///
+    /// A reference-counted (`Rc`) reference to the newly created `Container`.
     pub fn new(
         items: Vec<Item>,
         constraints: Vec<Constraint>,
@@ -50,23 +69,39 @@ impl Container {
         container
     }
 
+    /// Returns focused item as reference.
     fn actual_item(&self) -> &IItem {
         &self.items[self.act_index]
     }
 
+    /// Returns focused item as mutable reference.
     fn actual_item_mut(&mut self) -> &mut IItem {
         &mut self.items[self.act_index]
     }
 
+    /// Returns a reference to the currently active item within the container.
+    ///
+    /// # Returns
+    ///
+    /// A result containing a reference to the active `Widget` or an error if the active item
+    /// is not a widget.
     #[allow(dead_code)]
     pub fn actual(&self) -> ToDoRes<&Widget> {
         self.actual_item().actual()
     }
 
+    /// Returns a mutable reference to the currently active item within the container.
+    ///
+    /// # Returns
+    ///
+    /// A result containing a mutable reference to the active `Widget` or an error if the active
+    /// item is not a widget.
     pub fn actual_mut(&mut self) -> ToDoRes<&mut Widget> {
         self.actual_item_mut().actual_mut()
     }
 
+    /// Updates the currently active item within the container.
+    /// This function recursively searches for the next active item based on the container's layout.
     fn update_actual(container: &RcCon) -> RcCon {
         let mut borrow = container.borrow_mut();
         match borrow.actual_item() {
@@ -78,6 +113,20 @@ impl Container {
         }
     }
 
+    /// Attempts to change the active item within the container based on a condition.
+    ///
+    /// # Parameters
+    ///
+    /// - `container`: A reference-counted (Rc) reference to the container to navigate within.
+    /// - `condition`: A function that takes a reference to the current container and returns
+    ///   `true` if the condition to change the active item is met, or `false` otherwise.
+    /// - `change`: A function that takes a mutable reference to the current container and
+    ///   performs the necessary changes to the active item.
+    ///
+    /// # Returns
+    ///
+    /// An option containing either an updated reference to the container with the active item
+    /// changed, or `None` if the condition is not met.
     fn change_item(
         container: &RcCon,
         condition: fn(&Container) -> bool,
@@ -92,6 +141,16 @@ impl Container {
         Some(Container::update_actual(container))
     }
 
+    /// Attempts to select the next item within the container.
+    ///
+    /// # Parameters
+    ///
+    /// - `container`: A reference-counted (Rc) reference to the container to navigate within.
+    ///
+    /// # Returns
+    ///
+    /// An option containing either an updated reference to the container with the next item
+    /// as the active item, or `None` if there is no next item to select within the container.
     pub fn next_item(container: RcCon) -> Option<RcCon> {
         Container::change_item(
             &container,
@@ -100,10 +159,32 @@ impl Container {
         )
     }
 
+    /// Attempts to select the previous item within the container.
+    ///
+    /// # Parameters
+    ///
+    /// - `container`: A reference-counted (Rc) reference to the container to navigate within.
+    ///
+    /// # Returns
+    ///
+    /// An option containing either an updated reference to the container with the previous item
+    /// as the active item, or `None` if there is no previous item to select within the container.
+    ///
     pub fn previous_item(container: RcCon) -> Option<RcCon> {
         Container::change_item(&container, |c| c.act_index == 0, |c| c.act_index -= 1)
     }
 
+    /// Finds and selects a specific widget type within the container.
+    ///
+    /// # Parameters
+    ///
+    /// - `container`: A reference-counted (Rc) reference to the container to search within.
+    /// - `widget_type`: The `WidgetType` enum variant representing the target widget type.
+    ///
+    /// # Returns
+    ///
+    /// A result containing either an updated reference to the container with the selected widget
+    /// type as the active item, or an error if the widget type is not found within the container.
     pub fn select_widget(container: RcCon, widget_type: WidgetType) -> ToDoRes<RcCon> {
         let mut borrowed = container.borrow_mut();
         for (index, item) in borrowed.items.iter().enumerate() {

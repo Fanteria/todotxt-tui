@@ -25,12 +25,26 @@ use tui::{
     Frame,
 };
 
+/// Represents the layout of the user interface.
+///
+/// The `Layout` struct defines the layout of the user interface for the todo-tui application. It
+/// consists of a tree of containers and widgets, which are used to organize and display the various
+/// components of the application.
 pub struct Layout {
     root: Rc<RefCell<Container>>,
     actual: Rc<RefCell<Container>>,
 }
 
 impl Layout {
+    /// Parse and convert a string value to a `Constraint`.
+    ///
+    /// # Parameters
+    ///
+    /// - `value`: A string slice representing the layout constraint.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `ToDoRes` containing the converted `Constraint` or an error if parsing fails.
     fn value_from_string(value: &str) -> ToDoRes<Constraint> {
         if value.is_empty() {
             return Ok(Constraint::Percentage(50));
@@ -48,6 +62,21 @@ impl Layout {
         }
     }
 
+    /// Create a new `Layout` from a template string.
+    ///
+    /// This function parses a template string and creates a new `Layout` instance based on the
+    /// specified template. The template string defines the layout of the user interface, including
+    /// the arrangement of containers and widgets.
+    ///
+    /// # Parameters
+    ///
+    /// - `template`: A string containing the layout template.
+    /// - `data`: An `Arc<Mutex<ToDo>>` representing the shared to-do data.
+    ///
+    /// # Returns
+    ///
+    /// A `ToDoRes<Self>` result containing the created `Layout` if successful, or an error if
+    /// parsing fails.
     pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>) -> ToDoRes<Self> {
         // Find first '[' and move start of template to it (start of first container)
         let index = match template.find('[') {
@@ -157,6 +186,18 @@ impl Layout {
         Err(ToDoError::ParseNotEnd)
     }
 
+    /// Move the focus within the layout hierarchy.
+    ///
+    /// # Parameters
+    ///
+    /// - `container`: An `RcCon` representing the current container being focused.
+    /// - `direction`: A reference to the `Direction` indicating the movement direction.
+    /// - `f`: A function pointer that determines the action for moving the focus.
+    ///
+    /// # Returns
+    ///
+    /// Returns an `Option<RcCon>` containing the new focused container or `None` if no valid
+    /// container is found in the specified direction.
     fn move_focus(
         container: RcCon,
         direction: &Direction,
@@ -180,6 +221,11 @@ impl Layout {
         move_to_parent()
     }
 
+    /// Change the focus within the layout.
+    ///
+    /// # Parameters
+    ///
+    /// - `next`: An `Option<RcCon>` representing the new container to focus.
     fn change_focus(&mut self, next: Option<RcCon>) {
         let next = match next {
             Some(s) => s,
@@ -190,6 +236,10 @@ impl Layout {
         self.actual = next;
     }
 
+    /// Move the focus to the left.
+    ///
+    /// This method moves the focus to the container or widget to the left of the currently focused
+    /// element within the layout.
     pub fn left(&mut self) {
         self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),
@@ -198,6 +248,10 @@ impl Layout {
         ));
     }
 
+    /// Move the focus to the right.
+    ///
+    /// This method moves the focus to the container or widget to the right of the currently focused
+    /// element within the layout.
     pub fn right(&mut self) {
         self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),
@@ -206,6 +260,10 @@ impl Layout {
         ));
     }
 
+    /// Move the focus upwards.
+    ///
+    /// This method moves the focus to the container or widget above the currently focused element
+    /// within the layout.
     pub fn up(&mut self) {
         self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),
@@ -214,6 +272,10 @@ impl Layout {
         ));
     }
 
+    /// Move the focus downwards.
+    ///
+    /// This method moves the focus to the container or widget below the currently focused element
+    /// within the layout.
     pub fn down(&mut self) {
         self.change_focus(Self::move_focus(
             Rc::clone(&self.actual),
@@ -222,6 +284,14 @@ impl Layout {
         ));
     }
 
+    /// Handle a key event.
+    ///
+    /// This method is used to handle key events within the layout. It passes the key event to the
+    /// currently focused widget or container for processing.
+    ///
+    /// # Parameters
+    ///
+    /// - `event`: A reference to the `KeyEvent` to be handled.
     pub fn handle_key(&self, event: &KeyEvent) {
         self.actual
             .borrow_mut()

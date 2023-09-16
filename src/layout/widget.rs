@@ -23,8 +23,10 @@ use widget_base::WidgetBase;
 pub use widget_trait::State;
 use widget_type::WidgetType;
 
+/// Alias for the shared mutable reference to a ToDo instance.
 pub type RCToDo = Arc<Mutex<ToDo>>;
 
+/// Implement the enum_dispatch macro for the State trait.
 #[enum_dispatch(State)]
 pub enum Widget {
     List(StateList),
@@ -33,6 +35,18 @@ pub enum Widget {
 }
 
 impl Widget {
+    /// Create a new widget based on its type and shared ToDo data.
+    ///
+    /// This function creates a new widget based on its type and the shared ToDo data.
+    ///
+    /// # Parameters
+    ///
+    /// - `widget_type`: The type of widget to create.
+    /// - `data`: A shared mutable reference to the ToDo data.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new instance of the specified widget type.
     pub fn new(widget_type: WidgetType, data: RCToDo) -> Self {
         use WidgetType::*;
         match widget_type {
@@ -75,6 +89,13 @@ impl Widget {
         }
     }
 
+    /// Get the type of the widget.
+    ///
+    /// This function returns the type of the widget.
+    ///
+    /// # Returns
+    ///
+    /// Returns the `WidgetType` of the widget.
     pub fn widget_type(&self) -> WidgetType {
         use WidgetType::*;
         match self {

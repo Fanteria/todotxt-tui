@@ -4,6 +4,7 @@ use crossterm::event::KeyCode;
 use serde::{Deserialize, Serialize};
 use super::UIEvent;
 
+/// Struct representing an entry that maps a `KeyCode` to a `UIEvent`.
 #[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(Debug))]
 pub struct EventEntry {
