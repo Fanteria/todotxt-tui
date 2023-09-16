@@ -21,7 +21,7 @@ cp target/release/todo-tui /usr/local/bin/
 
 ## Configuration
 
-In ToDo TUI, you can customize various settings to tailor the application to your preferences. 
+In ToDo TUI, you can customize various settings to tailor the application to your preferences.
 ToDo TUI uses a TOML configuration file located at `~/.config/todo-tui.toml` for customization.
 Here's an overview of some of the key settings:
 
@@ -94,7 +94,7 @@ Here's an example of a custom layout configuration:
     ],
     [ Direction: Vertical,
       Done,
-      [ 
+      [
         Contexts,
         Projects,
       ],
@@ -124,7 +124,7 @@ window_title = "ToDo tui"
 
 # The path to your todo.txt file
 todo_path = "/home/jirka/todo.txt"
-    
+
 # The path to your archive.txt file
 # archive_path =
 
@@ -171,7 +171,7 @@ layout = """
     ],
     [ Direction: Vertical,
       Done,
-      [ 
+      [
         Contexts,
         Projects,
       ],
@@ -283,4 +283,4 @@ fg = "LightBlue"
 
 ## Feedback and Bug Reporting
 
-As this application is still in development, your feedback is invaluable. If you encounter any issues or have suggestions for improvement, please open an issue on the GitHub repository to help me make ToDo TUI better.
+As this application is still in development, your feedback is greatly appreciated. If you encounter any issues or have suggestions for improvement, please open an issue on the GitHub repository to assist me in making ToDo TUI better.
