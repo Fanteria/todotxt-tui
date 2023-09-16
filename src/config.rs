@@ -268,8 +268,7 @@ impl Config {
     }
 
     pub fn default_category_stype() -> TextStyle {
-        // TextStyle::default().fg(Color::DarkGray)
-        TextStyle::default().fg(Color::Indexed(1))
+        TextStyle::default().fg(Color::DarkGray)
     }
 
     pub fn default_custom_category_style() -> HashMap<String, TextStyle> {

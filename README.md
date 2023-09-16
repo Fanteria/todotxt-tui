@@ -4,6 +4,8 @@ ToDo TUI is a highly customizable terminal-based application for managing your t
 
 ## Installation
 
+Please note that this ToDo TUI application is intended for personal use and is not published on Rust's docs.rs or crates.io. Therefore, it must be installed manually.
+
 1. Clone the repository or download the latest release.
 2. Build the application using Rust's package manager, Cargo.
 
@@ -19,7 +21,73 @@ cp target/release/todo-tui /usr/local/bin/
 
 ## Configuration
 
+
+
+In ToDo TUI, you can customize various settings to tailor the application to your preferences. 
 ToDo TUI uses a TOML configuration file located at `~/.config/todo-tui.toml` for customization.
+Here's an overview of some of the key settings:
+
+### Sorting Options
+
+You can specify how tasks are sorted using the `pending_sort` and `done_sort` options. The available sorting options are:
+
+- None: No specific sorting; tasks appear in the order they were added.
+- Reverse: Reverse the order of tasks.
+- Priority: Sort tasks by priority.
+- Alphanumeric: Sort tasks in alphanumeric order.
+- AlphanumericReverse: Sort tasks in reverse alphanumeric order.
+
+### Preview Format
+
+The `preview_format` setting allows you to define the format for the task preview. You can use placeholders enclosed in `{}` to display task information. Here are the available placeholders and their corresponding values:
+
+- `{n}`: Number of pending tasks.
+- `{N}`: Number of completed tasks.
+- `{s}`: Task subject.
+- `{p}`: Task priority.
+- `{c}`: Task creation date.
+- `{f}`: Task finish date.
+- `{F}`: Task finished status (true or false).
+- `{t}`: Task threshold date.
+- `{d}`: Task due date.
+- `{C}`: Task contexts.
+- `{P}`: Task projects.
+- `{H}`: Task hashtags.
+
+### Custom Layout
+
+The layout setting allows you to define a custom layout for the application using blocks `[]`. You can specify the orientation of the blocks as either `Direction: Vertical` or `Direction: Horizontal`, along with the size of each block as a percentage or value. Within these blocks, you can include various widgets, such as:
+
+- List: The main list of tasks.
+- Preview: The task preview section.
+- Done: The list of completed tasks.
+- Projects: The list of projects.
+- Contexts: The list of contexts.
+- Hashtags: The list of hashtags.
+
+Here's an example of a custom layout configuration:
+
+```
+[
+    Direction: Horizontal,
+    Size: 50%,
+    [
+        List: 50%,
+        Preview,
+    ],
+    [ Direction: Vertical,
+      Done,
+      [ 
+        Contexts,
+        Projects,
+      ],
+    ],
+]
+```
+
+This example creates a layout with a horizontal split, where the list takes up 50% of the width, and the preview occupies the remaining space. On the right side, there's a vertical split with the list of completed tasks, contexts, and projects.
+
+Feel free to adjust these settings to create a ToDo TUI interface that suits your workflow and preferences.
 
 <details>
   <summary>Example config file</summary>
@@ -39,6 +107,9 @@ window_title = "ToDo tui"
 
 # The path to your todo.txt file
 todo_path = "/home/jirka/todo.txt"
+    
+# The path to your archive.txt file
+# archive_path =
 
 # Wrap long lines in the preview
 wrap_preview = true
@@ -59,7 +130,7 @@ file_watcher = true
 list_shift = 4
 
 # Sorting option for pending tasks
-pending_sort = "Priority"
+pending_sort = "None"
 
 # Sorting option for completed tasks
 done_sort = "None"
