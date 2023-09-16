@@ -21,11 +21,28 @@ cp target/release/todo-tui /usr/local/bin/
 
 ## Configuration
 
-
-
 In ToDo TUI, you can customize various settings to tailor the application to your preferences. 
 ToDo TUI uses a TOML configuration file located at `~/.config/todo-tui.toml` for customization.
 Here's an overview of some of the key settings:
+
+### Color Settings
+
+In ToDo TUI, you can customize the colors and text styling for various elements. You have the flexibility to set foreground (`fg`) and background (`bg`) colors, as well as apply text modifiers for styling. Colors can be defined using color names, RGB values, or terminal index.
+
+You can apply text modifiers to change the style of text within ToDo TUI. Available text modifiers include:
+
+- Bold: Apply bold styling to the text.
+- Italic: Apply italic styling to the text.
+- Underlined: Apply underlined styling to the text.
+
+Here's an example of how to configure custom color and text modifiers for project `todo-tui` in your ToDo TUI application's TOML configuration:
+
+```
+[custom_category_style."+todo-tui"]
+fg = [255, 0, 0]  # Set foreground color to red using RGB values
+bg = "Black"      # Set background color to black
+modifiers = "Italic"  # Apply italic styling
+```
 
 ### Sorting Options
 
@@ -58,12 +75,12 @@ The `preview_format` setting allows you to define the format for the task previe
 
 The layout setting allows you to define a custom layout for the application using blocks `[]`. You can specify the orientation of the blocks as either `Direction: Vertical` or `Direction: Horizontal`, along with the size of each block as a percentage or value. Within these blocks, you can include various widgets, such as:
 
-- List: The main list of tasks.
-- Preview: The task preview section.
-- Done: The list of completed tasks.
-- Projects: The list of projects.
-- Contexts: The list of contexts.
-- Hashtags: The list of hashtags.
+- `List`: The main list of tasks.
+- `Preview`: The task preview section.
+- `Done`: The list of completed tasks.
+- `Projects`: The list of projects.
+- `Contexts`: The list of contexts.
+- `Hashtags`: The list of hashtags.
 
 Here's an example of a custom layout configuration:
 
