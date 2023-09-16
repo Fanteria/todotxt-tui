@@ -37,7 +37,7 @@ You can apply text modifiers to change the style of text within ToDo TUI. Availa
 
 Here's an example of how to configure custom color and text modifiers for project `todo-tui` in your ToDo TUI application's TOML configuration:
 
-```
+```toml
 [custom_category_style."+todo-tui"]
 fg = [255, 0, 0]  # Set foreground color to red using RGB values
 bg = "Black"      # Set background color to black
