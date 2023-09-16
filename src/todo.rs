@@ -141,7 +141,7 @@ impl ToDo {
         match data {
             Pending => {
                 move_task_logic(&mut self.pending, &mut self.done);
-             },
+            }
             Done => move_task_logic(&mut self.done, &mut self.pending),
         };
         self.fix_active(index)
@@ -237,10 +237,10 @@ impl ToDo {
     fn fix_active(&mut self, index: usize) {
         if let Some((_, act_index)) = &mut self.active {
             log::trace!("act: {}, moved: {}", act_index, index);
-            if *act_index == index {
-                self.active = None
-            } else if *act_index > index {
-                *act_index -= 1;
+            match index.cmp(act_index) {
+                std::cmp::Ordering::Less => *act_index -= 1,
+                std::cmp::Ordering::Equal => self.active = None,
+                std::cmp::Ordering::Greater => {}
             }
         }
     }
@@ -497,5 +497,4 @@ mod tests {
         todo.swap_tasks(ToDoData::Pending, 1, 2);
         assert_eq!(todo.get_active().unwrap().subject, subject);
     }
-
 }

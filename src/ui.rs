@@ -3,8 +3,8 @@ mod ui_event;
 pub use ui_event::*;
 
 use crate::{
-    file_worker::FileWorkerCommands, layout::Layout, layout::Render, todo::ToDoCategory,
-    utils::some_or_return, ToDo, CONFIG,
+    file_worker::FileWorkerCommands, layout::Layout, layout::Render, todo::ToDoCategory, ToDo,
+    CONFIG,
 };
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -135,6 +135,15 @@ impl UI {
     }
 
     fn autocomplete(&mut self) {
+        macro_rules! some_or_return {
+            ($message:expr) => {
+                match $message {
+                    Some(s) => s,
+                    None => return,
+                }
+            };
+        }
+
         let last_space_index = self.input.rfind(' ').map(|i| i + 1).unwrap_or(0);
         let base = some_or_return!(self.input.get(last_space_index..));
         let category = some_or_return!(base.get(0..1));

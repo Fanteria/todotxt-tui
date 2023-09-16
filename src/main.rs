@@ -4,7 +4,6 @@ mod file_worker;
 mod layout;
 mod todo;
 mod ui;
-mod utils;
 
 use crate::{config::Config, file_worker::FileWorker, todo::ToDo, ui::UI};
 use file_worker::FileWorkerCommands;
