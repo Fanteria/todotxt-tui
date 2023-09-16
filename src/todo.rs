@@ -109,57 +109,42 @@ impl ToDo {
         )
     }
 
-    fn get_btree_done_switch(
-        &self,
-        f: fn(&Task) -> &[String],
-        selected: &BTreeSet<String>,
-    ) -> CategoryList {
-        Self::get_btree(
-            if self.use_done {
-                vec![&self.pending, &self.done]
-            } else {
-                vec![&self.pending]
-            },
-            f,
-            selected,
-        )
-    }
-
     pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
+        let get_btree_done_switch = |f, selected| {
+            Self::get_btree(
+                if self.use_done {
+                    vec![&self.pending, &self.done]
+                } else {
+                    vec![&self.pending]
+                },
+                f,
+                selected,
+            )
+        };
         match category {
-            Projects => self.get_btree_done_switch(|t| t.projects(), &self.project_filters),
-            Contexts => self.get_btree_done_switch(|t| t.contexts(), &self.context_filters),
-            Hashtags => self.get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters),
+            Projects => get_btree_done_switch(|t| t.projects(), &self.project_filters),
+            Contexts => get_btree_done_switch(|t| t.contexts(), &self.context_filters),
+            Hashtags => get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters),
         }
-    }
-
-    fn move_task_logic(from: &mut Vec<Task>, to: &mut Vec<Task>, index: usize) {
-        if from.len() <= index {
-            return;
-        }
-        to.push(from.remove(index))
     }
 
     pub fn move_task(&mut self, data: ToDoData, index: usize) {
         self.version += 1;
         let index = self.get_actual_index(data, index);
-        match data {
-            Pending => Self::move_task_logic(&mut self.pending, &mut self.done, index),
-            Done => Self::move_task_logic(&mut self.done, &mut self.pending, index),
+
+        let move_task_logic = |from: &mut Vec<_>, to: &mut Vec<_>| {
+            if from.len() <= index {
+                return;
+            }
+            to.push(from.remove(index))
         };
-    }
-    fn get_filtered_tasks<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
-        TaskList(
-            tasks
-                .iter()
-                .enumerate()
-                .filter(|task| {
-                    filters
-                        .iter()
-                        .all(|filter| filter.0.iter().all(|item| filter.1(task.1).contains(item)))
-                })
-                .collect(),
-        )
+        match data {
+            Pending => {
+                move_task_logic(&mut self.pending, &mut self.done);
+             },
+            Done => move_task_logic(&mut self.done, &mut self.pending),
+        };
+        self.fix_active(index)
     }
 
     pub fn toggle_filter(&mut self, category: ToDoCategory, filter: &str) {
@@ -174,7 +159,20 @@ impl ToDo {
     }
 
     pub fn get_filtered(&self, data: ToDoData) -> TaskList {
-        Self::get_filtered_tasks(
+        fn get_filtered_tasks<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
+            TaskList(
+                tasks
+                    .iter()
+                    .enumerate()
+                    .filter(|task| {
+                        filters.iter().all(|filter| {
+                            filter.0.iter().all(|item| filter.1(task.1).contains(item))
+                        })
+                    })
+                    .collect(),
+            )
+        }
+        get_filtered_tasks(
             self.get_data(data),
             &[
                 (&self.project_filters, |t| t.projects()),
@@ -201,12 +199,20 @@ impl ToDo {
     pub fn remove_task(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
         self.get_data_mut(data).remove(index);
+        self.fix_active(index);
     }
 
     pub fn swap_tasks(&mut self, data: ToDoData, from: usize, to: usize) {
         let from = self.get_actual_index(data, from);
         let to = self.get_actual_index(data, to);
         self.get_data_mut(data).swap(from, to);
+        if let Some((_, act_index)) = &mut self.active {
+            if *act_index == from {
+                *act_index = to;
+            } else if *act_index == to {
+                *act_index = from;
+            }
+        }
     }
 
     pub fn set_active(&mut self, data: ToDoData, index: usize) {
@@ -226,6 +232,17 @@ impl ToDo {
             self.get_data_mut(data)[index] = Task::from_str(task)?;
         }
         Ok(())
+    }
+
+    fn fix_active(&mut self, index: usize) {
+        if let Some((_, act_index)) = &mut self.active {
+            log::trace!("act: {}, moved: {}", act_index, index);
+            if *act_index == index {
+                self.active = None
+            } else if *act_index > index {
+                *act_index -= 1;
+            }
+        }
     }
 
     pub fn len(&self, data: ToDoData) -> usize {
@@ -426,4 +443,59 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn actual_consistency_move() {
+        let mut todo = example_todo(false);
+        todo.set_active(ToDoData::Pending, 2);
+        let subject = todo.get_active().unwrap().subject.clone();
+        // Item after
+        todo.move_task(ToDoData::Pending, 3);
+        assert_eq!(todo.get_active().unwrap().subject, subject);
+
+        // Item before
+        todo.move_task(ToDoData::Pending, 0);
+        assert_eq!(todo.get_active().unwrap().subject, subject);
+
+        // Active item
+        todo.move_task(ToDoData::Pending, 1);
+        assert!(todo.get_active().is_none());
+    }
+
+    #[test]
+    fn actual_consistency_remove() {
+        let mut todo = example_todo(false);
+        todo.set_active(ToDoData::Pending, 2);
+        let subject = todo.get_active().unwrap().subject.clone();
+        // Item after
+        todo.remove_task(ToDoData::Pending, 3);
+        assert_eq!(todo.get_active().unwrap().subject, subject);
+
+        // Item before
+        todo.remove_task(ToDoData::Pending, 0);
+        assert_eq!(todo.get_active().unwrap().subject, subject);
+
+        // Active item
+        todo.remove_task(ToDoData::Pending, 1);
+        assert!(todo.get_active().is_none());
+    }
+
+    #[test]
+    fn actual_consistency_swap() {
+        let mut todo = example_todo(false);
+        todo.set_active(ToDoData::Pending, 2);
+        let subject = todo.get_active().unwrap().subject.clone();
+        // Item outside
+        todo.swap_tasks(ToDoData::Pending, 0, 1);
+        assert_eq!(todo.get_active().unwrap().subject, subject);
+
+        // Item from
+        todo.swap_tasks(ToDoData::Pending, 2, 0);
+        assert_eq!(todo.get_active().unwrap().subject, subject);
+
+        // Item to
+        todo.swap_tasks(ToDoData::Pending, 1, 2);
+        assert_eq!(todo.get_active().unwrap().subject, subject);
+    }
+
 }
