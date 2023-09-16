@@ -19,10 +19,13 @@ cp target/release/todo-tui /usr/local/bin/
 
 ## Configuration
 
-ToDo TUI uses a TOML configuration file located at `~/.config/todo-tui.toml` for customization. Below is a sample configuration file with explanations for each setting:
+ToDo TUI uses a TOML configuration file located at `~/.config/todo-tui.toml` for customization.
 
 <details>
-<summary> Default config file </summary>
+  <summary>Example config file</summary>
+    
+Cofig file with default values. And description for every setting.
+
 ```toml
 # The active color for selected items
 # You can set the color by name ("Blue"), by RGB values ([255, 0, 0]), or by index in the terminal (fg.Index = 5).
@@ -187,6 +190,7 @@ fg = "DarkGray"
 [custom_category_style."+todo-tui"]
 fg = "LightBlue"
 ```
+
 </details>
 
 ## Feedback and Bug Reporting
