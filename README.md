@@ -21,6 +21,27 @@ Copy the executable from the target directory to a directory included in your sy
 cp target/release/todo-tui /usr/local/bin/
 ```
 
+## Basic Usage
+
+ToDo TUI provides a straightforward and customizable interface for managing your tasks. The following keybindings and actions are available for basic usage, and please note that these actions can be configured according to your preferences in the configuration file:
+
+- `j`: Move down in the list.
+- `k`: Move up in the list.
+- `g`: Go to the first item in the list.
+- `G`: Go to the last item in the list.
+- `Enter`: Select an item.
+- `U`: Swap the selected item up.
+- `D`: Swap the selected item down.
+- `x`: Remove the selected item.
+- `d`: Move a task between the pending and done lists.
+- `I`: Input a new task.
+- `E`: Edit the selected item.
+- `J`: Move to the widget below the current one.
+- `K`: Move to the widget above the current one.
+- `H`: Move to the widget on the left.
+- `L`: Move to the widget on the right.
+- `q`: Quit the application.
+
 ## Configuration
 
 In ToDo TUI, you can customize various settings to tailor the application to your preferences.
@@ -33,9 +54,9 @@ In ToDo TUI, you can customize the colors and text styling for various elements.
 
 You can apply text modifiers to change the style of text within ToDo TUI. Available text modifiers include:
 
-- Bold: Apply bold styling to the text.
-- Italic: Apply italic styling to the text.
-- Underlined: Apply underlined styling to the text.
+- `Bold`: Apply bold styling to the text.
+- `Italic`: Apply italic styling to the text.
+- `Underlined`: Apply underlined styling to the text.
 
 Here's an example of how to configure custom color and text modifiers for project `todo-tui` in your ToDo TUI application's TOML configuration:
 
@@ -50,11 +71,11 @@ modifiers = "Italic"  # Apply italic styling
 
 You can specify how tasks are sorted using the `pending_sort` and `done_sort` options. The available sorting options are:
 
-- None: No specific sorting; tasks appear in the order they were added.
-- Reverse: Reverse the order of tasks.
-- Priority: Sort tasks by priority.
-- Alphanumeric: Sort tasks in alphanumeric order.
-- AlphanumericReverse: Sort tasks in reverse alphanumeric order.
+- `None`: No specific sorting; tasks appear in the order they were added.
+- `Reverse`: Reverse the order of tasks.
+- `Priority`: Sort tasks by priority.
+- `Alphanumeric`: Sort tasks in alphanumeric order.
+- `AlphanumericReverse`: Sort tasks in reverse alphanumeric order.
 
 ### Preview Format
 
