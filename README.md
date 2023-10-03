@@ -281,8 +281,40 @@ key.Char = "k"
 
 # Window keybindings
 [[window_keybind.events]]
+event = "EditMode"
+key.Char = "E"
+
+[[window_keybind.events]]
+event = "MoveLeft"
+key.Char = "H"
+
+[[window_keybind.events]]
+event = "InsertMode"
+key.Char = "I"
+
+[[window_keybind.events]]
+event = "MoveDown"
+key.Char = "J"
+
+[[window_keybind.events]]
+event = "MoveUp"
+key.Char = "K"
+
+[[window_keybind.events]]
+event = "MoveRight"
+key.Char = "L"
+
+[[window_keybind.events]]
+event = "Save"
+key.Char = "S"
+
+[[window_keybind.events]]
 event = "Quit"
 key.Char = "q"
+
+[[window_keybind.events]]
+event = "Load"
+key.Char = "u"
 
 # Category style
 [category_style]

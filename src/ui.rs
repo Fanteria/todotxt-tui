@@ -46,6 +46,8 @@ pub struct UI {
     mode: Mode,
     data: Arc<Mutex<ToDo>>,
     tx: Sender<FileWorkerCommands>,
+    event_handler: EventHandler,
+    quit: bool
 }
 
 impl UI {
@@ -68,6 +70,8 @@ impl UI {
             mode: Mode::Normal,
             data,
             tx,
+            event_handler: CONFIG.window_keybind.clone(),
+            quit: false,
         }
     }
 
@@ -241,7 +245,6 @@ impl UI {
     ///
     /// An `ioResult` indicating whether the application should exit.
     fn handle_event(&mut self) -> ioResult<bool> {
-        let mut ret = false;
         match event::read()? {
             Event::Resize(width, height) => {
                 self.update_chunk(Rect::new(0, 0, width, height));
@@ -296,40 +299,54 @@ impl UI {
                     }
                     _ => {}
                 },
-                Mode::Normal => match event.code {
-                    KeyCode::Char('q') => ret = true,
-                    KeyCode::Char('I') => {
-                        self.mode = Mode::Input;
-                        self.layout.unfocus();
-                    }
-                    KeyCode::Char('L') => self.layout.right(),
-                    KeyCode::Char('H') => self.layout.left(),
-                    KeyCode::Char('K') => self.layout.up(),
-                    KeyCode::Char('J') => self.layout.down(),
-                    KeyCode::Char('S') => {
-                        if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
-                            log::error!("Error while send signal to save todo list: {}", e);
-                            // TODO show something on screen
-                        }
-                    }
-                    KeyCode::Char('u') => {
-                        if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
-                            log::error!("Error while send signal to load todo list: {}", e);
-                            // TODO show something on screen
-                        }
-                    }
-                    KeyCode::Char('E') => {
-                        if let Some(active) = self.data.lock().unwrap().get_active() {
-                            self.input = active.to_string();
-                            self.mode = Mode::Edit;
-                            self.layout.unfocus();
-                        }
-                    }
-                    _ => self.layout.handle_key(&event),
+                Mode::Normal =>  {
+                    let _ = self.handle_key(&event.code) || self.layout.handle_key(&event);
                 },
             },
             _ => {}
         }
-        Ok(ret)
+        Ok(self.quit)
+    }
+}
+
+impl HandleEvent for UI {
+    fn get_event(&self, key: &KeyCode) -> UIEvent {
+        self.event_handler.get_event(key)
+    }
+
+    fn handle_event(&mut self, event: UIEvent) -> bool {
+        use UIEvent::*;
+        match event {
+            Quit => self.quit = true,
+            InsertMode => {
+                self.mode = Mode::Input;
+                self.layout.unfocus();
+            }
+            MoveRight => self.layout.right(),
+            MoveLeft => self.layout.left(),
+            MoveUp => self.layout.up(),
+            MoveDown => self.layout.down(),
+            Save => {
+                if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
+                    log::error!("Error while send signal to save todo list: {}", e);
+                    // TODO show something on screen
+                }
+            }
+            Load => {
+                if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
+                    log::error!("Error while send signal to load todo list: {}", e);
+                    // TODO show something on screen
+                }
+            }
+            EditMode => {
+                if let Some(active) = self.data.lock().unwrap().get_active() {
+                    self.input = active.to_string();
+                    self.mode = Mode::Edit;
+                    self.layout.unfocus();
+                }
+            }
+            _ => { return false; }
+        }
+        true
     }
 }

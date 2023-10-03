@@ -6,10 +6,17 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 /// Enum representing various UI events that can be triggered.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy)]
-#[cfg_attr(test, derive(Debug))]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Debug)]
 pub enum UIEvent {
-    Quit,
+    Quit, // Window
+    Save,
+    Load,
+    MoveLeft,
+    MoveRight,
+    MoveUp,
+    MoveDown,
+    InsertMode,
+    EditMode,
 
     ListDown, // Widget list
     ListUp,
@@ -58,7 +65,9 @@ pub trait HandleEvent {
     ///
     /// `true` if the event was successfully handled, `false` otherwise.
     fn handle_key(&mut self, key: &KeyCode) -> bool {
-        self.handle_event(self.get_event(key))
+        let event = self.get_event(key);
+        log::trace!("EventHandler: Key '{:?}' cause event '{:?}'", key, event);
+        self.handle_event(event)
     }
 }
 

@@ -113,7 +113,7 @@ impl FileWorker {
         let mut f = File::create(&self.todo_path)?;
         let todo = self.todo.lock().unwrap();
         log::info!(
-            "Saveing todo task to {}{}",
+            "Saving todo task to {}{}",
             self.todo_path,
             self.archive_path
                 .as_ref()
@@ -184,7 +184,7 @@ impl FileWorker {
                         load_skip = true;
                         let act_version = self.todo.lock().unwrap().get_version();
                         if version == act_version {
-                            log::trace!("File Worker: Todo list is actual.");
+                            log::debug!("File Worker: Todo list is actual.");
                             Ok(())
                         } else {
                             version = act_version;

@@ -292,12 +292,12 @@ impl Layout {
     /// # Parameters
     ///
     /// - `event`: A reference to the `KeyEvent` to be handled.
-    pub fn handle_key(&self, event: &KeyEvent) {
+    pub fn handle_key(&self, event: &KeyEvent) -> bool {
         self.actual
             .borrow_mut()
             .actual_mut()
             .unwrap() // TODO remove
-            .handle_key(&event.code); // TODO return bool value
+            .handle_key(&event.code)
     }
 }
 

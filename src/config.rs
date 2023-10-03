@@ -264,7 +264,17 @@ impl Config {
     }
 
     pub fn default_window_keybind() -> EventHandler {
-        EventHandler::new(&[(KeyCode::Char('q'), UIEvent::Quit)])
+        EventHandler::new(&[
+            (KeyCode::Char('q'), UIEvent::Quit),
+            (KeyCode::Char('S'), UIEvent::Save),
+            (KeyCode::Char('u'), UIEvent::Load),
+            (KeyCode::Char('H'), UIEvent::MoveLeft),
+            (KeyCode::Char('L'), UIEvent::MoveRight),
+            (KeyCode::Char('K'), UIEvent::MoveUp),
+            (KeyCode::Char('J'), UIEvent::MoveDown),
+            (KeyCode::Char('I'), UIEvent::InsertMode),
+            (KeyCode::Char('E'), UIEvent::EditMode),
+        ])
     }
 
     pub fn default_category_stype() -> TextStyle {
