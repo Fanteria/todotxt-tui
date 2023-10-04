@@ -94,7 +94,7 @@ impl WidgetList {
                 self.state.select(Some(act + 1));
             }
         } else if self.size <= act + 1 + CONFIG.list_shift {
-            if self.first + self.size + 1 < self.len {
+            if self.first + self.size < self.len {
                 self.first += 1;
             } else if self.size > act + 1 {
                 self.state.select(Some(act + 1));
@@ -174,7 +174,7 @@ impl WidgetList {
             self.state.select(Some(shown_items));
         } else {
             self.first = shown_items - self.size;
-            self.state.select(Some(self.size - 1));
+            self.state.select(Some(self.size));
         }
     }
 
