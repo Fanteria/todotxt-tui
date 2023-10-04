@@ -196,11 +196,13 @@ impl ToDo {
         self.version += 1;
         let index = self.get_actual_index(data, index);
 
-        let move_task_logic = |from: &mut Vec<_>, to: &mut Vec<_>| {
+        let move_task_logic = |from: &mut Vec<Task>, to: &mut Vec<_>| {
             if from.len() <= index {
                 return;
             }
-            to.push(from.remove(index))
+            let mut task = from.remove(index);
+            task.finished = !task.finished;
+            to.push(task)
         };
         match data {
             Pending => {
