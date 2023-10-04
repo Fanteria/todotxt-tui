@@ -177,27 +177,28 @@ impl FileWorker {
 
         thread::spawn(move || {
             let mut version = self.todo.lock().unwrap().get_version();
-            let mut load_skip = false;
+            let mut skip_count: usize = 0;
             for received in rx {
                 if let Err(e) = match received {
                     Save => {
-                        load_skip = true;
                         let act_version = self.todo.lock().unwrap().get_version();
                         if version == act_version {
                             log::debug!("File Worker: Todo list is actual.");
                             Ok(())
                         } else {
+                            skip_count += 2;
                             version = act_version;
                             self.save()
                         }
                     }
                     ForceSave => {
-                        load_skip = true;
+                        skip_count += 2;
                         self.save()
                     }
                     Load => {
-                        if load_skip {
-                            load_skip = false;
+                        if skip_count > 0 {
+                            skip_count -= 1;
+                            log::debug!("Load file 'skip_count': {}", skip_count);
                             continue;
                         }
                         let result = self.load();
