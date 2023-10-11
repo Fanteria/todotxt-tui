@@ -171,16 +171,16 @@ impl UI {
             .borders(Borders::ALL)
             .title("Input")
             .border_type(BorderType::Rounded);
-        if self.mode == Mode::Input {
+        if self.mode == Mode::Input || self.mode == Mode::Edit {
             block = block.border_style(Style::default().fg(CONFIG.active_color));
         }
         terminal.draw(|f| {
             f.render_widget(
-                // Paragraph::new(self.input.clone()).block(block),
                 Paragraph::new(self.tinput.value()).block(block),
                 self.input_chunk,
             );
             self.layout.render(f);
+
             if self.mode == Mode::Input {
                 let width = self.input_chunk.width.max(3) - 3;
                 let scroll = self.tinput.visual_scroll(width as usize);
@@ -351,6 +351,7 @@ impl HandleEvent for UI {
                     self.tinput = active.to_string().into();
                     self.mode = Mode::Edit;
                     self.layout.unfocus();
+                    // self.in
                 }
             }
             _ => {
