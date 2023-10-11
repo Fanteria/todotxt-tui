@@ -1,5 +1,5 @@
 use super::{RCToDo, WidgetBase, WidgetType};
-use crate::ui::{EventHandler, HandleEvent, UIEvent};
+use crate::ui::{EventHandlerUI, HandleEvent, UIEvent};
 use crate::CONFIG;
 use crossterm::event::KeyCode;
 use std::ops::{Deref, DerefMut};
@@ -13,7 +13,7 @@ pub struct WidgetList {
     first: usize,
     size: usize,
     shift: usize,
-    event_handler: EventHandler,
+    event_handler: EventHandlerUI,
 }
 
 impl WidgetList {

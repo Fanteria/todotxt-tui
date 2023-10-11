@@ -10,7 +10,7 @@ use self::{colors::*, text_style::*};
 use crate::{
     layout::widget::widget_type::WidgetType,
     todo::task_list::TaskSort,
-    ui::{EventHandler, UIEvent},
+    ui::{EventHandlerUI, UIEvent},
 };
 use crossterm::event::KeyCode;
 use log::LevelFilter;
@@ -75,14 +75,14 @@ pub struct Config {
     #[serde(default = "Config::default_layout")]
     pub layout: String,
     #[serde(default = "Config::default_tasks_keybind")]
-    pub tasks_keybind: EventHandler,
+    pub tasks_keybind: EventHandlerUI,
     // pub preview_keybind: EventHandler,
     #[serde(default = "Config::default_category_keybind")]
-    pub category_keybind: EventHandler,
+    pub category_keybind: EventHandlerUI,
     #[serde(default = "Config::default_list_keybind")]
-    pub list_keybind: EventHandler,
+    pub list_keybind: EventHandlerUI,
     #[serde(default = "Config::default_window_keybind")]
-    pub window_keybind: EventHandler,
+    pub window_keybind: EventHandlerUI,
     #[serde(default = "Config::default_category_stype")]
     pub category_style: TextStyle,
     #[serde(default = "TextStyle::default")]
@@ -240,8 +240,8 @@ impl Config {
         )
     }
 
-    fn default_tasks_keybind() -> EventHandler {
-        EventHandler::new(&[
+    fn default_tasks_keybind() -> EventHandlerUI {
+        EventHandlerUI::new(&[
             (KeyCode::Char('U'), UIEvent::SwapUpItem),
             (KeyCode::Char('D'), UIEvent::SwapDownItem),
             (KeyCode::Char('x'), UIEvent::RemoveItem),
@@ -250,12 +250,12 @@ impl Config {
         ])
     }
 
-    pub fn default_category_keybind() -> EventHandler {
-        EventHandler::new(&[(KeyCode::Enter, UIEvent::Select)])
+    pub fn default_category_keybind() -> EventHandlerUI {
+        EventHandlerUI::new(&[(KeyCode::Enter, UIEvent::Select)])
     }
 
-    pub fn default_list_keybind() -> EventHandler {
-        EventHandler::new(&[
+    pub fn default_list_keybind() -> EventHandlerUI {
+        EventHandlerUI::new(&[
             (KeyCode::Char('j'), UIEvent::ListDown),
             (KeyCode::Char('k'), UIEvent::ListUp),
             (KeyCode::Char('g'), UIEvent::ListFirst),
@@ -263,8 +263,8 @@ impl Config {
         ])
     }
 
-    pub fn default_window_keybind() -> EventHandler {
-        EventHandler::new(&[
+    pub fn default_window_keybind() -> EventHandlerUI {
+        EventHandlerUI::new(&[
             (KeyCode::Char('q'), UIEvent::Quit),
             (KeyCode::Char('S'), UIEvent::Save),
             (KeyCode::Char('u'), UIEvent::Load),

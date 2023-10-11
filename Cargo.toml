@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tui = { package = "ratatui", version = "0.22.0", features = ["all-widgets"]}
+tui = { package = "ratatui", version = "0.22.0", features = ["all-widgets", "crossterm"]}
 log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
-crossterm = "0.25"
+crossterm = "0.27"
 todo-txt = "3.1"
 toml = "0.7"
 lazy_static = "1.4"
@@ -15,3 +15,4 @@ enum_dispatch = "0.3"
 chrono = "0.4"
 log4rs = "1.2"
 notify = "6.0"
+tui-input = { version = "0.8", features = ["crossterm"], default-features = false }

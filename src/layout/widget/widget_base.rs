@@ -1,6 +1,6 @@
 use super::{widget_type::WidgetType, RCToDo};
 use crate::todo::ToDo;
-use crate::{ui::EventHandler, CONFIG};
+use crate::{ui::EventHandlerUI, CONFIG};
 use std::sync::MutexGuard;
 use tui::prelude::Rect;
 
@@ -10,7 +10,7 @@ pub struct WidgetBase {
     pub focus: bool,
     pub chunk: Rect,
     pub data: RCToDo,
-    pub event_handler: EventHandler,
+    pub event_handler: EventHandlerUI,
 }
 
 impl WidgetBase {
@@ -31,7 +31,7 @@ impl WidgetBase {
             WidgetType::Project => CONFIG.category_keybind.clone(),
             WidgetType::Context => CONFIG.category_keybind.clone(),
             WidgetType::Hashtag => CONFIG.category_keybind.clone(),
-            WidgetType::Preview => EventHandler::default(),
+            WidgetType::Preview => EventHandlerUI::default(),
         };
         Self {
             title: widget_type.to_string(),

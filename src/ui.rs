@@ -7,7 +7,8 @@ use crate::{
     CONFIG,
 };
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    self,
+    event::{self, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{
         disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
@@ -22,13 +23,12 @@ use std::{
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout as tuiLayout, Rect},
+    style::Style,
     widgets::Paragraph,
+    widgets::{Block, BorderType, Borders},
     Terminal,
 };
-use tui::{
-    style::Style,
-    widgets::{Block, BorderType, Borders},
-};
+use tui_input::{backend::crossterm::EventHandler, Input};
 
 /// Enum representing the different modes of the UI.
 #[derive(PartialEq, Eq)]
@@ -40,14 +40,14 @@ enum Mode {
 
 /// The struct representing the UI for the application.
 pub struct UI {
-    input: String,
     input_chunk: Rect,
+    tinput: Input,
     layout: Layout,
     mode: Mode,
     data: Arc<Mutex<ToDo>>,
     tx: Sender<FileWorkerCommands>,
-    event_handler: EventHandler,
-    quit: bool
+    event_handler: EventHandlerUI,
+    quit: bool,
 }
 
 impl UI {
@@ -64,8 +64,8 @@ impl UI {
     /// A new `UI` instance.
     pub fn new(layout: Layout, data: Arc<Mutex<ToDo>>, tx: Sender<FileWorkerCommands>) -> UI {
         UI {
-            input: String::new(),
             input_chunk: Rect::default(),
+            tinput: Input::default(),
             layout,
             mode: Mode::Normal,
             data,
@@ -176,27 +176,40 @@ impl UI {
         }
         terminal.draw(|f| {
             f.render_widget(
-                Paragraph::new(self.input.clone()).block(block),
+                // Paragraph::new(self.input.clone()).block(block),
+                Paragraph::new(self.tinput.value()).block(block),
                 self.input_chunk,
             );
             self.layout.render(f);
+            if self.mode == Mode::Input {
+                let width = self.input_chunk.width.max(3) - 3;
+                let scroll = self.tinput.visual_scroll(width as usize);
+                f.set_cursor(
+                    self.input_chunk.x
+                        + (self.tinput.visual_cursor().max(scroll) - scroll) as u16
+                        + 1,
+                    self.input_chunk.y + 1,
+                );
+            }
         })?;
         Ok(())
     }
 
     /// Handles autocompletion based on user input.
-    fn autocomplete(&mut self) {
+    fn autocomplete(&self, input: &str) -> String {
         macro_rules! some_or_return {
             ($message:expr) => {
                 match $message {
                     Some(s) => s,
-                    None => return,
+                    None => return input.to_string(),
                 }
             };
         }
 
-        let last_space_index = self.input.rfind(' ').map(|i| i + 1).unwrap_or(0);
-        let base = some_or_return!(self.input.get(last_space_index..));
+        let last_space_index = input.rfind(' ').map(|i| i + 1).unwrap_or(0);
+        let base = some_or_return!(input.get(last_space_index..));
+        // let last_space_index = self.input.rfind(' ').map(|i| i + 1).unwrap_or(0);
+        // let base = some_or_return!(self.input.get(last_space_index..));
         let category = some_or_return!(base.get(0..1));
         let pattern = some_or_return!(base.get(1..));
 
@@ -205,11 +218,11 @@ impl UI {
             "+" => data.get_categories(ToDoCategory::Projects),
             "@" => data.get_categories(ToDoCategory::Contexts),
             "#" => data.get_categories(ToDoCategory::Hashtags),
-            _ => return,
+            _ => return input.to_string(),
         };
 
         if list.is_empty() {
-            return;
+            return input.to_string();
         }
 
         let list = list.start_with(pattern);
@@ -223,19 +236,17 @@ impl UI {
             std::cmp::min(fst.len(), sec.len())
         };
         if list.is_empty() {
-            return;
+            return input.to_string();
         }
 
         let mut new_act = list[0].as_str();
-
         if list.len() != 1 {
             list.iter()
                 .skip(1)
                 .for_each(|item| new_act = &new_act[..same_start_index(new_act, item)]);
-            self.input += &new_act[pattern.len()..];
+            input.to_string() + &new_act[pattern.len()..]
         } else {
-            self.input += &new_act[pattern.len()..];
-            self.input += " ";
+            input.to_string() + &new_act[pattern.len()..] + " "
         }
     }
 
@@ -245,63 +256,60 @@ impl UI {
     ///
     /// An `ioResult` indicating whether the application should exit.
     fn handle_event(&mut self) -> ioResult<bool> {
-        match event::read()? {
+        let e = read()?;
+        match e {
             Event::Resize(width, height) => {
                 self.update_chunk(Rect::new(0, 0, width, height));
             }
             Event::Key(event) => match self.mode {
                 Mode::Input => match event.code {
                     KeyCode::Enter => {
-                        self.data.lock().unwrap().new_task(&self.input).unwrap(); // TODO fix
-                        self.input.clear();
+                        self.data
+                            .lock()
+                            .unwrap()
+                            .new_task(&self.tinput.value())
+                            .unwrap(); // TODO fix
+                        self.tinput.reset();
                         self.mode = Mode::Normal;
                         self.layout.focus();
-                    }
-                    KeyCode::Char(c) => {
-                        self.input.push(c);
-                    }
-                    KeyCode::Backspace => {
-                        self.input.pop();
                     }
                     KeyCode::Esc => {
                         self.mode = Mode::Normal;
                         self.layout.focus();
                     }
                     KeyCode::Tab => {
-                        self.autocomplete();
+                        self.tinput = self.autocomplete(&self.tinput.value()).into();
                     }
-                    _ => {}
+                    _ => {
+                        self.tinput.handle_event(&e);
+                    }
                 },
                 Mode::Edit => match event.code {
                     KeyCode::Enter => {
                         self.data
                             .lock()
                             .unwrap()
-                            .update_active(&self.input)
+                            .update_active(&self.tinput.value())
                             .unwrap();
-                        self.input.clear();
+                        self.tinput.reset();
                         self.mode = Mode::Normal;
                         self.layout.focus();
                     }
-                    KeyCode::Char(c) => {
-                        self.input.push(c);
-                    }
-                    KeyCode::Backspace => {
-                        self.input.pop();
-                    }
                     KeyCode::Esc => {
-                        self.input.clear();
+                        self.tinput.reset();
                         self.mode = Mode::Normal;
                         self.layout.focus();
                     }
                     KeyCode::Tab => {
-                        self.autocomplete();
+                        self.tinput = self.autocomplete(&self.tinput.value()).into();
                     }
-                    _ => {}
+                    _ => {
+                        self.tinput.handle_event(&e);
+                    }
                 },
-                Mode::Normal =>  {
+                Mode::Normal => {
                     let _ = self.handle_key(&event.code) || self.layout.handle_key(&event);
-                },
+                }
             },
             _ => {}
         }
@@ -340,12 +348,14 @@ impl HandleEvent for UI {
             }
             EditMode => {
                 if let Some(active) = self.data.lock().unwrap().get_active() {
-                    self.input = active.to_string();
+                    self.tinput = active.to_string().into();
                     self.mode = Mode::Edit;
                     self.layout.unfocus();
                 }
             }
-            _ => { return false; }
+            _ => {
+                return false;
+            }
         }
         true
     }
