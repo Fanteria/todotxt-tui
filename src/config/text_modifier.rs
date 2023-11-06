@@ -22,3 +22,20 @@ impl From<TextModifier> for Modifier {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn to_text_modifier() {
+        let bold = TextModifier::Bold;
+        assert_eq!(Modifier::from(bold), Modifier::BOLD);
+
+        let italic = TextModifier::Italic;
+        assert_eq!(Modifier::from(italic), Modifier::ITALIC);
+
+        let underline = TextModifier::Underlined;
+        assert_eq!(Modifier::from(underline), Modifier::UNDERLINED);
+    }
+}

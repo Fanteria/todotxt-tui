@@ -637,4 +637,75 @@ mod tests {
         todo.swap_tasks(ToDoData::Pending, 1, 2);
         assert_eq!(todo.get_active().unwrap().subject, subject);
     }
+
+    #[test]
+    fn move_data() {
+        let todo = example_todo(false);
+        let mut empty = ToDo::default();
+        assert!(empty.pending.is_empty());
+        assert!(empty.done.is_empty());
+        empty.move_data(example_todo(false));
+        assert_eq!(todo.pending, empty.pending);
+        assert_eq!(todo.done, empty.done);
+    }
+
+    #[test]
+    fn version() {
+        let mut todo = ToDo::default();
+        assert_eq!(todo.get_version(), 0);
+        todo.move_data(example_todo(false));
+        assert_eq!(todo.get_version(), 1);
+        todo.move_task(ToDoData::Done, 1);
+    }
+
+    #[test]
+    fn toggle_filter() {
+        let mut todo = example_todo(false);
+        assert!(todo.project_filters.is_empty());
+        todo.toggle_filter(ToDoCategory::Projects, "project1");
+        assert!(todo.project_filters.contains("project1"));
+        assert_eq!(todo.project_filters.len(), 1);
+        todo.toggle_filter(ToDoCategory::Projects, "project1");
+        assert!(todo.project_filters.is_empty());
+
+        todo.toggle_filter(ToDoCategory::Contexts, "context1");
+        assert!(todo.context_filters.contains("context1"));
+        assert_eq!(todo.context_filters.len(), 1);
+        todo.toggle_filter(ToDoCategory::Contexts, "context1");
+        assert!(todo.context_filters.is_empty());
+
+        todo.toggle_filter(ToDoCategory::Hashtags, "hashtag1");
+        assert!(todo.hashtag_filters.contains("hashtag1"));
+        assert_eq!(todo.hashtag_filters.len(), 1);
+        todo.toggle_filter(ToDoCategory::Hashtags, "hashtag1");
+        assert!(todo.hashtag_filters.is_empty());
+    }
+
+    #[test]
+    fn new_task() -> Result<(), todo_txt::Error> {
+        let mut todo = ToDo::default();
+        todo.new_task("Some pending task")?;
+        assert_eq!(todo.pending.len(), 1);
+        assert_eq!(todo.pending[0].subject, "Some pending task");
+        todo.new_task("x Some done task")?;
+        assert_eq!(todo.done.len(), 1);
+        assert_eq!(todo.done[0].subject, "Some done task");
+
+        Ok(())
+    }
+
+    #[test]
+    fn update_active() -> Result<(), todo_txt::Error> {
+        let mut todo = example_todo(false);
+        todo.active = Some((ToDoData::Pending, 0));
+        todo.update_active("New subject")?;
+        assert_eq!(todo.pending[0].subject, "New subject");
+
+        todo.active = Some((ToDoData::Done, 0));
+        todo.update_active("New done subject")?;
+        assert_eq!(todo.done[0].subject, "New done subject");
+
+        Ok(())
+    }
+
 }

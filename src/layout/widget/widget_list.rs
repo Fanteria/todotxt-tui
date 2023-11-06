@@ -33,7 +33,7 @@ impl WidgetList {
             state: ListState::default(),
             len: 0,
             first: 0,
-            size: 24,
+            size: 0,
             shift: 0,
             event_handler: CONFIG.list_keybind.clone(),
         };
@@ -216,5 +216,93 @@ impl Deref for WidgetList {
 impl DerefMut for WidgetList {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+    use crate::todo::ToDo;
+    use super::*;
+
+    fn testing_widget() -> WidgetList {
+        let mut todo = ToDo::default();
+        let len = 50;
+        for i in 1..len {
+            todo.new_task(&format!("Task {}", i)).unwrap();
+        }
+        let todo = Arc::new(Mutex::new(todo));
+        let mut widget = WidgetList::new(&WidgetType::List, todo);
+        widget.set_size(10);
+        widget.len = len;
+
+        widget
+    }
+
+    fn n_times(times: usize, func: fn(&mut WidgetList), s: &mut WidgetList) {
+        for _ in 0..times {
+            func(s)
+        }
+    }
+
+    #[test]
+    fn movement_basic() {
+        let mut widget = testing_widget();
+
+        // Starting position
+        assert_eq!(widget.index(), 0);
+        assert_eq!(widget.act(), 0);
+        assert_eq!(widget.first, 0);
+
+        // First down
+        widget.down();
+        assert_eq!(widget.index(), 1);
+        assert_eq!(widget.act(), 1);
+        assert_eq!(widget.first, 0);
+
+        // Second down
+        widget.down();
+        assert_eq!(widget.index(), 2);
+        assert_eq!(widget.act(), 2);
+        assert_eq!(widget.first, 0);
+
+        // First up
+        widget.up();
+        assert_eq!(widget.index(), 1);
+        assert_eq!(widget.act(), 1);
+        assert_eq!(widget.first, 0);
+
+        // Third down
+        widget.down();
+        assert_eq!(widget.index(), 2);
+        assert_eq!(widget.act(), 2);
+        assert_eq!(widget.first, 0);
+    }
+
+    #[test]
+    fn movement_full_list() {
+        let mut widget = testing_widget();
+
+        // Before first full list move
+        n_times(5, WidgetList::down, &mut widget);
+
+        assert_eq!(widget.index(), 5);
+        assert_eq!(widget.act(), 5);
+        assert_eq!(widget.first, 0);
+
+        // First full list move
+        widget.down();
+
+        assert_eq!(widget.index(), 6);
+        assert_eq!(widget.act(), 5);
+        assert_eq!(widget.first, 1);
+
+        // Second full list move
+        widget.down();
+
+        assert_eq!(widget.index(), 7);
+        assert_eq!(widget.act(), 5);
+        assert_eq!(widget.first, 2);
+
     }
 }

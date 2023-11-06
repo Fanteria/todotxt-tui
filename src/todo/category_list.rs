@@ -3,7 +3,7 @@ use tui::text::Span;
 use tui::widgets::ListItem;
 
 /// Represents a list of categories, where each category is a tuple of `(&'a String, bool)`.
-/// The `String` value represents name of category and the `bool` value represents 
+/// The `String` value represents name of category and the `bool` value represents
 /// whether the category is selected or not.
 pub struct CategoryList<'a>(pub Vec<(&'a String, bool)>);
 
@@ -68,5 +68,78 @@ impl<'a> From<CategoryList<'a>> for Vec<ListItem<'a>> {
                 }
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basics() {
+        let first = String::from("first");
+        let second = String::from("second");
+        let third = String::from("third");
+        let third2 = String::from("third2");
+        let categories = CategoryList(vec![
+            (&first, false),
+            (&second, false),
+            (&third, false),
+            (&third2, false),
+        ]);
+
+        assert!(!categories.is_empty());
+        assert_eq!(categories.len(), 4);
+    }
+
+    #[test]
+    fn start_with() {
+        let first = String::from("first");
+        let second = String::from("second");
+        let third = String::from("third");
+        let third2 = String::from("third2");
+        let categories = CategoryList(vec![
+            (&first, false),
+            (&second, false),
+            (&third, false),
+            (&third2, false),
+        ]);
+        assert!(categories.start_with("none").is_empty());
+
+        let match_fi = categories.start_with("fi");
+        assert_eq!(match_fi.len(), 1);
+        assert_eq!(match_fi[0], &first);
+
+        let match_fi = categories.start_with("th");
+        assert_eq!(match_fi.len(), 2);
+        assert_eq!(match_fi[0], &third);
+        assert_eq!(match_fi[1], &third2);
+    }
+
+    #[test]
+    fn create_list_of_items() {
+        let first = String::from("first");
+        let second = String::from("second");
+        let third = String::from("third");
+        let third2 = String::from("third2");
+        let categories = CategoryList(vec![
+            (&first, false),
+            (&second, false),
+            (&third, true),
+            (&third2, false),
+        ]);
+
+        let items = Vec::<ListItem>::from(categories);
+        assert_eq!(items.len(), 4);
+        assert_eq!(items[0], ListItem::new(first.clone()));
+        assert_eq!(items[1], ListItem::new(second.clone()));
+        assert_eq!(
+            items[2],
+            ListItem::new(Span::styled(
+                third.clone(),
+                CONFIG.category_color.get_style()
+            ))
+        );
+        assert_eq!(items[3], ListItem::new(third2.clone()));
     }
 }
