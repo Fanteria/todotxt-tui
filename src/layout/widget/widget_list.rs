@@ -134,7 +134,8 @@ impl WidgetList {
     /// An `Option` containing the indices of the (old, new) selections,
     /// or `None` if the list is at the end.
     pub fn next(&mut self) -> Option<(usize, usize)> {
-        if (self.len <= self.size) && self.len <= self.act() + 1 {
+        log::error!("len: {}, index: {}", self.len, self.index());
+        if self.len <= self.index() + 1 {
             None
         } else {
             let old = self.index();
@@ -173,8 +174,8 @@ impl WidgetList {
             self.first = 0;
             self.state.select(Some(shown_items));
         } else {
-            self.first = shown_items - self.size;
-            self.state.select(Some(self.size));
+            self.first = self.len - self.size;
+            self.state.select(Some(self.size - 1));
         }
     }
 
@@ -223,11 +224,11 @@ impl DerefMut for WidgetList {
 mod tests {
     use std::sync::{Arc, Mutex};
     use crate::todo::ToDo;
+    use test_log::test;
     use super::*;
 
-    fn testing_widget() -> WidgetList {
+    fn testing_widget(len: usize) -> WidgetList {
         let mut todo = ToDo::default();
-        let len = 50;
         for i in 1..len {
             todo.new_task(&format!("Task {}", i)).unwrap();
         }
@@ -246,8 +247,23 @@ mod tests {
     }
 
     #[test]
+    fn movement_in_short_list() {
+        let mut widget = testing_widget(5);
+
+        assert_eq!(widget.index(), 0);
+        assert_eq!(widget.act(), 0);
+        assert_eq!(widget.first, 0);
+
+        widget.down();
+        assert_eq!(widget.index(), 1);
+        assert_eq!(widget.act(), 1);
+        assert_eq!(widget.first, 0);
+
+    }
+
+    #[test]
     fn movement_basic() {
-        let mut widget = testing_widget();
+        let mut widget = testing_widget(50);
 
         // Starting position
         assert_eq!(widget.index(), 0);
@@ -281,7 +297,7 @@ mod tests {
 
     #[test]
     fn movement_full_list() {
-        let mut widget = testing_widget();
+        let mut widget = testing_widget(50);
 
         // Before first full list move
         n_times(5, WidgetList::down, &mut widget);
@@ -304,5 +320,145 @@ mod tests {
         assert_eq!(widget.act(), 5);
         assert_eq!(widget.first, 2);
 
+        // Move to last item
+        n_times(50, WidgetList::down, &mut widget);
+        assert_eq!(widget.index(), 49);
+        assert_eq!(widget.act(), 9);
+        assert_eq!(widget.first, 40);
+
+        // Move up
+        widget.up();
+        assert_eq!(widget.index(), 48);
+        assert_eq!(widget.act(), 8);
+        assert_eq!(widget.first, 40);
+
+        // Before first full list move up
+        n_times(4, WidgetList::up, &mut widget);
+        assert_eq!(widget.index(), 44);
+        assert_eq!(widget.act(), 4);
+        assert_eq!(widget.first, 40);
+
+        // First full list move up
+        widget.up();
+        assert_eq!(widget.index(), 43);
+        assert_eq!(widget.act(), 4);
+        assert_eq!(widget.first, 39);
+
+        // Go to start of the list where full list stop moving
+        n_times(39, WidgetList::up, &mut widget);
+        assert_eq!(widget.index(), 4);
+        assert_eq!(widget.act(), 4);
+        assert_eq!(widget.first, 0);
+
+        widget.up();
+        assert_eq!(widget.index(), 3);
+        assert_eq!(widget.act(), 3);
+        assert_eq!(widget.first, 0);
+
+        // Go to first index
+        n_times(3, WidgetList::up, &mut widget);
+        assert_eq!(widget.index(), 0);
+        assert_eq!(widget.act(), 0);
+        assert_eq!(widget.first, 0);
+    }
+
+    #[test]
+    fn move_task() {
+        let mut widget = testing_widget(50);
+        assert_eq!(widget.next(), Some((0, 1)));
+        assert_eq!(widget.next(), Some((1, 2)));
+        assert_eq!(widget.next(), Some((2, 3)));
+        assert_eq!(widget.next(), Some((3, 4)));
+        assert_eq!(widget.next(), Some((4, 5)));
+
+        assert_eq!(widget.prev(), Some((5, 4)));
+        assert_eq!(widget.prev(), Some((4, 3)));
+        assert_eq!(widget.prev(), Some((3, 2)));
+        assert_eq!(widget.prev(), Some((2, 1)));
+        assert_eq!(widget.prev(), Some((1, 0)));
+
+        widget.down();
+        assert_eq!(widget.next(), Some((1, 2)));
+
+        widget.up();
+        assert_eq!(widget.next(), Some((1, 2)));
+
+        widget.up();
+        assert_eq!(widget.next(), Some((1, 2)));
+    }
+
+    #[test]
+    fn move_task_borders() {
+        let mut widget = testing_widget(50);
+        assert_eq!(widget.prev(), None);
+
+        widget.down();
+        assert_eq!(widget.prev(), Some((1, 0)));
+
+
+        n_times(50, WidgetList::down, &mut widget);
+        assert_eq!(widget.next(), None);
+
+        widget.up();
+        assert_eq!(widget.next(), Some((48, 49)));
+    }
+
+    #[test]
+    fn first_and_last_item() {
+        // Long list
+        let mut widget = testing_widget(50);
+        widget.last();
+        assert_eq!(widget.index(), 49);
+        assert_eq!(widget.act(), 9);
+        assert_eq!(widget.first, 40);
+
+        widget.first();
+        assert_eq!(widget.index(), 0);
+        assert_eq!(widget.act(), 0);
+        assert_eq!(widget.first, 0);
+
+        // Short list
+        let mut widget = testing_widget(5);
+        widget.last();
+        assert_eq!(widget.index(), 4);
+        assert_eq!(widget.act(), 4);
+        assert_eq!(widget.first, 0);
+
+        widget.first();
+        assert_eq!(widget.index(), 0);
+        assert_eq!(widget.act(), 0);
+        assert_eq!(widget.first, 0);
+    }
+
+    #[test]
+    fn range() {
+        let widget = testing_widget(50);
+        assert_eq!(widget.range(), (0, 10));
+    }
+
+    #[test]
+    fn handle_event() {
+        let mut widget = testing_widget(50);
+        assert!(widget.handle_event(UIEvent::ListDown));
+        assert_eq!(widget.index(), 1);
+        assert_eq!(widget.act(), 1);
+        assert_eq!(widget.first, 0);
+
+        assert!(widget.handle_event(UIEvent::ListUp));
+        assert_eq!(widget.index(), 0);
+        assert_eq!(widget.act(), 0);
+        assert_eq!(widget.first, 0);
+
+        assert!(widget.handle_event(UIEvent::ListLast));
+        assert_eq!(widget.index(), 49);
+        assert_eq!(widget.act(), 9);
+        assert_eq!(widget.first, 40);
+
+        assert!(widget.handle_event(UIEvent::ListFirst));
+        assert_eq!(widget.index(), 0);
+        assert_eq!(widget.act(), 0);
+        assert_eq!(widget.first, 0);
+
+        assert!(!widget.handle_event(UIEvent::None));
     }
 }
