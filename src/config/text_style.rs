@@ -160,3 +160,54 @@ impl Default for TextStyleList {
         Self(items)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn text_style() {
+        let style = TextStyle::default();
+        assert_eq!(style.bg, None);
+        assert_eq!(style.fg, None);
+        assert_eq!(style.modifier, None);
+        assert!(!style.is_some());
+        let style = style
+            .bg(Color::Red)
+            .fg(Color::Green)
+            .modifier(TextModifier::Bold);
+        assert_eq!(style.bg, Some(Color::Red));
+        assert_eq!(style.fg, Some(Color::Green));
+        assert_eq!(style.modifier, Some(TextModifier::Bold));
+        assert!(style.is_some());
+
+        let _ = style.get_style();
+    }
+
+    #[test]
+    fn combine_styles() {
+        let style = TextStyle::default()
+            .bg(Color::Red)
+            .modifier(TextModifier::Bold)
+            .combine(
+                &TextStyle::default()
+                    .fg(Color::Green)
+                    .modifier(TextModifier::Italic),
+            );
+        assert_eq!(style.bg, Some(Color::Red));
+        assert_eq!(style.fg, Some(Color::Green));
+        assert_eq!(style.modifier, Some(TextModifier::Italic));
+
+        let style = TextStyle::default()
+            .bg(Color::Red)
+            .combine(&TextStyle::default().bg(Color::Yellow));
+        assert_eq!(style.bg, Some(Color::Yellow));
+        assert_eq!(style.fg, None);
+        assert_eq!(style.modifier, None);
+    }
+
+    #[test]
+    fn text_style_list() {
+        assert_eq!(format!("{:?}", TextStyleList::default().get_style(0)), "Style { fg: Some(Red), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }");
+    }
+}

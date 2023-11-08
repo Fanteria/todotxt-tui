@@ -5,7 +5,6 @@ use tui::style::Color;
 ///
 /// This enum is used to serialize and deserialize TUI `Color` objects.
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq, Debug))]
 #[serde(remote = "Color")]
 pub enum ColorDef {
     Reset,
@@ -36,7 +35,6 @@ pub enum ColorDef {
 /// - `Some(Color)`: Represents a specific color.
 /// - `Default`: Represents the default color (e.g., when no color is specified).
 #[derive(Serialize, Deserialize, Clone, Copy)]
-#[cfg_attr(test, derive(PartialEq, Debug))]
 pub enum OptionalColor {
     #[serde(with = "ColorDef")]
     Some(Color),

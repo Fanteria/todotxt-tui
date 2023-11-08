@@ -57,7 +57,7 @@ impl<'a> TaskList<'a> {
     /// A `TaskSlice` containing the sliced tasks.
     pub fn slice(&self, first: usize, last: usize) -> TaskSlice {
         if last > self.0.len() {
-            return TaskSlice(&self.0);
+            return TaskSlice(&self.0[first..]);
         };
         TaskSlice(&self.0[first..last])
     }
@@ -183,4 +183,60 @@ mod tests {
         assert_eq!(parsed[4].content, " ");
         assert_eq!(parsed[5].content, "#hashtag1");
     }
+
+    #[test]
+    fn task_slice() {
+        let task1 = Task::from_str("measure space for 1").unwrap();
+        let task2 = Task::from_str("measure space for 2").unwrap();
+        let task3 = Task::from_str("measure space for 3").unwrap();
+        let task4 = Task::from_str("measure space for 4").unwrap();
+        let tasklist = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        let slice = tasklist.slice(1, 3);
+
+        assert_eq!(slice.0.len(), 2);
+        assert_eq!(slice.0[0], (1, &task2));
+        assert_eq!(slice.0[1], (2, &task3));
+
+        let slice = tasklist.slice(1, 100_000);
+        assert_eq!(slice.0.len(), 3);
+        assert_eq!(slice.0[0], (1, &task2));
+        assert_eq!(slice.0[1], (2, &task3));
+        assert_eq!(slice.0[2], (3, &task4));
+    }
+
+    #[test]
+    fn sort_tasklist() {
+        let compare = |expected: &TaskList, real: TaskList| {
+            assert_eq!(expected.0.len(), real.0.len());
+            for i in 0..expected.0.len() {
+                assert_eq!(expected[i], real[i]);
+            }
+        };
+        let task1 = Task::from_str("(C) 2 measure space for 1").unwrap();
+        let task2 = Task::from_str("    3 measure space for 2").unwrap();
+        let task3 = Task::from_str("    1 measure space for 3").unwrap();
+        let task4 = Task::from_str("(A) 4 measure space for 4").unwrap();
+        let tasklist = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+
+        let mut none = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        none.sort(TaskSort::None);
+        compare(&tasklist, none);
+
+        let mut reverse = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        reverse.sort(TaskSort::Reverse);
+        compare(&TaskList(vec![(3, &task4), (2, &task3), (1, &task2), (0, &task1)]), reverse);
+
+        let mut priority = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        priority.sort(TaskSort::Priority);
+        compare(&TaskList(vec![(3, &task4), (0, &task1), (1, &task2), (2, &task3)]), priority);
+
+        let mut alpha = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        alpha.sort(TaskSort::Alphanumeric);
+        compare(&TaskList(vec![(2, &task3), (0, &task1), (1, &task2), (3, &task4)]), alpha);
+
+        let mut alpha_reverse = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        alpha_reverse.sort(TaskSort::AlphanumericReverse);
+        compare(&TaskList(vec![(3, &task4), (1, &task2), (0, &task1), (2, &task3)]), alpha_reverse);
+    }
+
 }
