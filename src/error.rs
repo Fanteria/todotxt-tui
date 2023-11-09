@@ -15,7 +15,7 @@ const PARSE_NOT_END: &str = "All containers must be closed";
 const ACTIVE_IS_NOT_WIDGET: &str = "Invalid state, active container is not widget.";
 
 /// Enum representing ToDo-related errors.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ToDoError {
     WidgetDoesNotExist,
     ParseValue(IntErrorKind),
@@ -24,6 +24,8 @@ pub enum ToDoError {
     ParseNotStart,
     ParseNotEnd,
     ParseInvalidDirection(String),
+    ParseTextStyle(String),
+    ParseTextModifier(String),
     ActiveIsNotWidget,
 }
 
@@ -33,39 +35,41 @@ impl Error for ToDoError {}
 /// Implement the Display trait for ToDoError to format error messages.
 impl Display for ToDoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use ToDoError::*;
         let mut msg = match self {
-            Self::WidgetDoesNotExist => String::from(WIDGET_DOES_NOT_EXIST),
-            Self::ParseValue(e) => format!("{:?}", e),
-            Self::ParseWidgetType => String::from(PARSE_WIDGET_TYPE),
-            Self::ParseNotStart => String::from(PARSE_NOT_START),
-            Self::ParseNotEnd => String::from(PARSE_NOT_END),
-            Self::ParseInvalidDirection(direction) => {
-                format!("Direction \"{}\" is invalid", direction)
-            }
-            Self::ActiveIsNotWidget => String::from(ACTIVE_IS_NOT_WIDGET),
+            WidgetDoesNotExist => String::from(WIDGET_DOES_NOT_EXIST),
+            ParseValue(e) => format!("{:?}", e),
+            ParseWidgetType => String::from(PARSE_WIDGET_TYPE),
+            ParseNotStart => String::from(PARSE_NOT_START),
+            ParseNotEnd => String::from(PARSE_NOT_END),
+            ParseInvalidDirection(direction) => format!("Direction \"{}\" is invalid", direction),
+            ParseTextStyle(style) => format!("Style \"{}\" is invalid", style),
+            ParseTextModifier(modifier) => format!("Modifier \"{}\" is invalid", modifier),
+            ActiveIsNotWidget => String::from(ACTIVE_IS_NOT_WIDGET),
             _ => String::new(),
         };
         if !msg.is_empty() {
             msg = format!(": {}", msg);
         }
-        write!(f, "Error: \"{}\"{}", self.name(), msg)
+        write!(f, "Error: \"{}\" {}", self.name(), msg)
     }
 }
 
 impl ToDoError {
     /// Get a error name.
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> &'static str {
+        use ToDoError::*;
         match self {
-            Self::WidgetDoesNotExist => String::from("widget does not exists"),
-            Self::ParseValue(_) => String::from("parse value error"),
-            Self::ParseUnknownValue => {
-                String::from("Value can constraint only unsigned integer and %.")
-            }
-            Self::ParseWidgetType => String::from("parse widget type"),
-            Self::ParseNotStart => String::from("parse not start"),
-            Self::ParseNotEnd => String::from("parse not end"),
-            Self::ParseInvalidDirection(_) => String::from("parse invalid direction"),
-            Self::ActiveIsNotWidget => String::from("active is not widget"),
+            WidgetDoesNotExist => "widget does not exists",
+            ParseValue(_) => "parse value error",
+            ParseUnknownValue => "Value can constraint only unsigned integer and %.",
+            ParseWidgetType => "parse widget type",
+            ParseNotStart => "parse not start",
+            ParseNotEnd => "parse not end",
+            ParseInvalidDirection(_) => "parse invalid direction",
+            ParseTextStyle(_) => "parse text style",
+            ParseTextModifier(_) => "parse text modifier",
+            ActiveIsNotWidget => "active is not widget",
         }
     }
 }

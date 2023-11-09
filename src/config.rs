@@ -5,6 +5,7 @@ mod text_style;
 
 pub use self::colors::OptionalColor;
 pub use self::keycode::KeyCodeDef;
+pub use self::text_style::TextStyle;
 
 use self::{colors::*, text_style::*};
 use crate::{

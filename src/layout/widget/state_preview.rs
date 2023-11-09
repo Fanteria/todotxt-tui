@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{todo::ToDoData, ui::UIEvent, CONFIG};
+use crate::{config::TextStyle, error::ToDoRes, todo::ToDoData, ui::UIEvent, CONFIG};
 use chrono::NaiveDate;
 use tui::{
     backend::Backend,
-    style::{Style, Color, Modifier},
+    style::Style,
     widgets::{Paragraph, Wrap},
     Frame,
 };
@@ -124,7 +124,7 @@ impl StatePreview {
         read
     }
 
-    fn parse_variables(block: &str) -> Vec<Parts> {
+    fn parse_variables(block: &str) -> ToDoRes<Vec<Parts>> {
         let mut ret = Vec::new();
         let mut iter = block.chars();
         let mut read_variable = false;
@@ -170,27 +170,20 @@ impl StatePreview {
             Parts::Text(read)
         });
 
-        ret
+        Ok(ret)
     }
 
-    fn parse_style(style: Option<String>) -> Style {
-        let mut ret = Style::default();
-        if let Some(style) = style {
-            style.split_whitespace().for_each(|word| {
-                let color = Color::from_str(word);
-                let modifier = Modifier::from_name(word);
-
-            });
-        }
-        // Style::default().mo
-        
-        ret
-    }
-
-    fn parse(template: &str) -> Vec<(Vec<Parts>, Style)> {
+    fn parse(template: &str) -> ToDoRes<Vec<(Vec<Parts>, Style)>> {
         let mut ret = Vec::new();
         let mut act = String::default();
         let mut iter = template.chars().into_iter();
+        let save_act = |act: &mut String, ret: &mut Vec<_>| -> ToDoRes<()> {
+            if !act.is_empty() {
+                ret.push((StatePreview::parse_variables(&act)?, Style::default()));
+                *act = String::default();
+            }
+            Ok(())
+        };
         loop {
             let c = match iter.next() {
                 Some(c) => c,
@@ -198,28 +191,31 @@ impl StatePreview {
             };
             match c {
                 '[' => {
-                    let block = &StatePreview::read_block(&mut iter, ']');
+                    let block = StatePreview::read_block(&mut iter, ']');
                     let mut style = None;
+                    save_act(&mut act, &mut ret)?;
                     match iter.next() {
-                        Some('(') => {
-                            style = Some(StatePreview::read_block(&mut iter, ')'));
-                        }
+                        Some('(') => style = Some(StatePreview::read_block(&mut iter, ')')),
                         Some('\\') => act.push(iter.next().unwrap()),
                         Some(ch) => act.push(ch),
-                        None => break,
+                        None => {
+                            act = block;
+                            break;
+                        }
                     }
                     ret.push((
-                        StatePreview::parse_variables(&block),
-                        StatePreview::parse_style(style),
+                        StatePreview::parse_variables(&block)?,
+                        TextStyle::from_str(&style.unwrap_or(String::from("")))?.get_style(),
                     ));
                 }
                 '\\' => act.push(iter.next().unwrap()),
                 _ => act.push(c),
             }
         }
+        save_act(&mut act, &mut ret)?;
         // ahead = "[$count](bold white) "
 
-        ret
+        Ok(ret)
     }
 }
 
@@ -249,6 +245,8 @@ impl State for StatePreview {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tui::style::Color;
+    use tui::style::Modifier;
 
     #[test]
     fn read_block() {
@@ -266,33 +264,105 @@ mod tests {
         let mut iter = "block to parse] some other text".chars();
         assert_eq!(&StatePreview::read_block(&mut iter, ']'), "block to parse");
         assert_eq!(&iter.collect::<String>(), " some other text");
+
+        let mut iter = "block to parse \\] with some \\\\ escapes]".chars();
+        assert_eq!(
+            &StatePreview::read_block(&mut iter, ']'),
+            "block to parse ] with some \\ escapes"
+        );
+        assert_eq!(&iter.collect::<String>(), "");
     }
 
     #[test]
-    fn parse_variables() {
-        let parts = StatePreview::parse_variables("");
+    fn parse_variables() -> ToDoRes<()> {
+        let parts = StatePreview::parse_variables("")?;
         assert_eq!(parts[0], Parts::Text("".into()));
 
-        let parts = StatePreview::parse_variables("some text");
+        let parts = StatePreview::parse_variables("some text")?;
         assert_eq!(parts[0], Parts::Text("some text".into()));
 
-        let parts = StatePreview::parse_variables("some text $done another text");
+        let parts = StatePreview::parse_variables("some text $done another text")?;
         assert_eq!(parts[0], Parts::Text("some text ".into()));
         assert_eq!(parts[1], Parts::Done);
         assert_eq!(parts[2], Parts::Text("another text".into()));
 
-        let parts = StatePreview::parse_variables("there is ${pending}x pending tasks");
+        let parts = StatePreview::parse_variables("there is ${pending}x pending tasks")?;
         assert_eq!(parts[0], Parts::Text("there is ".into()));
         assert_eq!(parts[1], Parts::Pending);
         assert_eq!(parts[2], Parts::Text("x pending tasks".into()));
 
-        let parts = StatePreview::parse_variables("spacial task text $some-special");
+        let parts = StatePreview::parse_variables("spacial task text $some-special")?;
         assert_eq!(parts[0], Parts::Text("spacial task text ".into()));
         assert_eq!(parts[1], Parts::Special("some-special".into()));
+
+        Ok(())
     }
 
     #[test]
-    fn parse_stype() {
+    fn parse() -> ToDoRes<()> {
+        assert_eq!(StatePreview::parse("")?, Vec::new());
+        assert_eq!(
+            StatePreview::parse("some text")?,
+            vec![(vec![Parts::Text("some text".to_string())], Style::default())]
+        );
+        assert_eq!(
+            StatePreview::parse("some text \\[ with escapes \\]")?,
+            vec![(
+                vec![Parts::Text("some text [ with escapes ]".to_string())],
+                Style::default()
+            )]
+        );
+        assert_eq!(
+            StatePreview::parse("[some text](red)")?,
+            vec![(
+                vec![Parts::Text("some text".to_string())],
+                Style::default().fg(Color::Red)
+            )]
+        );
+        assert_eq!(
+            StatePreview::parse("[some text] and another text")?,
+            vec![
+                (vec![Parts::Text("some text".to_string())], Style::default()),
+                (
+                    vec![Parts::Text(" and another text".to_string())],
+                    Style::default()
+                )
+            ]
+        );
+        assert_eq!(
+            StatePreview::parse("[some text]\\[ and escaped text \\]")?,
+            vec![
+                (vec![Parts::Text("some text".to_string())], Style::default()),
+                (
+                    vec![Parts::Text("[ and escaped text ]".to_string())],
+                    Style::default()
+                )
+            ]
+        );
+        assert_eq!(
+            StatePreview::parse("[some text]")?,
+            vec![(vec![Parts::Text("some text".to_string())], Style::default())]
+        );
+        assert_eq!(
+            StatePreview::parse("[some text](red) text between [another text](blue bold)")?,
+            vec![
+                (
+                    vec![Parts::Text("some text".to_string())],
+                    Style::default().fg(Color::Red)
+                ),
+                (
+                    vec![Parts::Text(" text between ".to_string())],
+                    Style::default()
+                ),
+                (
+                    vec![Parts::Text("another text".to_string())],
+                    Style::default()
+                        .fg(Color::Blue)
+                        .add_modifier(Modifier::BOLD)
+                )
+            ]
+        );
 
+        Ok(())
     }
 }

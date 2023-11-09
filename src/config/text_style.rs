@@ -1,7 +1,9 @@
+use crate::error::ToDoError;
+
 use super::colors::opt_color;
 use super::text_modifier::TextModifier;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 use tui::style::{Color, Style};
 
 /// Represents the styling for text elements.
@@ -91,16 +93,21 @@ impl TextStyle {
     /// A new `TextStyle` with the combined properties.
     pub fn combine(&self, additional: &Self) -> TextStyle {
         let mut new = *self;
+        new.add_style(additional);
+        new
+    }
+
+    // TODO doc comment
+    pub fn add_style(&mut self, additional: &Self) {
         if let Some(bg) = additional.bg {
-            new.bg = Some(bg);
+            self.bg = Some(bg);
         }
         if let Some(fg) = additional.fg {
-            new.fg = Some(fg);
+            self.fg = Some(fg);
         }
         if let Some(modifier) = additional.modifier {
-            new.modifier = Some(modifier);
+            self.modifier = Some(modifier);
         }
-        new
     }
 
     /// Get the TUI `Style` corresponding to the text style.
@@ -120,6 +127,34 @@ impl TextStyle {
             style = style.add_modifier(s.into());
         }
         style
+    }
+}
+
+// TODO doc comment
+impl FromStr for TextStyle {
+    type Err = ToDoError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut ret = TextStyle::default();
+        for word in s.split_whitespace() {
+            if word.starts_with("^") {
+                match Color::from_str(&word[1..]) {
+                    Ok(c) => ret = ret.bg(c),
+                    Err(_) => return Err(ToDoError::ParseTextStyle(word.to_string())),
+                }
+            } else if let Ok(color) = Color::from_str(word) {
+                ret = ret.fg(color);
+            } else if let Ok(modifier) = TextModifier::from_str(word) {
+                ret = ret.modifier(modifier.into());
+            } else {
+                match TextStyleList::default().0.get(word) {
+                    Some(style) => ret = ret.combine(style),
+                    None => return Err(ToDoError::ParseTextStyle(word.to_string())),
+                }
+            }
+        }
+
+        Ok(ret)
     }
 }
 
@@ -163,6 +198,8 @@ impl Default for TextStyleList {
 
 #[cfg(test)]
 mod tests {
+    use crate::error::ToDoRes;
+
     use super::*;
 
     #[test]
@@ -208,6 +245,66 @@ mod tests {
 
     #[test]
     fn text_style_list() {
-        assert_eq!(format!("{:?}", TextStyleList::default().get_style(0)), "Style { fg: Some(Red), bg: None, underline_color: None, add_modifier: NONE, sub_modifier: NONE }");
+        let style = TextStyleList::default().get_style(0);
+        assert_eq!(style.fg, Some(Color::Red));
+        assert_eq!(style.bg, None);
+        assert!(style.add_modifier.is_empty());
+    }
+
+    #[test]
+    fn from_str() -> ToDoRes<()> {
+        assert_eq!(
+            TextStyle::from_str("red")?,
+            TextStyle::default().fg(Color::Red)
+        );
+        assert_eq!(
+            TextStyle::from_str("^red").unwrap(),
+            TextStyle::default().bg(Color::Red)
+        );
+        assert_eq!(
+            TextStyle::from_str("green ^blue").unwrap(),
+            TextStyle::default().fg(Color::Green).bg(Color::Blue)
+        );
+        assert_eq!(
+            TextStyle::from_str("bold").unwrap(),
+            TextStyle::default().modifier(TextModifier::Bold)
+        );
+        assert_eq!(
+            TextStyle::from_str("italic").unwrap(),
+            TextStyle::default().modifier(TextModifier::Italic)
+        );
+        assert_eq!(
+            TextStyle::from_str("underline").unwrap(),
+            TextStyle::default().modifier(TextModifier::Underlined)
+        );
+        assert_eq!(
+            TextStyle::from_str("red bold ^blue italic").unwrap(),
+            TextStyle::default()
+                .fg(Color::Red)
+                .modifier(TextModifier::Bold)
+                .bg(Color::Blue)
+                .modifier(TextModifier::Italic)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn from_str_err() {
+        assert_eq!(
+            TextStyle::from_str("invalid_color").unwrap_err(),
+            ToDoError::ParseTextStyle("invalid_color".to_string())
+        );
+        assert_eq!(
+            TextStyle::from_str("^bg_invalid_color").unwrap_err(),
+            ToDoError::ParseTextStyle("^bg_invalid_color".to_string())
+        );
+        assert_eq!(
+            TextStyle::from_str("invalid_modifier").unwrap_err(),
+            ToDoError::ParseTextStyle("invalid_modifier".to_string())
+        );
+        assert_eq!(
+            TextStyle::from_str("unknown_style").unwrap_err(),
+            ToDoError::ParseTextStyle("unknown_style".to_string())
+        );
     }
 }

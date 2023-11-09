@@ -1,5 +1,9 @@
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 use tui::style::Modifier;
+
+use crate::error::ToDoError;
 
 /// Serialization and deserialization support for the TUI text modifier type.
 ///
@@ -10,6 +14,20 @@ pub enum TextModifier {
     Bold,
     Italic,
     Underlined,
+}
+
+// TODO coverage
+impl FromStr for TextModifier {
+    type Err = ToDoError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "bold" => Ok(Self::Bold),
+            "italic" => Ok(Self::Italic),
+            "underline" => Ok(Self::Underlined),
+            _ => Err(ToDoError::ParseTextModifier(s.to_string())),
+        }
+    }
 }
 
 impl From<TextModifier> for Modifier {
