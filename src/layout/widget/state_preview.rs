@@ -1,7 +1,13 @@
 use std::str::FromStr;
 
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{config::TextStyle, error::ToDoRes, todo::ToDoData, ui::UIEvent, CONFIG};
+use crate::{
+    config::TextStyle,
+    error::{ToDoError, ToDoRes},
+    todo::{ToDo, ToDoData},
+    ui::UIEvent,
+    CONFIG,
+};
 use chrono::NaiveDate;
 use tui::{
     backend::Backend,
@@ -28,8 +34,74 @@ enum Parts {
     Special(String),
 }
 
+impl Parts {
+    fn fill(&self, todo: &ToDo) -> Option<String> {
+        use Parts::*;
+        let process_vec = |vec: &[String]| {
+            if vec.is_empty() {
+                None
+            } else {
+                Some(vec.join(", "))
+            }
+        };
+        match todo.get_active() {
+            Some(task) => match self {
+                Text(text) => Some(text.to_string()),
+                Pending => Some(todo.len(ToDoData::Pending).to_string()),
+                Done => Some(todo.len(ToDoData::Done).to_string()),
+                Subject => Some(task.subject.clone()),
+                Priority => Some(task.priority.to_string()),
+                CreateDate => task.create_date.map(|d| d.to_string()),
+                FinishDate => task.finish_date.map(|d| d.to_string()),
+                Finished => Some(task.finished.to_string()),
+                TresholdDate => task.threshold_date.map(|d| d.to_string()),
+                DueDate => task.due_date.map(|d| d.to_string()),
+                Contexts => process_vec(task.contexts()),
+                Projects => process_vec(task.projects()),
+                Hashtags => process_vec(&task.hashtags),
+                Special(special) => task.tags.get(special).cloned(),
+            },
+            None => None,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct LineBlock {
+    parts: Vec<Parts>,
+    style: Style,
+}
+
+impl LineBlock {
+    fn fill(&self, todo: &ToDo) -> Option<(String, Style)> {
+        let mut ret = String::new();
+        for part in &self.parts {
+            ret += &part.fill(todo)?;
+        }
+        Some((ret, self.style))
+    }
+
+    fn try_from_styled(value: &str, style: Option<String>) -> ToDoRes<Self> {
+        Ok(LineBlock {
+            parts: StatePreview::parse_variables(value)?,
+            style: match style {
+                Some(style) => TextStyle::from_str(&style)?.get_style(),
+                None => Style::default(),
+            },
+        })
+    }
+}
+
+impl TryFrom<&str> for LineBlock {
+    type Error = ToDoError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from_styled(value, None)
+    }
+}
+
 #[derive(Default, PartialEq, Eq, Debug)]
-struct Line(Vec<(Vec<Parts>, Style)>);
+struct Line(Vec<LineBlock>);
 impl Line {
     fn add_span(&mut self, parts: &str) -> ToDoRes<()> {
         self.add_span_styled(parts, None)
@@ -37,17 +109,14 @@ impl Line {
 
     fn add_span_styled(&mut self, parts: &str, style: Option<String>) -> ToDoRes<()> {
         if !parts.is_empty() {
-            self.0.push((
-                StatePreview::parse_variables(parts)?,
-                match style {
-                    Some(style) => TextStyle::from_str(&style)?.get_style(),
-                    None => Style::default(),
-                }
-            ));
+            self.0.push(LineBlock::try_from_styled(parts, style)?);
         }
         Ok(())
     }
 
+    fn fill(&self, todo: &ToDo) -> Vec<(String, Style)> {
+        self.0.iter().map_while(|block| block.fill(todo)).collect()
+    }
 }
 
 impl From<String> for Parts {
@@ -228,7 +297,7 @@ impl StatePreview {
                     act = String::default();
                     ret.push(line);
                     line = Line::default();
-                },
+                }
                 _ => act.push(c),
             }
         }
@@ -244,26 +313,22 @@ impl State for StatePreview {
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
-        let mut a = tui::text::Line::default();
-        a.spans = vec![
-            // tui::text::Line::raw("First"),
-            tui::text::Span::styled("line", Style::default().bg(tui::style::Color::Red)),
-            tui::text::Span::styled("line", Style::default().bg(tui::style::Color::Blue)),
-            tui::text::Span::styled(
-                "Some really really long\n line that will be wrapped........",
-                Style::default().fg(tui::style::Color::Green),
-            ),
-            tui::text::Span::styled(
-                "Some really really long line that will be wrapped........",
-                Style::default().fg(tui::style::Color::Yellow),
-            ),
-            ".".into(),
-        ];
-        let mut paragraph = Paragraph::new(a);
-        // let mut paragraph = Paragraph::new(self.get_content()).block(self.get_block());
-
-        // paragraph = paragraph.style(Style::default().fg(tui::style::Color::Red).bg(tui::style::Color::Black));
-        // paragraph = paragraph.alignment(tui::prelude::Alignment::Center);
+        let b = StatePreview::parse(&self.format).unwrap();
+        let lines = b.iter().map(|line| line.fill(&self.base.data())).collect::<Vec<_>>();
+        let mut paragraph = Paragraph::new(
+            lines
+                .iter()
+                .map(|line| {
+                    let mut l = tui::text::Line::default();
+                    l.spans = line
+                        .iter()
+                        .map(|(text, style)| tui::text::Span::styled(text, *style))
+                        .collect::<Vec<_>>();
+                    l
+                })
+                .collect::<Vec<_>>(),
+        )
+        .block(self.get_block());
 
         if CONFIG.wrap_preview {
             paragraph = paragraph.wrap(Wrap { trim: true })
@@ -340,74 +405,92 @@ mod tests {
         assert_eq!(StatePreview::parse("")?[0], Line::default());
         assert_eq!(
             StatePreview::parse("some text")?[0],
-            Line(vec![(vec![Parts::Text("some text".to_string())], Style::default())])
+            Line(vec![LineBlock {
+                parts: vec![Parts::Text("some text".to_string())],
+                style: Style::default()
+            }])
         );
         assert_eq!(
             StatePreview::parse("some text \\[ with escapes \\]")?[0],
-            Line(vec![(
-                vec![Parts::Text("some text [ with escapes ]".to_string())],
-                Style::default()
-            )])
+            Line(vec![LineBlock {
+                parts: vec![Parts::Text("some text [ with escapes ]".to_string())],
+                style: Style::default()
+            }])
         );
         assert_eq!(
             StatePreview::parse("[some text](red)")?[0],
-            Line(vec![(
-                vec![Parts::Text("some text".to_string())],
-                Style::default().fg(Color::Red)
-            )])
+            Line(vec![LineBlock {
+                parts: vec![Parts::Text("some text".to_string())],
+                style: Style::default().fg(Color::Red)
+            }])
         );
         assert_eq!(
             StatePreview::parse("[some text] and another text")?[0],
             Line(vec![
-                (vec![Parts::Text("some text".to_string())], Style::default()),
-                (
-                    vec![Parts::Text(" and another text".to_string())],
-                    Style::default()
-                )
+                LineBlock {
+                    parts: vec![Parts::Text("some text".to_string())],
+                    style: Style::default()
+                },
+                LineBlock {
+                    parts: vec![Parts::Text(" and another text".to_string())],
+                    style: Style::default()
+                }
             ])
         );
         assert_eq!(
             StatePreview::parse("[some text]\\[ and escaped text \\]")?[0],
             Line(vec![
-                (vec![Parts::Text("some text".to_string())], Style::default()),
-                (
-                    vec![Parts::Text("[ and escaped text ]".to_string())],
-                    Style::default()
-                )
+                LineBlock {
+                    parts: vec![Parts::Text("some text".to_string())],
+                    style: Style::default()
+                },
+                LineBlock {
+                    parts: vec![Parts::Text("[ and escaped text ]".to_string())],
+                    style: Style::default()
+                }
             ])
         );
         assert_eq!(
             StatePreview::parse("[some text]")?[0],
-            Line(vec![(vec![Parts::Text("some text".to_string())], Style::default())])
+            Line(vec![LineBlock {
+                parts: vec![Parts::Text("some text".to_string())],
+                style: Style::default()
+            }])
         );
         assert_eq!(
             StatePreview::parse("[some text](red) text between [another text](blue bold)")?[0],
             Line(vec![
-                (
-                    vec![Parts::Text("some text".to_string())],
-                    Style::default().fg(Color::Red)
-                ),
-                (
-                    vec![Parts::Text(" text between ".to_string())],
-                    Style::default()
-                ),
-                (
-                    vec![Parts::Text("another text".to_string())],
-                    Style::default()
+                LineBlock {
+                    parts: vec![Parts::Text("some text".to_string())],
+                    style: Style::default().fg(Color::Red)
+                },
+                LineBlock {
+                    parts: vec![Parts::Text(" text between ".to_string())],
+                    style: Style::default()
+                },
+                LineBlock {
+                    parts: vec![Parts::Text("another text".to_string())],
+                    style: Style::default()
                         .fg(Color::Blue)
                         .add_modifier(Modifier::BOLD)
-                )
+                }
             ])
         );
         let parse = StatePreview::parse("some text\nnew line")?;
         assert_eq!(parse.len(), 2);
         assert_eq!(
             parse[0],
-            Line(vec![(vec![Parts::Text("some text".to_string())], Style::default())])
+            Line(vec![LineBlock {
+                parts: vec![Parts::Text("some text".to_string())],
+                style: Style::default()
+            }])
         );
         assert_eq!(
             parse[1],
-            Line(vec![(vec![Parts::Text("new line".to_string())], Style::default())])
+            Line(vec![LineBlock {
+                parts: vec![Parts::Text("new line".to_string())],
+                style: Style::default()
+            }])
         );
 
         Ok(())
