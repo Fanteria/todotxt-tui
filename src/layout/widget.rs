@@ -85,7 +85,7 @@ impl Widget {
             Preview => Self::Preview(StatePreview::new(
                 WidgetBase::new(&widget_type, data),
                 CONFIG.preview_format.clone(),
-            )),
+            ).unwrap()), // TODO produce error
         }
     }
 

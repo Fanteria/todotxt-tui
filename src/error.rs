@@ -26,6 +26,8 @@ pub enum ToDoError {
     ParseInvalidDirection(String),
     ParseTextStyle(String),
     ParseTextModifier(String),
+    ParseBlockEscapeOnEnd(String),
+    EmptyVariableName(String),
     ActiveIsNotWidget,
 }
 
@@ -45,6 +47,10 @@ impl Display for ToDoError {
             ParseInvalidDirection(direction) => format!("Direction \"{}\" is invalid", direction),
             ParseTextStyle(style) => format!("Style \"{}\" is invalid", style),
             ParseTextModifier(modifier) => format!("Modifier \"{}\" is invalid", modifier),
+            ParseBlockEscapeOnEnd(block) => format!("Block \"{}\" have escape on the end", block),
+            EmptyVariableName(block) => {
+                format!("Block \"{}\" constraint empty variable name", block)
+            }
             ActiveIsNotWidget => String::from(ACTIVE_IS_NOT_WIDGET),
             _ => String::new(),
         };
@@ -69,6 +75,8 @@ impl ToDoError {
             ParseInvalidDirection(_) => "parse invalid direction",
             ParseTextStyle(_) => "parse text style",
             ParseTextModifier(_) => "parse text modifier",
+            ParseBlockEscapeOnEnd(_) => "parse block have escape on the end",
+            EmptyVariableName(_) => "empty variable name",
             ActiveIsNotWidget => "active is not widget",
         }
     }

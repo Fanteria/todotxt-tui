@@ -1,6 +1,7 @@
 pub mod category_list;
 pub mod task_list;
-pub use self::{category_list::CategoryList, task_list::TaskList};
+pub mod parser;
+pub use self::{category_list::CategoryList, task_list::TaskList, parser::Parser};
 
 use chrono::Utc;
 use std::{collections::btree_set::BTreeSet, convert::From, str::FromStr};
