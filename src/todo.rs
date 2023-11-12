@@ -1,7 +1,8 @@
 pub mod category_list;
 pub mod task_list;
 pub mod parser;
-pub use self::{category_list::CategoryList, task_list::TaskList, parser::Parser};
+pub mod autocomplete;
+pub use self::{category_list::CategoryList, task_list::TaskList, parser::Parser, autocomplete::autocomplete};
 
 use chrono::Utc;
 use std::{collections::btree_set::BTreeSet, convert::From, str::FromStr};

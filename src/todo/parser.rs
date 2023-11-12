@@ -15,20 +15,23 @@ pub struct Parser {
 }
 
 impl Parser {
-    fn read_block(iter: &mut std::str::Chars<'_>, delimiter: char) -> String {
+    fn read_block(iter: &mut std::str::Chars<'_>, delimiter: char) -> ToDoRes<String> {
         let mut read = String::default();
         loop {
             let c = match iter.next() {
                 Some(c) => c,
-                None => break, // TODO errror, block is not closed
+                None => return Err(ToDoError::ParseBlockNotClosed(read.to_string())),
             };
             match c {
-                '\\' => read.push(iter.next().unwrap()),
+                '\\' => read.push(match iter.next() {
+                    Some(ch) => ch,
+                    None => return Err(ToDoError::ParseBlockEscapeOnEnd(read + "\\")),
+                }),
                 c if c == delimiter => break,
                 _ => read.push(c),
             };
         }
-        read
+        Ok(read)
     }
 
     fn parse(template: &str) -> ToDoRes<Vec<Line>> {
@@ -43,12 +46,12 @@ impl Parser {
             };
             match c {
                 '[' => {
-                    let block = Parser::read_block(&mut iter, ']');
+                    let block = Parser::read_block(&mut iter, ']')?;
                     line.add_span(&act)?;
                     act = String::default();
                     let mut style = None;
                     match iter.next() {
-                        Some('(') => style = Some(Parser::read_block(&mut iter, ')')),
+                        Some('(') => style = Some(Parser::read_block(&mut iter, ')')?),
                         Some('\\') => act.push(iter.next().unwrap()),
                         Some(ch) => act.push(ch),
                         None => {
@@ -58,7 +61,10 @@ impl Parser {
                     }
                     line.add_span_styled(&block, style)?;
                 }
-                '\\' => act.push(iter.next().unwrap()),
+                '\\' => act.push(match iter.next() {
+                    Some(ch) => ch,
+                    None => return Err(ToDoError::ParseBlockEscapeOnEnd(act + "\\")),
+                }),
                 '\n' => {
                     line.add_span(&act)?;
                     act = String::default();
@@ -90,34 +96,52 @@ impl FromStr for Parser {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::Line;
+    use super::*;
     use tui::style::Color;
     use tui::style::Modifier;
 
     #[test]
-    fn read_block() {
+    fn read_block() -> ToDoRes<()> {
         let mut iter = "block to parse]".chars();
-        assert_eq!(&Parser::read_block(&mut iter, ']'), "block to parse");
+        assert_eq!(&Parser::read_block(&mut iter, ']')?, "block to parse");
         assert_eq!(&iter.collect::<String>(), "");
 
         let mut iter = "Some style block)".chars();
-        assert_eq!(
-            &Parser::read_block(&mut iter, ')'),
-            "Some style block"
-        );
+        assert_eq!(&Parser::read_block(&mut iter, ')')?, "Some style block");
         assert_eq!(&iter.collect::<String>(), "");
 
         let mut iter = "block to parse] some other text".chars();
-        assert_eq!(&Parser::read_block(&mut iter, ']'), "block to parse");
+        assert_eq!(&Parser::read_block(&mut iter, ']')?, "block to parse");
         assert_eq!(&iter.collect::<String>(), " some other text");
 
         let mut iter = "block to parse \\] with some \\\\ escapes]".chars();
         assert_eq!(
-            &Parser::read_block(&mut iter, ']'),
+            &Parser::read_block(&mut iter, ']')?,
             "block to parse ] with some \\ escapes"
         );
         assert_eq!(&iter.collect::<String>(), "");
+
+        Ok(())
+    }
+
+    #[test]
+    fn read_block_error() {
+        let mut iter = "not closed block".chars();
+        assert_eq!(
+            Parser::read_block(&mut iter, ']'),
+            Err(ToDoError::ParseBlockNotClosed(
+                "not closed block".to_string()
+            ))
+        );
+
+        let mut iter = "not closed block \\".chars();
+        assert_eq!(
+            Parser::read_block(&mut iter, ']'),
+            Err(ToDoError::ParseBlockEscapeOnEnd(
+                "not closed block \\".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -212,6 +236,31 @@ mod tests {
                 style: Style::default()
             }])
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn parse_error() {
+        assert_eq!(
+            Parser::parse("escape on end of line \\"),
+            Err(ToDoError::ParseBlockEscapeOnEnd(
+                "escape on end of line \\".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn fill() -> ToDoRes<()> {
+        let parser = Parser::from_str("some text")?;
+        let mut todo = ToDo::new(false);
+        todo.new_task("task").unwrap();
+        todo.new_task("x done task").unwrap();
+
+        assert_eq!(parser.fill(&todo), vec![vec![]]);
+
+        todo.set_active(ToDoData::Pending, 0);
+        assert_eq!(parser.fill(&todo), vec![vec![(String::from("some text"), Style::default())]]);
 
         Ok(())
     }

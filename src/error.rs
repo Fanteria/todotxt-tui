@@ -27,6 +27,8 @@ pub enum ToDoError {
     ParseTextStyle(String),
     ParseTextModifier(String),
     ParseBlockEscapeOnEnd(String),
+    ParseBlockNotClosed(String),
+    ParseVariableNotClosed(String),
     EmptyVariableName(String),
     ActiveIsNotWidget,
 }
@@ -48,6 +50,8 @@ impl Display for ToDoError {
             ParseTextStyle(style) => format!("Style \"{}\" is invalid", style),
             ParseTextModifier(modifier) => format!("Modifier \"{}\" is invalid", modifier),
             ParseBlockEscapeOnEnd(block) => format!("Block \"{}\" have escape on the end", block),
+            ParseBlockNotClosed(block) => format!("Block \"{}\" is not closed", block),
+            ParseVariableNotClosed(variable) => format!("Variable \"{}\" is not closed", variable),
             EmptyVariableName(block) => {
                 format!("Block \"{}\" constraint empty variable name", block)
             }
@@ -76,6 +80,8 @@ impl ToDoError {
             ParseTextStyle(_) => "parse text style",
             ParseTextModifier(_) => "parse text modifier",
             ParseBlockEscapeOnEnd(_) => "parse block have escape on the end",
+            ParseBlockNotClosed(_) => "parse block not closed",
+            ParseVariableNotClosed(_) => "parse variable not closed",
             EmptyVariableName(_) => "empty variable name",
             ActiveIsNotWidget => "active is not widget",
         }

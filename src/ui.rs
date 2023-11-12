@@ -3,7 +3,7 @@ mod ui_event;
 pub use ui_event::*;
 
 use crate::{
-    file_worker::FileWorkerCommands, layout::Layout, layout::Render, todo::ToDoCategory, ToDo,
+    file_worker::FileWorkerCommands, layout::Layout, layout::Render, todo::autocomplete, ToDo,
     CONFIG,
 };
 use crossterm::{
@@ -181,7 +181,7 @@ impl UI {
             );
             self.layout.render(f);
 
-            if self.mode == Mode::Input {
+            if self.mode == Mode::Input || self.mode == Mode::Edit {
                 let width = self.input_chunk.width.max(3) - 3;
                 let scroll = self.tinput.visual_scroll(width as usize);
                 f.set_cursor(
@@ -193,61 +193,6 @@ impl UI {
             }
         })?;
         Ok(())
-    }
-
-    /// Handles autocompletion based on user input.
-    fn autocomplete(&self, input: &str) -> String {
-        macro_rules! some_or_return {
-            ($message:expr) => {
-                match $message {
-                    Some(s) => s,
-                    None => return input.to_string(),
-                }
-            };
-        }
-
-        let last_space_index = input.rfind(' ').map(|i| i + 1).unwrap_or(0);
-        let base = some_or_return!(input.get(last_space_index..));
-        // let last_space_index = self.input.rfind(' ').map(|i| i + 1).unwrap_or(0);
-        // let base = some_or_return!(self.input.get(last_space_index..));
-        let category = some_or_return!(base.get(0..1));
-        let pattern = some_or_return!(base.get(1..));
-
-        let data = self.data.lock().unwrap();
-        let list = match category {
-            "+" => data.get_categories(ToDoCategory::Projects),
-            "@" => data.get_categories(ToDoCategory::Contexts),
-            "#" => data.get_categories(ToDoCategory::Hashtags),
-            _ => return input.to_string(),
-        };
-
-        if list.is_empty() {
-            return input.to_string();
-        }
-
-        let list = list.start_with(pattern);
-
-        let same_start_index = |fst: &str, sec: &str| -> usize {
-            for (i, (fst_char, sec_char)) in fst.chars().zip(sec.chars()).enumerate() {
-                if fst_char != sec_char {
-                    return i;
-                }
-            }
-            std::cmp::min(fst.len(), sec.len())
-        };
-        if list.is_empty() {
-            return input.to_string();
-        }
-
-        let mut new_act = list[0].as_str();
-        if list.len() != 1 {
-            list.iter()
-                .skip(1)
-                .for_each(|item| new_act = &new_act[..same_start_index(new_act, item)]);
-            input.to_string() + &new_act[pattern.len()..]
-        } else {
-            input.to_string() + &new_act[pattern.len()..] + " "
-        }
     }
 
     /// Handles various user events.
@@ -278,7 +223,11 @@ impl UI {
                         self.layout.focus();
                     }
                     KeyCode::Tab => {
-                        self.tinput = self.autocomplete(&self.tinput.value()).into();
+                        if let Some(input) =
+                            autocomplete(&self.data.lock().unwrap(), &self.tinput.value())
+                        {
+                            self.tinput = input.into();
+                        }
                     }
                     _ => {
                         self.tinput.handle_event(&e);
@@ -301,7 +250,11 @@ impl UI {
                         self.layout.focus();
                     }
                     KeyCode::Tab => {
-                        self.tinput = self.autocomplete(&self.tinput.value()).into();
+                        if let Some(input) =
+                            autocomplete(&self.data.lock().unwrap(), &self.tinput.value())
+                        {
+                            self.tinput = input.into();
+                        }
                     }
                     _ => {
                         self.tinput.handle_event(&e);
@@ -361,4 +314,3 @@ impl HandleEvent for UI {
         true
     }
 }
-

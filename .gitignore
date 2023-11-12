@@ -22,3 +22,4 @@ Cargo.lock
 resources/test/tmp
 
 log.log
+lcov.info

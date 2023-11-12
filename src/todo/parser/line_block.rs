@@ -48,7 +48,7 @@ impl LineBlock {
                 c if read_variable && !variable_block && c.is_whitespace() => {
                     read_variable = false;
                     ret.push(Parts::from(read));
-                    read = String::new();
+                    read = String::from(c);
                 }
                 '\\' => read.push(match iter.next() {
                     Some(ch) => ch,
@@ -59,7 +59,7 @@ impl LineBlock {
         }
         ret.push(if read_variable {
             if variable_block {
-                todo!() // TODO error variable block not closed
+                return Err(ToDoError::ParseVariableNotClosed(read));
             }
             Parts::from(read)
         } else {
@@ -103,7 +103,7 @@ mod tests {
         let parts = LineBlock::parse_variables("some text $done another text")?;
         assert_eq!(parts[0], Parts::Text("some text ".into()));
         assert_eq!(parts[1], Parts::Done);
-        assert_eq!(parts[2], Parts::Text("another text".into()));
+        assert_eq!(parts[2], Parts::Text(" another text".into()));
 
         let parts = LineBlock::parse_variables("there is ${pending}x pending tasks")?;
         assert_eq!(parts[0], Parts::Text("there is ".into()));
@@ -116,6 +116,12 @@ mod tests {
 
         let parts = LineBlock::parse_variables("special \\$ character")?;
         assert_eq!(parts[0], Parts::Text("special $ character".into()));
+
+        let parts = LineBlock::parse_variables("Pending: $pending Done: $done")?;
+        assert_eq!(parts[0], Parts::Text("Pending: ".into()));
+        assert_eq!(parts[1], Parts::Pending);
+        assert_eq!(parts[2], Parts::Text(" Done: ".into()));
+        assert_eq!(parts[3], Parts::Done);
 
         Ok(())
     }
@@ -141,6 +147,11 @@ mod tests {
             Err(ToDoError::ParseBlockEscapeOnEnd(String::from(
                 "invalid escape \\"
             )))
+        );
+
+        assert_eq!(
+            LineBlock::parse_variables("variable block not closed ${variable "),
+            Err(ToDoError::ParseVariableNotClosed(String::from("variable ")))
         );
     }
 }
