@@ -2,6 +2,8 @@ pub mod category_list;
 pub mod task_list;
 pub mod parser;
 pub mod autocomplete;
+use crate::CONFIG;
+
 pub use self::{category_list::CategoryList, task_list::TaskList, parser::Parser, autocomplete::autocomplete};
 
 use chrono::Utc;
@@ -113,7 +115,12 @@ impl ToDo {
     ///
     /// The actual index of the item in ToDo data without filtering.
     fn get_actual_index(&self, data: ToDoData, index: usize) -> usize {
-        self.get_filtered(data).get_actual_index(index)
+        let mut task_list = self.get_filtered(data);
+        match data {
+            ToDoData::Pending => task_list.sort(CONFIG.pending_sort),
+            ToDoData::Done => task_list.sort(CONFIG.done_sort),
+        }
+        task_list.get_actual_index(index)
     }
 
     /// Adds a new task to the ToDo list.
@@ -276,7 +283,9 @@ impl ToDo {
     /// A `Result` indicating success or an error if the task string cannot be parsed.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         self.version += 1;
-        let mut task = Task::from_str(task)?;
+        let task = task.replace("due:today ", &format!("due:{}", Utc::now().naive_utc().date()));
+        let task = task.replace("due: ", &format!("due:{}", Utc::now().naive_utc().date()));
+        let mut task = Task::from_str(&task)?;
         if task.create_date.is_none() {
             task.create_date = Some(Utc::now().naive_utc().date());
         }
