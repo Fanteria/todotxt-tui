@@ -1,11 +1,14 @@
-use crate::CONFIG;
+use crate::config::Styles;
 use tui::text::Span;
 use tui::widgets::ListItem;
 
 /// Represents a list of categories, where each category is a tuple of `(&'a String, bool)`.
 /// The `String` value represents name of category and the `bool` value represents
 /// whether the category is selected or not.
-pub struct CategoryList<'a>(pub Vec<(&'a String, bool)>);
+pub struct CategoryList<'a> {
+    pub vec: Vec<(&'a String, bool)>,
+    pub styles: &'a Styles,
+}
 
 impl<'a> CategoryList<'a> {
     /// Returns a vector of references to categories that start with the specified pattern.
@@ -18,7 +21,7 @@ impl<'a> CategoryList<'a> {
     ///
     /// A vector of references to the matching categories.
     pub fn start_with(&self, pattern: &str) -> Vec<&String> {
-        self.0
+        self.vec
             .iter()
             .filter(|(item, _)| item.starts_with(pattern))
             .map(|(item, _)| *item)
@@ -27,12 +30,12 @@ impl<'a> CategoryList<'a> {
 
     /// Checks if the category list is empty.
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.vec.is_empty()
     }
 
     /// Returns the number of categories in the list.
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.vec.len()
     }
 
     /// Gets the name of the category at the specified index.
@@ -49,22 +52,22 @@ impl<'a> CategoryList<'a> {
     ///
     /// Panics if the index is out of bounds.
     pub fn get_name(&self, index: usize) -> &String {
-        self.0[index].0
+        self.vec[index].0
     }
 }
 
 impl<'a> From<CategoryList<'a>> for Vec<ListItem<'a>> {
     fn from(val: CategoryList<'a>) -> Self {
-        val.0
+        val.vec
             .iter()
-            .map(|category| {
-                if category.1 {
+            .map(|(category, active)| {
+                if *active {
                     ListItem::new(Span::styled(
-                        category.0.clone(),
-                        CONFIG.category_color.get_style(),
+                        (*category).clone(),
+                        val.styles.category_style.get_style(),
                     ))
                 } else {
-                    ListItem::new(category.0.clone())
+                    ListItem::new((*category).clone())
                 }
             })
             .collect()
@@ -73,20 +76,26 @@ impl<'a> From<CategoryList<'a>> for Vec<ListItem<'a>> {
 
 #[cfg(test)]
 mod tests {
+    use crate::config::Config;
+
     use super::*;
 
     #[test]
     fn basics() {
+        let styles = Styles::default();
         let first = String::from("first");
         let second = String::from("second");
         let third = String::from("third");
         let third2 = String::from("third2");
-        let categories = CategoryList(vec![
-            (&first, false),
-            (&second, false),
-            (&third, false),
-            (&third2, false),
-        ]);
+        let categories = CategoryList {
+            vec: vec![
+                (&first, false),
+                (&second, false),
+                (&third, false),
+                (&third2, false),
+            ],
+            styles: &styles,
+        };
 
         assert!(!categories.is_empty());
         assert_eq!(categories.len(), 4);
@@ -94,16 +103,20 @@ mod tests {
 
     #[test]
     fn start_with() {
+        let styles = Styles::default();
         let first = String::from("first");
         let second = String::from("second");
         let third = String::from("third");
         let third2 = String::from("third2");
-        let categories = CategoryList(vec![
-            (&first, false),
-            (&second, false),
-            (&third, false),
-            (&third2, false),
-        ]);
+        let categories = CategoryList {
+            vec: vec![
+                (&first, false),
+                (&second, false),
+                (&third, false),
+                (&third2, false),
+            ],
+            styles: &styles,
+        };
         assert!(categories.start_with("none").is_empty());
 
         let match_fi = categories.start_with("fi");
@@ -118,16 +131,20 @@ mod tests {
 
     #[test]
     fn create_list_of_items() {
+        let styles = Styles::new(&Config::default());
         let first = String::from("first");
         let second = String::from("second");
         let third = String::from("third");
         let third2 = String::from("third2");
-        let categories = CategoryList(vec![
-            (&first, false),
-            (&second, false),
-            (&third, true),
-            (&third2, false),
-        ]);
+        let categories = CategoryList {
+            vec: vec![
+                (&first, false),
+                (&second, false),
+                (&third, true),
+                (&third2, false),
+            ],
+            styles: &styles,
+        };
 
         let items = Vec::<ListItem>::from(categories);
         assert_eq!(items.len(), 4);
@@ -137,7 +154,7 @@ mod tests {
             items[2],
             ListItem::new(Span::styled(
                 third.clone(),
-                CONFIG.category_color.get_style()
+                styles.category_style.get_style()
             ))
         );
         assert_eq!(items[3], ListItem::new(third2.clone()));

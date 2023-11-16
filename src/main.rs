@@ -40,7 +40,10 @@ fn init_logging() -> Result<(), Box<dyn Error>> {
 fn main() -> Result<(), Box<dyn Error>> {
     init_logging()?;
     log::trace!("===== PROGRAM START =====");
-    let todo = Arc::new(Mutex::new(ToDo::new(false)));
+    let mut todo = ToDo::new(false);
+    todo.pending_sort = CONFIG.pending_sort;
+    todo.done_sort = CONFIG.done_sort;
+    let todo = Arc::new(Mutex::new(todo));
     let file_worker = FileWorker::new(
         CONFIG.todo_path.clone(),
         CONFIG.archive_path.clone(),
@@ -52,7 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     log::trace!("Starting UI...");
     UI::new(
-        Layout::from_str(&CONFIG.layout, todo.clone())?,
+        Layout::from_str(&CONFIG.layout, todo.clone(), &CONFIG)?,
         todo.clone(),
         tx.clone(),
     )

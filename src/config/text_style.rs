@@ -161,7 +161,7 @@ impl FromStr for TextStyle {
 /// Represents a list of text styles for priorities.
 ///
 /// This struct maintains a list of text styles for different priority levels.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct TextStyleList(HashMap<String, TextStyle>);
 

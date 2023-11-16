@@ -1,6 +1,6 @@
 use super::{RCToDo, WidgetBase, WidgetType};
+use crate::config::Config;
 use crate::ui::{EventHandlerUI, HandleEvent, UIEvent};
-use crate::CONFIG;
 use crossterm::event::KeyCode;
 use std::ops::{Deref, DerefMut};
 use tui::widgets::ListState;
@@ -14,6 +14,7 @@ pub struct WidgetList {
     size: usize,
     shift: usize,
     event_handler: EventHandlerUI,
+    list_shift: usize,
 }
 
 impl WidgetList {
@@ -27,15 +28,16 @@ impl WidgetList {
     /// # Returns
     ///
     /// A new `WidgetList` instance.
-    pub fn new(widget_type: &WidgetType, data: RCToDo) -> Self {
+    pub fn new(widget_type: &WidgetType, data: RCToDo, config: &Config) -> Self {
         let mut def = Self {
-            base: WidgetBase::new(widget_type, data),
+            base: WidgetBase::new(widget_type, data, config),
             state: ListState::default(),
             len: 0,
             first: 0,
             size: 0,
             shift: 0,
-            event_handler: CONFIG.list_keybind.clone(),
+            event_handler: config.list_keybind.clone(),
+            list_shift: config.list_shift,
         };
         def.state.select(Some(0));
         def
@@ -93,7 +95,7 @@ impl WidgetList {
             if self.len > act + 1 {
                 self.state.select(Some(act + 1));
             }
-        } else if self.size <= act + 1 + CONFIG.list_shift {
+        } else if self.size <= act + 1 + self.list_shift {
             if self.first + self.size < self.len {
                 self.first += 1;
             } else if self.size > act + 1 {
@@ -107,14 +109,14 @@ impl WidgetList {
             act,
             self.size,
             self.len,
-            CONFIG.list_shift
+            self.list_shift
         );
     }
 
     /// Moves the selection up the list.
     pub fn up(&mut self) {
         let act = self.act();
-        if act <= CONFIG.list_shift {
+        if act <= self.list_shift {
             if self.first > 0 {
                 self.first -= 1;
             } else if act > 0 {
@@ -233,7 +235,7 @@ mod tests {
             todo.new_task(&format!("Task {}", i)).unwrap();
         }
         let todo = Arc::new(Mutex::new(todo));
-        let mut widget = WidgetList::new(&WidgetType::List, todo);
+        let mut widget = WidgetList::new(&WidgetType::List, todo, &Config::default());
         widget.set_size(10);
         widget.len = len;
 

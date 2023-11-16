@@ -6,11 +6,11 @@ use self::{
     container::{Container, Item, RcCon},
     widget::{widget_type::WidgetType, Widget},
 };
+use crate::Config;
 use crate::{
     error::{ToDoError, ToDoRes},
     todo::ToDo,
     ui::HandleEvent,
-    CONFIG,
 };
 use crossterm::event::KeyEvent;
 pub use render_trait::Render;
@@ -77,7 +77,7 @@ impl Layout {
     ///
     /// A `ToDoRes<Self>` result containing the created `Layout` if successful, or an error if
     /// parsing fails.
-    pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>) -> ToDoRes<Self> {
+    pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>, config: &Config) -> ToDoRes<Self> {
         // Find first '[' and move start of template to it (start of first container)
         let index = match template.find('[') {
             Some(i) => i,
@@ -124,7 +124,7 @@ impl Layout {
                     if container.is_empty() {
                         let root = Container::new(cont.2, cont.3, cont.0, None);
                         let actual =
-                            Container::select_widget(root.clone(), CONFIG.init_widget).unwrap();
+                            Container::select_widget(root.clone(), config.init_widget).unwrap();
                         actual.borrow_mut().actual_mut()?.focus();
                         // if let IItem::Widget(w) = actual.borrow_mut().actual_item_mut() {
                         //     w.widget.focus();
@@ -170,8 +170,11 @@ impl Layout {
                         _ => {
                             let widget_type = WidgetType::from_str(&item)?;
                             let cont = container.last_mut().unwrap();
-                            cont.2
-                                .push(Item::Widget(Widget::new(widget_type, data.clone())));
+                            cont.2.push(Item::Widget(Widget::new(
+                                widget_type,
+                                data.clone(),
+                                config,
+                            )));
                             cont.3.push(Self::value_from_string(&string)?);
                         }
                     }
@@ -341,7 +344,12 @@ mod tests {
             ],
         ]
         "#;
-        Layout::from_str(mock_layout, Arc::new(Mutex::new(ToDo::new(false)))).unwrap()
+        Layout::from_str(
+            mock_layout,
+            Arc::new(Mutex::new(ToDo::new(false))),
+            &Config::default(),
+        )
+        .unwrap()
     }
 
     #[test]
@@ -407,7 +415,7 @@ mod tests {
             Direction: ERROR,
         "#;
 
-        Layout::from_str(str_layout, Arc::new(Mutex::new(ToDo::new(false))))?;
+        Layout::from_str(str_layout, Arc::new(Mutex::new(ToDo::new(false))), &Config::default())?;
         Ok(())
     }
 }

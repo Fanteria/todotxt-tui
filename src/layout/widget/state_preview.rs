@@ -1,5 +1,5 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{error::ToDoRes, todo::Parser, ui::UIEvent, CONFIG};
+use crate::{error::ToDoRes, todo::Parser, ui::UIEvent};
 use std::str::FromStr;
 use tui::{
     backend::Backend,
@@ -11,6 +11,7 @@ use tui::{
 pub struct StatePreview {
     base: WidgetBase,
     parser: Parser,
+    wrap_preview: bool,
 }
 
 impl StatePreview {
@@ -24,10 +25,11 @@ impl StatePreview {
     /// # Returns
     ///
     /// A new `StatePreview` instance.
-    pub fn new(base: WidgetBase, format: String) -> ToDoRes<Self> {
+    pub fn new(base: WidgetBase, format: String, wrap_preview: bool) -> ToDoRes<Self> {
         Ok(StatePreview {
             base,
             parser: Parser::from_str(&format)?,
+            wrap_preview,
         })
     }
 }
@@ -53,7 +55,7 @@ impl State for StatePreview {
                 .collect::<Vec<_>>(),
         )
         .block(self.get_block());
-        if CONFIG.wrap_preview {
+        if self.wrap_preview {
             paragraph = paragraph.wrap(Wrap { trim: true })
         }
         f.render_widget(paragraph, self.base.chunk);

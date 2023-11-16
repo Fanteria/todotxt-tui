@@ -2,10 +2,12 @@ mod colors;
 mod keycode;
 mod text_modifier;
 mod text_style;
+mod styles;
 
 pub use self::colors::OptionalColor;
 pub use self::keycode::KeyCodeDef;
 pub use self::text_style::TextStyle;
+pub use self::styles::Styles;
 
 use self::{colors::*, text_style::*};
 use crate::{

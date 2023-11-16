@@ -1,11 +1,14 @@
-pub mod category_list;
-pub mod task_list;
-pub mod parser;
 pub mod autocomplete;
-use crate::CONFIG;
+pub mod category_list;
+pub mod parser;
+pub mod task_list;
 
-pub use self::{category_list::CategoryList, task_list::TaskList, parser::Parser, autocomplete::autocomplete};
+use self::task_list::TaskSort;
+pub use self::{
+    autocomplete::autocomplete, category_list::CategoryList, parser::Parser, task_list::TaskList,
+};
 
+use crate::{config::Styles, CONFIG};
 use chrono::Utc;
 use std::{collections::btree_set::BTreeSet, convert::From, str::FromStr};
 use todo_txt::Task;
@@ -38,9 +41,12 @@ pub struct ToDo {
     use_done: bool,
     active: Option<(ToDoData, usize)>,
     version: usize,
+    pub pending_sort: TaskSort,
+    pub done_sort: TaskSort,
     project_filters: BTreeSet<String>,
     context_filters: BTreeSet<String>,
     hashtag_filters: BTreeSet<String>,
+    styles: Styles,
 }
 
 impl ToDo {
@@ -56,9 +62,12 @@ impl ToDo {
             use_done,
             active: None,
             version: 0,
+            pending_sort: TaskSort::default(),
+            done_sort: TaskSort::default(),
             project_filters: BTreeSet::new(),
             context_filters: BTreeSet::new(),
             hashtag_filters: BTreeSet::new(),
+            styles: Styles::new(&CONFIG),
         }
     }
 
@@ -117,8 +126,8 @@ impl ToDo {
     fn get_actual_index(&self, data: ToDoData, index: usize) -> usize {
         let mut task_list = self.get_filtered(data);
         match data {
-            ToDoData::Pending => task_list.sort(CONFIG.pending_sort),
-            ToDoData::Done => task_list.sort(CONFIG.done_sort),
+            ToDoData::Pending => task_list.sort(self.pending_sort),
+            ToDoData::Done => task_list.sort(self.done_sort),
         }
         task_list.get_actual_index(index)
     }
@@ -150,6 +159,7 @@ impl ToDo {
         tasks: Vec<&'a Vec<Task>>,
         f: fn(&Task) -> &[String],
         selected: &BTreeSet<String>,
+        styles: &'a Styles,
     ) -> CategoryList<'a> {
         let mut btree = BTreeSet::<&String>::new();
         tasks.iter().for_each(|list| {
@@ -159,12 +169,13 @@ impl ToDo {
                 })
             })
         });
-        CategoryList(
-            btree
+        CategoryList{
+            vec: btree
                 .iter()
                 .map(|item| (*item, selected.contains(*item)))
                 .collect(),
-        )
+            styles,
+        }
     }
 
     /// Gets a filtered list of categories from the ToDo data.
@@ -186,6 +197,7 @@ impl ToDo {
                 },
                 f,
                 selected,
+                &self.styles,
             )
         };
         match category {
@@ -249,9 +261,13 @@ impl ToDo {
     ///
     /// A `TaskList` containing the filtered tasks.
     pub fn get_filtered(&self, data: ToDoData) -> TaskList {
-        fn get_filtered_tasks<'a>(tasks: &'a [Task], filters: &[FilterData<'a>]) -> TaskList<'a> {
-            TaskList(
-                tasks
+        fn get_filtered_tasks<'a>(
+            tasks: &'a [Task],
+            filters: &[FilterData<'a>],
+            styles: &'a Styles,
+        ) -> TaskList<'a> {
+            TaskList {
+                vec: tasks
                     .iter()
                     .enumerate()
                     .filter(|task| {
@@ -260,7 +276,8 @@ impl ToDo {
                         })
                     })
                     .collect(),
-            )
+                styles,
+            }
         }
         get_filtered_tasks(
             self.get_data(data),
@@ -269,6 +286,7 @@ impl ToDo {
                 (&self.context_filters, |t| t.contexts()),
                 (&self.hashtag_filters, |t| &t.hashtags),
             ],
+            &self.styles,
         )
     }
 
@@ -283,7 +301,10 @@ impl ToDo {
     /// A `Result` indicating success or an error if the task string cannot be parsed.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         self.version += 1;
-        let task = task.replace("due:today ", &format!("due:{}", Utc::now().naive_utc().date()));
+        let task = task.replace(
+            "due:today ",
+            &format!("due:{}", Utc::now().naive_utc().date()),
+        );
         let task = task.replace("due: ", &format!("due:{}", Utc::now().naive_utc().date()));
         let mut task = Task::from_str(&task)?;
         if task.create_date.is_none() {
@@ -498,21 +519,21 @@ mod tests {
     fn test_categeries_list() -> Result<(), Box<dyn Error>> {
         let mut todo = example_todo(false);
         assert_eq!(
-            todo.get_categories(ToDoCategory::Projects).0,
+            todo.get_categories(ToDoCategory::Projects).vec,
             create_vec(&[String::from("project2"), String::from("project3")])
         );
         assert_eq!(
-            todo.get_categories(ToDoCategory::Contexts).0,
+            todo.get_categories(ToDoCategory::Contexts).vec,
             create_vec(&[String::from("context2"), String::from("context3")])
         );
         assert_eq!(
-            todo.get_categories(ToDoCategory::Hashtags).0,
+            todo.get_categories(ToDoCategory::Hashtags).vec,
             create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
         );
 
         todo.use_done = true;
         assert_eq!(
-            todo.get_categories(ToDoCategory::Projects).0,
+            todo.get_categories(ToDoCategory::Projects).vec,
             create_vec(&[
                 String::from("project1"),
                 String::from("project2"),
@@ -520,7 +541,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            todo.get_categories(ToDoCategory::Contexts).0,
+            todo.get_categories(ToDoCategory::Contexts).vec,
             create_vec(&[
                 String::from("context1"),
                 String::from("context2"),
@@ -528,7 +549,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            todo.get_categories(ToDoCategory::Hashtags).0,
+            todo.get_categories(ToDoCategory::Hashtags).vec,
             create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
         );
 
@@ -718,5 +739,4 @@ mod tests {
 
         Ok(())
     }
-
 }

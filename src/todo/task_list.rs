@@ -1,4 +1,4 @@
-use crate::CONFIG;
+use crate::config::Styles;
 use serde::{Deserialize, Serialize};
 use std::convert::From;
 use std::ops::Index;
@@ -10,9 +10,10 @@ use tui::widgets::ListItem;
 type Item<'a> = (usize, &'a Task);
 
 /// Represents the possible sorting options for tasks.
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub enum TaskSort {
+    #[default]
     None,
     Reverse,
     Priority,
@@ -22,14 +23,20 @@ pub enum TaskSort {
 
 /// Represents a list of tasks, where each task is a tuple of `(usize, &'a Task)`.
 /// The `usize` value is the index of the task in the original list.
-pub struct TaskList<'a>(pub Vec<Item<'a>>);
+pub struct TaskList<'a> {
+    pub vec: Vec<Item<'a>>,
+    pub styles: &'a Styles,
+}
 
-pub struct TaskSlice<'a>(pub &'a [Item<'a>]);
+pub struct TaskSlice<'a> {
+    pub vec: &'a [Item<'a>],
+    pub styles: &'a Styles,
+}
 
 impl<'a> TaskList<'a> {
     /// Returns the number of tasks in the list.
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.vec.len()
     }
 
     /// Retrieves the actual index of a task based on its position in the list.
@@ -42,7 +49,7 @@ impl<'a> TaskList<'a> {
     ///
     /// The actual index of the task in the original list.
     pub fn get_actual_index(&self, index: usize) -> usize {
-        self.0[index].0
+        self.vec[index].0
     }
 
     /// Slices the task list from `first` (inclusive) to `last` (exclusive).
@@ -56,10 +63,16 @@ impl<'a> TaskList<'a> {
     ///
     /// A `TaskSlice` containing the sliced tasks.
     pub fn slice(&self, first: usize, last: usize) -> TaskSlice {
-        if last > self.0.len() {
-            return TaskSlice(&self.0[first..]);
+        if last > self.vec.len() {
+            return TaskSlice {
+                vec: &self.vec[first..],
+                styles: self.styles,
+            };
         };
-        TaskSlice(&self.0[first..last])
+        TaskSlice {
+            vec: &self.vec[first..last],
+            styles: self.styles,
+        }
     }
 
     /// Sorts the task list based on the specified sorting criteria.
@@ -71,15 +84,15 @@ impl<'a> TaskList<'a> {
         use TaskSort::*;
         match sort {
             None => {}
-            Reverse => self.0.reverse(),
+            Reverse => self.vec.reverse(),
             Priority => self
-                .0
+                .vec
                 .sort_by(|(_, a_task), (_, b_task)| b_task.priority.cmp(&a_task.priority)),
             Alphanumeric => self
-                .0
+                .vec
                 .sort_by(|(_, a_task), (_, b_task)| a_task.subject.cmp(&b_task.subject)),
             AlphanumericReverse => self
-                .0
+                .vec
                 .sort_by(|(_, a_task), (_, b_task)| b_task.subject.cmp(&a_task.subject)),
         }
     }
@@ -93,7 +106,7 @@ impl<'a> TaskList<'a> {
     /// # Returns
     ///
     /// A vector of `Span` elements representing the parsed task.
-    pub fn parse_task_string(task: &Task) -> Vec<Span> {
+    pub fn parse_task_string(task: &'a Task, styles: &'a Styles) -> Vec<Span<'a>> {
         let mut indexes = Vec::new();
 
         let mut collect_indexes = |separator, iter: core::slice::Iter<'_, String>| {
@@ -111,8 +124,8 @@ impl<'a> TaskList<'a> {
         collect_indexes('@', task.contexts().iter());
         collect_indexes('#', task.hashtags.iter());
 
-        let style = CONFIG
-            .priority_colors
+        let style = styles
+            .priority_style
             .get_style(usize::from(u8::from(task.priority.clone())));
 
         if indexes.is_empty() {
@@ -121,31 +134,18 @@ impl<'a> TaskList<'a> {
 
         indexes.sort_by(|a, b| a.0.cmp(&b.0));
 
-        let get_style = |category: &str| {
-            let style_category = match category.chars().next().unwrap() {
-                '+' => CONFIG.projects_style.combine(&CONFIG.category_style),
-                '@' => CONFIG.contexts_style.combine(&CONFIG.category_style),
-                '#' => CONFIG.hashtags_style.combine(&CONFIG.category_style),
-                _ => CONFIG.category_style,
-            };
-            match CONFIG.custom_category_style.get(category) {
-                Some(style_custom) => style_category.combine(style_custom).get_style(),
-                None => style_category.get_style(),
-            }
-        };
-
         let mut parsed = vec![Span::styled(&task.subject[0..indexes[0].0], style)];
         indexes.iter().zip(indexes.iter().skip(1)).for_each(
             |((act_index, act_len), (next_index, _))| {
                 let end_index = act_index + act_len;
                 let s = &task.subject[*act_index..end_index];
-                parsed.push(Span::styled(s, get_style(s)));
+                parsed.push(Span::styled(s, styles.get_style(s).get_style()));
                 parsed.push(Span::styled(&task.subject[end_index..*next_index], style));
             },
         );
         let (last_index, last_len) = indexes.last().unwrap();
         let s = &task.subject[*last_index..last_index + last_len];
-        parsed.push(Span::styled(s, get_style(s)));
+        parsed.push(Span::styled(s, styles.get_style(s).get_style()));
 
         parsed
     }
@@ -154,15 +154,17 @@ impl<'a> TaskList<'a> {
 impl<'a> Index<usize> for TaskList<'a> {
     type Output = Task;
     fn index<'b>(&'b self, i: usize) -> &'a Task {
-        self.0[i].1
+        self.vec[i].1
     }
 }
 
 impl<'a> From<TaskSlice<'a>> for Vec<ListItem<'a>> {
     fn from(val: TaskSlice<'a>) -> Self {
-        val.0
+        val.vec
             .iter()
-            .map(|(_, task)| ListItem::new(Line::from(TaskList::parse_task_string(task))))
+            .map(|(_, task)| {
+                ListItem::new(Line::from(TaskList::parse_task_string(task, &val.styles)))
+            })
             .collect::<Vec<ListItem<'a>>>()
     }
 }
@@ -174,8 +176,9 @@ mod tests {
 
     #[test]
     fn parse_task_string() {
+        let styles = Styles::default();
         let task = Task::from_str("measure space for 1 +project1 ~ @context1 #hashtag1").unwrap();
-        let parsed = TaskList::parse_task_string(&task);
+        let parsed = TaskList::parse_task_string(&task, &styles);
         assert_eq!(parsed[0].content, "measure space for 1 ");
         assert_eq!(parsed[1].content, "+project1");
         assert_eq!(parsed[2].content, " ~ ");
@@ -186,57 +189,103 @@ mod tests {
 
     #[test]
     fn task_slice() {
+        let styles = Styles::default();
         let task1 = Task::from_str("measure space for 1").unwrap();
         let task2 = Task::from_str("measure space for 2").unwrap();
         let task3 = Task::from_str("measure space for 3").unwrap();
         let task4 = Task::from_str("measure space for 4").unwrap();
-        let tasklist = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        let tasklist = TaskList {
+            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
+            styles: &styles,
+        };
         let slice = tasklist.slice(1, 3);
 
-        assert_eq!(slice.0.len(), 2);
-        assert_eq!(slice.0[0], (1, &task2));
-        assert_eq!(slice.0[1], (2, &task3));
+        assert_eq!(slice.vec.len(), 2);
+        assert_eq!(slice.vec[0], (1, &task2));
+        assert_eq!(slice.vec[1], (2, &task3));
 
         let slice = tasklist.slice(1, 100_000);
-        assert_eq!(slice.0.len(), 3);
-        assert_eq!(slice.0[0], (1, &task2));
-        assert_eq!(slice.0[1], (2, &task3));
-        assert_eq!(slice.0[2], (3, &task4));
+        assert_eq!(slice.vec.len(), 3);
+        assert_eq!(slice.vec[0], (1, &task2));
+        assert_eq!(slice.vec[1], (2, &task3));
+        assert_eq!(slice.vec[2], (3, &task4));
     }
 
     #[test]
     fn sort_tasklist() {
         let compare = |expected: &TaskList, real: TaskList| {
-            assert_eq!(expected.0.len(), real.0.len());
-            for i in 0..expected.0.len() {
+            assert_eq!(expected.len(), real.len());
+            for i in 0..expected.len() {
                 assert_eq!(expected[i], real[i]);
             }
         };
+        let styles = Styles::default();
         let task1 = Task::from_str("(C) 2 measure space for 1").unwrap();
         let task2 = Task::from_str("    3 measure space for 2").unwrap();
         let task3 = Task::from_str("    1 measure space for 3").unwrap();
         let task4 = Task::from_str("(A) 4 measure space for 4").unwrap();
-        let tasklist = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        let tasklist = TaskList {
+            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
+            styles: &styles,
+        };
 
-        let mut none = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        let mut none = TaskList {
+            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
+            styles: &styles,
+        };
         none.sort(TaskSort::None);
         compare(&tasklist, none);
 
-        let mut reverse = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        let mut reverse = TaskList {
+            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
+            styles: &styles,
+        };
         reverse.sort(TaskSort::Reverse);
-        compare(&TaskList(vec![(3, &task4), (2, &task3), (1, &task2), (0, &task1)]), reverse);
+        compare(
+            &TaskList {
+                vec: vec![(3, &task4), (2, &task3), (1, &task2), (0, &task1)],
+                styles: &styles,
+            },
+            reverse,
+        );
 
-        let mut priority = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        let mut priority = TaskList {
+            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
+            styles: &styles,
+        };
         priority.sort(TaskSort::Priority);
-        compare(&TaskList(vec![(3, &task4), (0, &task1), (1, &task2), (2, &task3)]), priority);
+        compare(
+            &TaskList {
+                vec: vec![(3, &task4), (0, &task1), (1, &task2), (2, &task3)],
+                styles: &styles,
+            },
+            priority,
+        );
 
-        let mut alpha = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        let mut alpha = TaskList {
+            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
+            styles: &styles,
+        };
         alpha.sort(TaskSort::Alphanumeric);
-        compare(&TaskList(vec![(2, &task3), (0, &task1), (1, &task2), (3, &task4)]), alpha);
+        compare(
+            &TaskList {
+                vec: vec![(2, &task3), (0, &task1), (1, &task2), (3, &task4)],
+                styles: &styles,
+            },
+            alpha,
+        );
 
-        let mut alpha_reverse = TaskList(vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)]);
+        let mut alpha_reverse = TaskList {
+            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
+            styles: &styles,
+        };
         alpha_reverse.sort(TaskSort::AlphanumericReverse);
-        compare(&TaskList(vec![(3, &task4), (1, &task2), (0, &task1), (2, &task3)]), alpha_reverse);
+        compare(
+            &TaskList {
+                vec: vec![(3, &task4), (1, &task2), (0, &task1), (2, &task3)],
+                styles: &styles,
+            },
+            alpha_reverse,
+        );
     }
-
 }

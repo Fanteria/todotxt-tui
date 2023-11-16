@@ -1,7 +1,6 @@
 use super::super::Render;
 use super::widget_base::WidgetBase;
 use crate::ui::{HandleEvent, UIEvent};
-use crate::CONFIG;
 use crossterm::event::KeyCode;
 use tui::{
     backend::Backend,
@@ -40,12 +39,13 @@ pub trait State {
 
     // Retrieves the block (border and title) for rendering the widget.
     fn get_block(&self) -> Block {
+        let base = self.get_base();
         let mut block = Block::default()
             .borders(Borders::ALL)
-            .title(self.get_base().title.clone())
+            .title(base.title.clone())
             .border_type(BorderType::Rounded);
-        if self.get_base().focus {
-            block = block.border_style(Style::default().fg(CONFIG.active_color));
+        if base.focus {
+            block = block.border_style(Style::default().fg(base.active_color));
         }
         block
     }

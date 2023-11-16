@@ -243,16 +243,16 @@ impl Container {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::todo::ToDo;
+    use crate::{todo::ToDo, config::Config};
     use std::sync::{Arc, Mutex};
     use tui::layout::Direction::{Horizontal, Vertical};
     use WidgetType::*;
 
     fn create_testing_container() -> RcCon {
         let todo = Arc::new(Mutex::new(ToDo::new(false)));
-        let list_widget = Widget::new(WidgetType::List, todo.clone());
-        let done_widget = Widget::new(WidgetType::Done, todo.clone());
-        let project_widget = Widget::new(WidgetType::Project, todo);
+        let list_widget = Widget::new(WidgetType::List, todo.clone(), &Config::default());
+        let done_widget = Widget::new(WidgetType::Done, todo.clone(), &Config::default());
+        let project_widget = Widget::new(WidgetType::Project, todo, &Config::default());
         Container::new(
             vec![Item::Container(Container::new(
                 vec![

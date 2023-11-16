@@ -10,7 +10,7 @@ use crate::{
     layout::widget::widget_list::WidgetList,
     todo::{ToDo, ToDoCategory, ToDoData},
     ui::UIEvent,
-    CONFIG,
+    config::Config,
 };
 use crossterm::event::KeyCode;
 use state_categories::StateCategories;
@@ -47,44 +47,45 @@ impl Widget {
     /// # Returns
     ///
     /// Returns a new instance of the specified widget type.
-    pub fn new(widget_type: WidgetType, data: RCToDo) -> Self {
+    pub fn new(widget_type: WidgetType, data: RCToDo, config: &Config) -> Self {
         use WidgetType::*;
         match widget_type {
             List => Self::List(StateList::new(
-                WidgetList::new(&widget_type, data),
+                WidgetList::new(&widget_type, data, config),
                 ToDoData::Pending,
-                CONFIG
+                config
                     .list_active_color
-                    .combine(&CONFIG.pending_active_color)
+                    .combine(&config.pending_active_color)
                     .get_style(),
-                CONFIG.list_shift,
-                CONFIG.pending_sort,
+                config.list_shift,
+                config.pending_sort,
             )),
             Done => Self::List(StateList::new(
-                WidgetList::new(&widget_type, data),
+                WidgetList::new(&widget_type, data, &config),
                 ToDoData::Done,
-                CONFIG
+                config
                     .list_active_color
-                    .combine(&CONFIG.done_active_color)
+                    .combine(&config.done_active_color)
                     .get_style(),
-                CONFIG.list_shift,
-                CONFIG.done_sort,
+                config.list_shift,
+                config.done_sort,
             )),
             Project => Self::Category(StateCategories::new(
-                WidgetList::new(&widget_type, data),
+                WidgetList::new(&widget_type, data, config),
                 ToDoCategory::Projects,
             )),
             Context => Self::Category(StateCategories::new(
-                WidgetList::new(&widget_type, data),
+                WidgetList::new(&widget_type, data, config),
                 ToDoCategory::Contexts,
             )),
             Hashtag => Self::Category(StateCategories::new(
-                WidgetList::new(&widget_type, data),
+                WidgetList::new(&widget_type, data, config),
                 ToDoCategory::Hashtags,
             )),
             Preview => Self::Preview(StatePreview::new(
-                WidgetBase::new(&widget_type, data),
-                CONFIG.preview_format.clone(),
+                WidgetBase::new(&widget_type, data, config),
+                config.preview_format.clone(),
+                config.wrap_preview,
             ).unwrap()), // TODO produce error
         }
     }
