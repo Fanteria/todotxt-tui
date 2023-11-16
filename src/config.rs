@@ -216,7 +216,14 @@ impl Config {
     }
 
     fn default_preview_format() -> String {
-        String::from("Pending: {n}   Done: {N}\nSubject: {s}\nPriority: {p}\nCreate date: {c}")
+        String::from(
+            "
+Pending: $pending Done: $done
+Subject: $subject
+Priority: $priority
+Create date: $create_date
+Link: $link",
+        )
     }
 
     fn default_layout() -> String {
