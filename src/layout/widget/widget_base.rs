@@ -26,16 +26,16 @@ impl WidgetBase {
     /// A new `WidgetBase` instance.
     pub fn new(widget_type: &WidgetType, data: RCToDo, config: &Config) -> Self {
         let event_handler = match widget_type {
-            WidgetType::List => config.tasks_keybind.clone(),
-            WidgetType::Done => config.tasks_keybind.clone(),
-            WidgetType::Project => config.category_keybind.clone(),
-            WidgetType::Context => config.category_keybind.clone(),
-            WidgetType::Hashtag => config.category_keybind.clone(),
+            WidgetType::List => config.get_tasks_keybind(),
+            WidgetType::Done => config.get_tasks_keybind(),
+            WidgetType::Project => config.get_category_keybind(),
+            WidgetType::Context => config.get_category_keybind(),
+            WidgetType::Hashtag => config.get_category_keybind(),
             WidgetType::Preview => EventHandlerUI::default(),
         };
         Self {
             title: widget_type.to_string(),
-            active_color: config.active_color,
+            active_color: config.get_active_color(),
             focus: false,
             chunk: Rect::default(),
             data,

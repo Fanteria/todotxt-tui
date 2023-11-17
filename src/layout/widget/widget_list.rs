@@ -36,8 +36,8 @@ impl WidgetList {
             first: 0,
             size: 0,
             shift: 0,
-            event_handler: config.list_keybind.clone(),
-            list_shift: config.list_shift,
+            event_handler: config.get_list_keybind(),
+            list_shift: config.get_list_shift(),
         };
         def.state.select(Some(0));
         def

@@ -124,7 +124,7 @@ impl Layout {
                     if container.is_empty() {
                         let root = Container::new(cont.2, cont.3, cont.0, None);
                         let actual =
-                            Container::select_widget(root.clone(), config.init_widget).unwrap();
+                            Container::select_widget(root.clone(), config.get_init_widget()).unwrap();
                         actual.borrow_mut().actual_mut()?.focus();
                         // if let IItem::Widget(w) = actual.borrow_mut().actual_item_mut() {
                         //     w.widget.focus();

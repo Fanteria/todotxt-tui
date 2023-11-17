@@ -61,8 +61,8 @@ impl ToDo {
             use_done: false, // TODO add to config
             active: None,
             version: 0,
-            pending_sort: config.pending_sort,
-            done_sort: config.done_sort,
+            pending_sort: config.get_pending_sort(),
+            done_sort: config.get_done_sort(),
             project_filters: BTreeSet::new(),
             context_filters: BTreeSet::new(),
             hashtag_filters: BTreeSet::new(),

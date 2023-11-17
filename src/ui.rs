@@ -3,8 +3,8 @@ mod ui_event;
 pub use ui_event::*;
 
 use crate::{
-    file_worker::FileWorkerCommands, layout::Layout, layout::Render, todo::autocomplete, ToDo,
-    config::Config,
+    config::Config, file_worker::FileWorkerCommands, layout::Layout, layout::Render,
+    todo::autocomplete, ToDo,
 };
 use crossterm::{
     self,
@@ -18,12 +18,13 @@ use crossterm::{
 use std::{
     io::{self, Result as ioResult},
     sync::mpsc::Sender,
-    sync::{Arc, Mutex}, time::Duration,
+    sync::{Arc, Mutex},
+    time::Duration,
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout as tuiLayout, Rect},
-    style::{Style, Color},
+    style::{Color, Style},
     widgets::Paragraph,
     widgets::{Block, BorderType, Borders},
     Terminal,
@@ -65,7 +66,12 @@ impl UI {
     /// # Returns
     ///
     /// A new `UI` instance.
-    pub fn new(layout: Layout, data: Arc<Mutex<ToDo>>, tx: Sender<FileWorkerCommands>, config: &Config) -> UI {
+    pub fn new(
+        layout: Layout,
+        data: Arc<Mutex<ToDo>>,
+        tx: Sender<FileWorkerCommands>,
+        config: &Config,
+    ) -> UI {
         UI {
             input_chunk: Rect::default(),
             tinput: Input::default(),
@@ -73,11 +79,11 @@ impl UI {
             mode: Mode::Normal,
             data,
             tx,
-            event_handler: config.window_keybind.clone(),
+            event_handler: config.get_window_keybind(),
             quit: false,
-            window_title: config.window_title.clone(),
-            list_refresh_rate: config.list_refresh_rate,
-            active_color: config.active_color,
+            window_title: config.get_window_title(),
+            list_refresh_rate: config.get_list_refresh_rate(),
+            active_color: config.get_active_color(),
         }
     }
 
@@ -210,7 +216,11 @@ impl UI {
         let e = read()?;
         match e {
             Event::Resize(width, height) => {
+                log::debug!("Resize event: width {width}, height {height}");
                 self.update_chunk(Rect::new(0, 0, width, height));
+            }
+            Event::Mouse(event) => {
+                log::debug!("Mouse event: {:?}", event);
             }
             Event::Key(event) => match self.mode {
                 Mode::Input => match event.code {

@@ -9,6 +9,22 @@ use log::LevelFilter;
 use std::{collections::HashMap, env::var, time::Duration};
 use tui::style::Color;
 
+/// Returns the default configuration file path based on environment variables.
+///
+/// The configuration file path is determined based on the XDG_CONFIG_HOME and HOME environment variables.
+///
+/// # Returns
+///
+/// A `Result` containing the default configuration file path (`Ok`) or an error (`Err`) if the path cannot be determined.
+pub fn default_config_path() -> String {
+    const CONFIG_FOLDER: &str = "/.config/";
+    const CONFIG_NAME: &str = "todo-tui.toml";
+    var("XDG_CONFIG_HOME")
+        .or_else(|_| var("HOME").map(|home| format!("{home}{CONFIG_FOLDER}")))
+        .unwrap_or(String::from("~") + CONFIG_FOLDER)
+        + CONFIG_NAME
+}
+
 pub fn default_todo_path() -> String {
     var("HOME").unwrap_or(String::from("~")) + "/todo.txt"
 }
@@ -21,7 +37,7 @@ pub fn default_active_color() -> Color {
     Color::Red
 }
 
-pub fn default_widget_type() -> WidgetType {
+pub fn default_init_widget() -> WidgetType {
     WidgetType::List
 }
 

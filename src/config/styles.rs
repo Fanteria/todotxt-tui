@@ -14,25 +14,23 @@ pub struct Styles {
 
 impl Styles {
     pub fn new(config: &Config) -> Self {
+        let category_style = config.get_category_style();
         let mut styles = Styles {
-            priority_style: config.priority_colors.clone(),
-            category_style: config.category_style,
-            projects_style: config.projects_style.combine(&config.category_style),
-            contexts_style: config.contexts_style.combine(&config.category_style),
-            hashtags_style: config.hashtags_style.combine(&config.category_style),
+            priority_style: config.get_priority_colors(),
+            category_style,
+            projects_style: config.get_projects_style().combine(&category_style),
+            contexts_style: config.get_contexts_style().combine(&category_style),
+            hashtags_style: config.get_hashtags_style().combine(&category_style),
             custom_category_style: HashMap::new(),
         };
         styles.custom_category_style = config
-            .custom_category_style
-            .iter()
+            .get_custom_category_style()
+            .into_iter()
             .map(|(name, style)| {
-                (
-                    name.clone(),
-                    style.combine(&styles.get_category_style(name)),
-                )
+                let style = style.combine(&styles.get_category_style(&name));
+                (name, style)
             })
             .collect();
-
         styles
     }
 

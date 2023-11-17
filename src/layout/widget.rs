@@ -54,21 +54,21 @@ impl Widget {
                 WidgetList::new(&widget_type, data, config),
                 ToDoData::Pending,
                 config
-                    .list_active_color
-                    .combine(&config.pending_active_color)
+                    .get_list_active_color()
+                    .combine(&config.get_pending_active_color())
                     .get_style(),
-                config.list_shift,
-                config.pending_sort,
+                config.get_list_shift(),
+                config.get_pending_sort(),
             )),
             Done => Self::List(StateList::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoData::Done,
                 config
-                    .list_active_color
-                    .combine(&config.done_active_color)
+                    .get_list_active_color()
+                    .combine(&config.get_done_active_color())
                     .get_style(),
-                config.list_shift,
-                config.done_sort,
+                config.get_list_shift(),
+                config.get_done_sort(),
             )),
             Project => Self::Category(StateCategories::new(
                 WidgetList::new(&widget_type, data, config),
@@ -84,8 +84,7 @@ impl Widget {
             )),
             Preview => Self::Preview(StatePreview::new(
                 WidgetBase::new(&widget_type, data, config),
-                config.preview_format.clone(),
-                config.wrap_preview,
+                config,
             ).unwrap()), // TODO produce error
         }
     }
