@@ -123,12 +123,7 @@ impl ToDo {
     ///
     /// The actual index of the item in ToDo data without filtering.
     fn get_actual_index(&self, data: ToDoData, index: usize) -> usize {
-        let mut task_list = self.get_filtered(data);
-        match data {
-            ToDoData::Pending => task_list.sort(self.pending_sort),
-            ToDoData::Done => task_list.sort(self.done_sort),
-        }
-        task_list.get_actual_index(index)
+        self.get_filtered_and_sorted(data).get_actual_index(index)
     }
 
     /// Adds a new task to the ToDo list.
@@ -250,6 +245,7 @@ impl ToDo {
         }
     }
 
+    /// TODO UPDATE DOC NOW IS SORTED
     /// Gets a filtered list of tasks based on active filters.
     ///
     /// # Arguments
@@ -259,7 +255,7 @@ impl ToDo {
     /// # Returns
     ///
     /// A `TaskList` containing the filtered tasks.
-    pub fn get_filtered(&self, data: ToDoData) -> TaskList {
+    pub fn get_filtered_and_sorted(&self, data: ToDoData) -> TaskList {
         fn get_filtered_tasks<'a>(
             tasks: &'a [Task],
             filters: &[FilterData<'a>],
@@ -278,7 +274,7 @@ impl ToDo {
                 styles,
             }
         }
-        get_filtered_tasks(
+        let mut task_list = get_filtered_tasks(
             self.get_data(data),
             &[
                 (&self.project_filters, |t| t.projects()),
@@ -286,7 +282,12 @@ impl ToDo {
                 (&self.hashtag_filters, |t| &t.hashtags),
             ],
             &self.styles,
-        )
+        );
+        match data {
+            ToDoData::Pending => task_list.sort(self.pending_sort),
+            ToDoData::Done => task_list.sort(self.done_sort),
+        }
+        task_list
     }
 
     /// Adds a new task to the ToDo list using a task string.
@@ -417,7 +418,7 @@ impl ToDo {
     ///
     /// The number of tasks in the specified ToDo data.
     pub fn len(&self, data: ToDoData) -> usize {
-        self.get_filtered(data).len()
+        self.get_filtered_and_sorted(data).len()
     }
 }
 
@@ -576,16 +577,16 @@ mod tests {
         todo.add_task(Task::from_str("task 11 +project3 @context3 #hashtag2 #hashtag3").unwrap());
         todo.add_task(Task::from_str("task 12 +project3 @context2 #hashtag2").unwrap());
 
-        let filtered = todo.get_filtered(ToDoData::Pending);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 12);
 
         todo.project_filters.insert(String::from("project9999"));
-        let filtered = todo.get_filtered(ToDoData::Pending);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 0);
 
         todo.project_filters.clear();
         todo.project_filters.insert(String::from("project1"));
-        let filtered = todo.get_filtered(ToDoData::Pending);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 4);
         assert_eq!(filtered[0].subject, "task 2 +project1");
         assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
@@ -593,24 +594,24 @@ mod tests {
         assert_eq!(filtered[3].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project2"));
-        let filtered = todo.get_filtered(ToDoData::Pending);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
         assert_eq!(filtered[1].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project3"));
-        let filtered = todo.get_filtered(ToDoData::Pending);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.insert(String::from("project1"));
-        let filtered = todo.get_filtered(ToDoData::Pending);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
 
         todo.project_filters.clear();
         todo.context_filters.insert(String::from("context1"));
-        let filtered = todo.get_filtered(ToDoData::Pending);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(
             filtered[0].subject,

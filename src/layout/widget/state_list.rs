@@ -1,6 +1,6 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
-    todo::{task_list::TaskSort, ToDo, ToDoData},
+    todo::{ToDo, ToDoData},
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
@@ -11,7 +11,6 @@ pub struct StateList {
     base: WidgetList,
     style: Style,
     pub data_type: ToDoData,
-    sort_type: TaskSort,
 }
 
 impl StateList {
@@ -33,13 +32,11 @@ impl StateList {
         data_type: ToDoData,
         style: Style,
         list_shift: usize,
-        sort_type: TaskSort,
     ) -> Self {
         let mut s = Self {
             base,
             style,
             data_type,
-            sort_type,
         };
         s.base.set_shift(list_shift); // TODO to constructor
         s
@@ -113,8 +110,7 @@ impl State for StateList {
 
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
         let data = self.base.data();
-        let mut filtered = data.get_filtered(self.data_type);
-        filtered.sort(self.sort_type);
+        let filtered = data.get_filtered_and_sorted(self.data_type);
         let (first, last) = self.base.range();
         let filtered = filtered.slice(first, last);
         let list = List::new(filtered).block(self.get_block());

@@ -58,7 +58,6 @@ impl Widget {
                     .combine(&config.get_pending_active_color())
                     .get_style(),
                 config.get_list_shift(),
-                config.get_pending_sort(),
             )),
             Done => Self::List(StateList::new(
                 WidgetList::new(&widget_type, data, config),
@@ -68,7 +67,6 @@ impl Widget {
                     .combine(&config.get_done_active_color())
                     .get_style(),
                 config.get_list_shift(),
-                config.get_done_sort(),
             )),
             Project => Self::Category(StateCategories::new(
                 WidgetList::new(&widget_type, data, config),
