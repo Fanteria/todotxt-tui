@@ -1,21 +1,20 @@
 mod colors;
+mod defaults;
 mod keycode;
+mod styles;
 mod text_modifier;
 mod text_style;
-mod styles;
 
 pub use self::colors::OptionalColor;
+use self::defaults::*;
 pub use self::keycode::KeyCodeDef;
-pub use self::text_style::TextStyle;
 pub use self::styles::Styles;
+pub use self::text_style::TextStyle;
 
 use self::{colors::*, text_style::*};
 use crate::{
-    layout::widget::widget_type::WidgetType,
-    todo::task_list::TaskSort,
-    ui::{EventHandlerUI, UIEvent},
+    layout::widget::widget_type::WidgetType, todo::task_list::TaskSort, ui::EventHandlerUI,
 };
-use crossterm::event::KeyCode;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -34,59 +33,59 @@ const CONFIG_NAME: &str = "todo-tui.toml";
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct Config {
-    #[serde(with = "ColorDef", default = "Config::default_color")]
+    #[serde(with = "ColorDef", default = "default_active_color")]
     pub active_color: Color,
-    #[serde(default = "Config::default_widget_type")]
+    #[serde(default = "default_widget_type")]
     pub init_widget: WidgetType,
-    #[serde(default = "Config::default_window_title")]
+    #[serde(default = "default_window_title")]
     pub window_title: String,
-    #[serde(default = "Config::default_todo_path")]
+    #[serde(default = "default_todo_path")]
     pub todo_path: String,
     pub archive_path: Option<String>,
     #[serde(default = "TextStyleList::default")]
     pub priority_colors: TextStyleList,
-    #[serde(default = "Config::default_category")]
+    #[serde(default = "default_category")]
     pub category_color: TextStyle,
-    #[serde(default = "Config::default_wrap_preview")]
+    #[serde(default = "default_wrap_preview")]
     pub wrap_preview: bool,
-    #[serde(default = "Config::default_list_active_color")]
+    #[serde(default = "default_list_active_color")]
     pub list_active_color: TextStyle,
     #[serde(default = "TextStyle::default")]
     pub pending_active_color: TextStyle,
     #[serde(default = "TextStyle::default")]
     pub done_active_color: TextStyle,
-    #[serde(default = "Config::default_autosave_duration")]
+    #[serde(default = "default_autosave_duration")]
     pub autosave_duration: Duration,
-    #[serde(default = "Config::default_log_file")]
+    #[serde(default = "default_log_file")]
     pub log_file: String,
-    #[serde(default = "Config::default_log_format")]
+    #[serde(default = "default_log_format")]
     pub log_format: String,
-    #[serde(default = "Config::default_log_level")]
+    #[serde(default = "default_log_level")]
     pub log_level: LevelFilter,
-    #[serde(default = "Config::default_file_watcher")]
+    #[serde(default = "default_file_watcher")]
     pub file_watcher: bool,
-    #[serde(default = "Config::default_list_refresh_rate")]
+    #[serde(default = "default_list_refresh_rate")]
     pub list_refresh_rate: Duration,
-    #[serde(default = "Config::default_list_shift")]
+    #[serde(default = "default_list_shift")]
     pub list_shift: usize,
-    #[serde(default = "Config::default_pending_sort")]
+    #[serde(default = "default_pending_sort")]
     pub pending_sort: TaskSort,
-    #[serde(default = "Config::default_done_sort")]
+    #[serde(default = "default_done_sort")]
     pub done_sort: TaskSort,
-    #[serde(default = "Config::default_preview_format")]
+    #[serde(default = "default_preview_format")]
     pub preview_format: String,
-    #[serde(default = "Config::default_layout")]
+    #[serde(default = "default_layout")]
     pub layout: String,
-    #[serde(default = "Config::default_tasks_keybind")]
+    #[serde(default = "default_tasks_keybind")]
     pub tasks_keybind: EventHandlerUI,
     // pub preview_keybind: EventHandler,
-    #[serde(default = "Config::default_category_keybind")]
+    #[serde(default = "default_category_keybind")]
     pub category_keybind: EventHandlerUI,
-    #[serde(default = "Config::default_list_keybind")]
+    #[serde(default = "default_list_keybind")]
     pub list_keybind: EventHandlerUI,
-    #[serde(default = "Config::default_window_keybind")]
+    #[serde(default = "default_window_keybind")]
     pub window_keybind: EventHandlerUI,
-    #[serde(default = "Config::default_category_stype")]
+    #[serde(default = "default_category_stype")]
     pub category_style: TextStyle,
     #[serde(default = "TextStyle::default")]
     pub projects_style: TextStyle,
@@ -94,7 +93,7 @@ pub struct Config {
     pub contexts_style: TextStyle,
     #[serde(default = "TextStyle::default")]
     pub hashtags_style: TextStyle,
-    #[serde(default = "Config::default_custom_category_style")]
+    #[serde(default = "default_custom_category_style")]
     pub custom_category_style: HashMap<String, TextStyle>,
 }
 
@@ -152,190 +151,42 @@ impl Config {
             .or_else(|_| var("HOME").map(|home| format!("{}/.config/", home)))?
             + CONFIG_NAME)
     }
-
-    fn default_todo_path() -> String {
-        var("HOME").unwrap_or(String::from("~")) + "/todo.txt"
-    }
-
-    fn default_category() -> TextStyle {
-        TextStyle::default().bg(Color::Blue)
-    }
-
-    fn default_color() -> Color {
-        Color::Red
-    }
-
-    fn default_widget_type() -> WidgetType {
-        WidgetType::List
-    }
-
-    fn default_window_title() -> String {
-        String::from("ToDo tui")
-    }
-
-    fn default_wrap_preview() -> bool {
-        true
-    }
-
-    fn default_list_active_color() -> TextStyle {
-        TextStyle::default().bg(Color::LightRed)
-    }
-
-    fn default_autosave_duration() -> Duration {
-        Duration::from_secs(900)
-    }
-
-    fn default_log_file() -> String {
-        String::from("log.log")
-    }
-
-    fn default_log_format() -> String {
-        String::from("{d} [{h({l})}] {M}: {m}{n}")
-    }
-
-    fn default_log_level() -> LevelFilter {
-        LevelFilter::Info
-    }
-
-    fn default_file_watcher() -> bool {
-        true
-    }
-
-    fn default_list_refresh_rate() -> Duration {
-        Duration::from_secs(5)
-    }
-
-    fn default_list_shift() -> usize {
-        4
-    }
-
-    fn default_pending_sort() -> TaskSort {
-        TaskSort::None
-    }
-
-    fn default_done_sort() -> TaskSort {
-        TaskSort::None
-    }
-
-    fn default_preview_format() -> String {
-        String::from(
-            "
-Pending: $pending Done: $done
-Subject: $subject
-Priority: $priority
-Create date: $create_date
-Link: $link",
-        )
-    }
-
-    fn default_layout() -> String {
-        String::from(
-            r#"
-[
-    Direction: Horizontal,
-    Size: 50%,
-    [
-        List: 50%,
-        Preview,
-    ],
-    [ Direction: Vertical,
-      Done,
-      [ 
-        Contexts,
-        Projects,
-      ],
-    ],
-]
-"#,
-        )
-    }
-
-    fn default_tasks_keybind() -> EventHandlerUI {
-        EventHandlerUI::new(&[
-            (KeyCode::Char('U'), UIEvent::SwapUpItem),
-            (KeyCode::Char('D'), UIEvent::SwapDownItem),
-            (KeyCode::Char('x'), UIEvent::RemoveItem),
-            (KeyCode::Char('d'), UIEvent::MoveItem),
-            (KeyCode::Enter, UIEvent::Select),
-        ])
-    }
-
-    pub fn default_category_keybind() -> EventHandlerUI {
-        EventHandlerUI::new(&[(KeyCode::Enter, UIEvent::Select)])
-    }
-
-    pub fn default_list_keybind() -> EventHandlerUI {
-        EventHandlerUI::new(&[
-            (KeyCode::Char('j'), UIEvent::ListDown),
-            (KeyCode::Char('k'), UIEvent::ListUp),
-            (KeyCode::Char('g'), UIEvent::ListFirst),
-            (KeyCode::Char('G'), UIEvent::ListLast),
-        ])
-    }
-
-    pub fn default_window_keybind() -> EventHandlerUI {
-        EventHandlerUI::new(&[
-            (KeyCode::Char('q'), UIEvent::Quit),
-            (KeyCode::Char('S'), UIEvent::Save),
-            (KeyCode::Char('u'), UIEvent::Load),
-            (KeyCode::Char('H'), UIEvent::MoveLeft),
-            (KeyCode::Char('L'), UIEvent::MoveRight),
-            (KeyCode::Char('K'), UIEvent::MoveUp),
-            (KeyCode::Char('J'), UIEvent::MoveDown),
-            (KeyCode::Char('I'), UIEvent::InsertMode),
-            (KeyCode::Char('E'), UIEvent::EditMode),
-        ])
-    }
-
-    pub fn default_category_stype() -> TextStyle {
-        TextStyle::default().fg(Color::DarkGray)
-    }
-
-    pub fn default_custom_category_style() -> HashMap<String, TextStyle> {
-        let mut custom_category_style = HashMap::new();
-        custom_category_style.insert(
-            String::from("+todo-tui"),
-            TextStyle::default().fg(Color::LightBlue),
-        );
-
-        custom_category_style
-    }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            init_widget: Self::default_widget_type(),
-            active_color: Self::default_color(),
-            window_title: Self::default_window_title(),
-            todo_path: Self::default_todo_path(),
-            archive_path: None,
+            init_widget: default_widget_type(),
+            active_color: default_active_color(),
+            window_title: default_window_title(),
+            todo_path: default_todo_path(),
+            archive_path: Option::default(),
             priority_colors: TextStyleList::default(),
-            category_color: Self::default_category(),
-            wrap_preview: true,
-            list_active_color: Self::default_list_active_color(),
+            category_color: default_category(),
+            wrap_preview: default_wrap_preview(),
+            list_active_color: default_list_active_color(),
             pending_active_color: TextStyle::default(),
             done_active_color: TextStyle::default(),
-            autosave_duration: Self::default_autosave_duration(),
-            log_file: Self::default_log_file(),
-            log_format: Self::default_log_format(),
-            log_level: Self::default_log_level(),
-            file_watcher: Self::default_file_watcher(),
-            list_refresh_rate: Self::default_list_refresh_rate(),
-            list_shift: Self::default_list_shift(),
-            pending_sort: Self::default_pending_sort(),
-            done_sort: Self::default_done_sort(),
-            preview_format: Self::default_preview_format(),
-            layout: Self::default_layout(),
-            tasks_keybind: Self::default_tasks_keybind(),
-            category_keybind: Self::default_category_keybind(),
-            list_keybind: Self::default_list_keybind(),
-            window_keybind: Self::default_window_keybind(),
-            category_style: Self::default_category_stype(),
+            autosave_duration: default_autosave_duration(),
+            log_file: default_log_file(),
+            log_format: default_log_format(),
+            log_level: default_log_level(),
+            file_watcher: default_file_watcher(),
+            list_refresh_rate: default_list_refresh_rate(),
+            list_shift: default_list_shift(),
+            pending_sort: default_pending_sort(),
+            done_sort: default_done_sort(),
+            preview_format: default_preview_format(),
+            layout: default_layout(),
+            tasks_keybind: default_tasks_keybind(),
+            category_keybind: default_category_keybind(),
+            list_keybind: default_list_keybind(),
+            window_keybind: default_window_keybind(),
+            category_style: default_category_stype(),
             projects_style: TextStyle::default(),
             contexts_style: TextStyle::default(),
             hashtags_style: TextStyle::default(),
-            custom_category_style: Self::default_custom_category_style(),
+            custom_category_style: default_custom_category_style(),
         }
     }
 }
@@ -357,7 +208,7 @@ mod tests {
 
         assert_eq!(deserialized.active_color, Color::Green);
         assert_eq!(deserialized.init_widget, WidgetType::Done);
-        assert_eq!(deserialized.window_title, Config::default_window_title());
+        assert_eq!(deserialized.window_title, default_window_title());
     }
 
     #[test]
