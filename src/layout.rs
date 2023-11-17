@@ -174,7 +174,7 @@ impl Layout {
                                 widget_type,
                                 data.clone(),
                                 config,
-                            )));
+                            )?));
                             cont.3.push(Self::value_from_string(&string)?);
                         }
                     }

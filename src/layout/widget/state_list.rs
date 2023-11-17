@@ -1,7 +1,7 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
     todo::{ToDo, ToDoData},
-    ui::{HandleEvent, UIEvent},
+    ui::{HandleEvent, UIEvent}, config::Config,
 };
 use crossterm::event::KeyCode;
 use tui::{backend::Backend, style::Style, widgets::List, Frame};
@@ -21,25 +21,19 @@ impl StateList {
     /// - `base`: The base properties shared among different widget types.
     /// - `data_type`: The type of task data to display (e.g., Pending or Done tasks).
     /// - `style`: The style used to render the list widget.
-    /// - `list_shift`: The number of items to shift when navigating the list.
-    /// - `sort_type`: The sorting criteria for the tasks in the list.
     ///
     /// # Returns
     ///
     /// A new `StateList` instance.
-    pub fn new(
-        base: WidgetList,
-        data_type: ToDoData,
-        style: Style,
-        list_shift: usize,
-    ) -> Self {
-        let mut s = Self {
+    pub fn new(base: WidgetList, data_type: ToDoData, config: &Config) -> Self {
+        Self {
             base,
-            style,
+            style: config.get_list_active_color().combine(&match data_type {
+                ToDoData::Done => config.get_done_active_color(),
+                ToDoData::Pending => config.get_pending_active_color(),
+            }).get_style(),
             data_type,
-        };
-        s.base.set_shift(list_shift); // TODO to constructor
-        s
+        }
     }
 
     /// Gets the number of tasks in the list.

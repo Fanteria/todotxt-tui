@@ -7,6 +7,7 @@ pub mod widget_trait;
 pub mod widget_type;
 
 use crate::{
+    error::ToDoRes,
     layout::widget::widget_list::WidgetList,
     todo::{ToDo, ToDoCategory, ToDoData},
     ui::UIEvent,
@@ -47,26 +48,18 @@ impl Widget {
     /// # Returns
     ///
     /// Returns a new instance of the specified widget type.
-    pub fn new(widget_type: WidgetType, data: RCToDo, config: &Config) -> Self {
+    pub fn new(widget_type: WidgetType, data: RCToDo, config: &Config) -> ToDoRes<Self> {
         use WidgetType::*;
-        match widget_type {
+        Ok(match widget_type {
             List => Self::List(StateList::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoData::Pending,
                 config
-                    .get_list_active_color()
-                    .combine(&config.get_pending_active_color())
-                    .get_style(),
-                config.get_list_shift(),
             )),
             Done => Self::List(StateList::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoData::Done,
                 config
-                    .get_list_active_color()
-                    .combine(&config.get_done_active_color())
-                    .get_style(),
-                config.get_list_shift(),
             )),
             Project => Self::Category(StateCategories::new(
                 WidgetList::new(&widget_type, data, config),
@@ -83,8 +76,8 @@ impl Widget {
             Preview => Self::Preview(StatePreview::new(
                 WidgetBase::new(&widget_type, data, config),
                 config,
-            ).unwrap()), // TODO produce error
-        }
+            )?),
+        })
     }
 
     /// Get the type of the widget.

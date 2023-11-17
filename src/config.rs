@@ -6,14 +6,13 @@ mod styles;
 mod text_modifier;
 mod text_style;
 
-pub use self::colors::OptionalColor;
 use self::defaults::*;
 pub use self::keycode::KeyCodeDef;
 pub use self::logger::Logger;
 pub use self::styles::Styles;
 pub use self::text_style::TextStyle;
 
-use self::{colors::*, text_style::*};
+use self::{colors::opt_color, text_style::*};
 use crate::{
     layout::widget::widget_type::WidgetType, todo::task_list::TaskSort, ui::EventHandlerUI,
 };
@@ -22,20 +21,20 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, error::Error, fs::File, io::Read, time::Duration};
 use tui::style::Color;
 
+
 /// Configuration struct for the ToDo TUI application.
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct Config {
     #[serde(skip, default = "default_config_path")]
     config_path: String,
-    #[serde(with = "ColorDef", default = "default_active_color")]
-    active_color: Color,
+    #[serde(default, with = "opt_color")]
+    active_color: Option<Color>,
     init_widget: Option<WidgetType>,
     window_title: Option<String>,
     todo_path: Option<String>,
     archive_path: Option<String>,
     priority_colors: Option<TextStyleList>,
-    category_color: Option<TextStyle>,
     wrap_preview: Option<bool>,
     list_active_color: Option<TextStyle>,
     pending_active_color: Option<TextStyle>,
@@ -64,13 +63,6 @@ pub struct Config {
 }
 
 impl Config {
-    /// Creates empty config
-    // pub fn empty() -> Self {
-    //     Config {
-    //
-    //     }
-    // }
-
     /// Loads the default configuration settings.
     ///
     /// This function first attempts to load the configuration file, and if it fails, it returns the default configuration.
@@ -112,9 +104,14 @@ impl Config {
         }
     }
 
+    // pub fn merge(&self, other: &Config) {
+    //
+    // }
+
     fn get_config_path(&self) {}
+
     pub fn get_active_color(&self) -> Color {
-        self.active_color
+        self.active_color.unwrap_or_else(default_active_color)
     }
 
     pub fn get_init_widget(&self) -> WidgetType {
@@ -135,10 +132,6 @@ impl Config {
 
     fn get_priority_colors(&self) -> TextStyleList {
         self.priority_colors.clone().unwrap_or_default()
-    }
-
-    fn get_category_color(&self) -> TextStyle {
-        self.category_color.unwrap_or_else(default_category)
     }
 
     pub fn get_wrap_preview(&self) -> bool {
@@ -257,13 +250,12 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             config_path: default_config_path(),
-            active_color: default_active_color(),
+            active_color: Some(default_active_color()),
             init_widget: Some(default_init_widget()),
             window_title: Some(default_window_title()),
             todo_path: Some(default_todo_path()),
             archive_path: Option::default(),
             priority_colors: Some(TextStyleList::default()),
-            category_color: Some(default_category()),
             wrap_preview: Some(default_wrap_preview()),
             list_active_color: Some(default_list_active_color()),
             pending_active_color: Some(TextStyle::default()),
@@ -307,7 +299,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(deserialized.active_color, Color::Green);
+        assert_eq!(deserialized.active_color, Some(Color::Green));
         assert_eq!(deserialized.init_widget, Some(WidgetType::Done));
         assert_eq!(deserialized.window_title, None);
         assert_eq!(deserialized.get_window_title(), default_window_title());
@@ -331,7 +323,7 @@ mod tests {
         "#;
 
         let c = Config::load_config(s.as_bytes());
-        assert_eq!(c.active_color, Color::Blue);
+        assert_eq!(c.active_color, Some(Color::Blue));
         assert_eq!(c.init_widget, None);
         assert_eq!(c.get_init_widget(), WidgetType::List);
         assert_eq!(c.window_title, Some(String::from("Title")));

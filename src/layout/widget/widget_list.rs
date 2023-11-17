@@ -12,7 +12,6 @@ pub struct WidgetList {
     pub len: usize,
     first: usize,
     size: usize,
-    shift: usize,
     event_handler: EventHandlerUI,
     list_shift: usize,
 }
@@ -35,7 +34,6 @@ impl WidgetList {
             len: 0,
             first: 0,
             size: 0,
-            shift: 0,
             event_handler: config.get_list_keybind(),
             list_shift: config.get_list_shift(),
         };
@@ -68,15 +66,6 @@ impl WidgetList {
     /// A clone of the list state.
     pub fn state(&self) -> ListState {
         self.state.clone()
-    }
-
-    /// Sets the shift value for the list.
-    ///
-    /// # Parameters
-    ///
-    /// - `shift`: The number of items to shift when navigating the list.
-    pub fn set_shift(&mut self, shift: usize) {
-        self.shift = shift;
     }
 
     /// Sets the size of the list widget.
