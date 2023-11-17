@@ -51,7 +51,7 @@ mod tests {
 
     #[test]
     fn autocomplete_basic() {
-        let mut todo = ToDo::new(false);
+        let mut todo = ToDo::default();
         todo.new_task("t +project1 +project2").unwrap();
         todo.new_task("t +project1 +project3").unwrap();
         todo.new_task("t +project1 @context1").unwrap();
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn autocomplete_empty() {
-        let mut todo = ToDo::new(false);
+        let mut todo = ToDo::default();
         assert_eq!(autocomplete(&todo, "task +proj"), None);
 
         todo.new_task("t +project1 +project2").unwrap();

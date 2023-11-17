@@ -249,7 +249,7 @@ mod tests {
     use WidgetType::*;
 
     fn create_testing_container() -> RcCon {
-        let todo = Arc::new(Mutex::new(ToDo::new(false)));
+        let todo = Arc::new(Mutex::new(ToDo::default()));
         let list_widget = Widget::new(WidgetType::List, todo.clone(), &Config::default());
         let done_widget = Widget::new(WidgetType::Done, todo.clone(), &Config::default());
         let project_widget = Widget::new(WidgetType::Project, todo, &Config::default());

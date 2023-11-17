@@ -1,7 +1,7 @@
-use crate::todo::ToDo;
+use crate::{todo::ToDo, config::Config};
 use notify::{
     event::{AccessKind, AccessMode, EventKind},
-    Config, RecommendedWatcher, RecursiveMode, Watcher,
+    Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
 };
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Read, Result as ioResult, Write};
@@ -64,7 +64,7 @@ impl FileWorker {
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
     pub fn load(&self) -> ioResult<()> {
-        let mut todo = ToDo::new(false);
+        let mut todo = ToDo::new(&Config::default()); // TODO this can be improved
         Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
         log::info!("Load tasks from file {}", self.todo_path);
         if let Some(path) = &self.archive_path {
@@ -244,7 +244,7 @@ impl FileWorker {
         thread::spawn(move || {
             let (tx_handle, rx_handle) = std::sync::mpsc::channel();
             let mut watcher: RecommendedWatcher =
-                Watcher::new(tx_handle, Config::default()).unwrap();
+                Watcher::new(tx_handle, NotifyConfig::default()).unwrap();
             watcher
                 .watch(Path::new(&path), RecursiveMode::NonRecursive)
                 .unwrap();
@@ -281,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_load_tasks() -> ioResult<()> {
-        let mut todo = ToDo::new(false);
+        let mut todo = ToDo::default();
         FileWorker::load_tasks(TESTING_STRING.as_bytes(), &mut todo)?;
         assert_eq!(todo.pending.len(), 4);
         assert_eq!(todo.done.len(), 2);
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn test_write_tasks() -> ioResult<()> {
-        let mut todo = ToDo::new(false);
+        let mut todo = ToDo::default();
         FileWorker::load_tasks(TESTING_STRING.as_bytes(), &mut todo)?;
         let get_expected = |line: fn(&String) -> bool| {
             TESTING_STRING

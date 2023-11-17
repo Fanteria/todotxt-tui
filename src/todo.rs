@@ -8,7 +8,7 @@ pub use self::{
     autocomplete::autocomplete, category_list::CategoryList, parser::Parser, task_list::TaskList,
 };
 
-use crate::{config::Styles, CONFIG};
+use crate::config::{Styles, Config};
 use chrono::Utc;
 use std::{collections::btree_set::BTreeSet, convert::From, str::FromStr};
 use todo_txt::Task;
@@ -34,7 +34,6 @@ pub enum ToDoCategory {
 use ToDoCategory::*;
 
 /// Struct to manage ToDo tasks and theirs state.
-#[derive(Default)]
 pub struct ToDo {
     pub pending: Vec<Task>,
     pub done: Vec<Task>,
@@ -55,19 +54,19 @@ impl ToDo {
     /// # Arguments
     ///
     /// * `use_done` - A boolean indicating whether to include done tasks in the ToDo data.
-    pub fn new(use_done: bool) -> Self {
+    pub fn new(config: &Config) -> Self {
         Self {
             pending: Vec::new(),
             done: Vec::new(),
-            use_done,
+            use_done: false, // TODO add to config
             active: None,
             version: 0,
-            pending_sort: TaskSort::default(),
-            done_sort: TaskSort::default(),
+            pending_sort: config.pending_sort,
+            done_sort: config.done_sort,
             project_filters: BTreeSet::new(),
             context_filters: BTreeSet::new(),
             hashtag_filters: BTreeSet::new(),
-            styles: Styles::new(&CONFIG),
+            styles: Styles::new(config),
         }
     }
 
@@ -422,6 +421,10 @@ impl ToDo {
     }
 }
 
+impl Default for ToDo {
+    fn default() -> Self { ToDo::new(&Config::default()) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -429,8 +432,8 @@ mod tests {
     use std::error::Error;
     use todo_txt::Priority;
 
-    fn example_todo(use_done: bool) -> ToDo {
-        let mut todo = ToDo::new(use_done);
+    fn example_todo() -> ToDo {
+        let mut todo = ToDo::default();
 
         let mut task = Task::from_str("measure space for 1 +project1 @context1 #hashtag1").unwrap();
         task.finished = true;
@@ -469,7 +472,8 @@ mod tests {
 
     #[test]
     fn test_add_task() {
-        let todo = example_todo(true);
+        let mut todo = example_todo();
+        todo.use_done = true;
 
         assert_eq!(todo.done.len(), 2);
         assert_eq!(todo.pending.len(), 4);
@@ -517,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_categeries_list() -> Result<(), Box<dyn Error>> {
-        let mut todo = example_todo(false);
+        let mut todo = example_todo();
         assert_eq!(
             todo.get_categories(ToDoCategory::Projects).vec,
             create_vec(&[String::from("project2"), String::from("project3")])
@@ -558,7 +562,7 @@ mod tests {
 
     #[test]
     fn test_filtering() -> Result<(), Box<dyn Error>> {
-        let mut todo = ToDo::new(false);
+        let mut todo = ToDo::default();
         todo.add_task(Task::from_str("task 1").unwrap());
         todo.add_task(Task::from_str("task 2 +project1").unwrap());
         todo.add_task(Task::from_str("task 3 +project1 +project2").unwrap());
@@ -618,7 +622,7 @@ mod tests {
 
     #[test]
     fn actual_consistency_move() {
-        let mut todo = example_todo(false);
+        let mut todo = example_todo();
         todo.set_active(ToDoData::Pending, 2);
         let subject = todo.get_active().unwrap().subject.clone();
         // Item after
@@ -636,7 +640,7 @@ mod tests {
 
     #[test]
     fn actual_consistency_remove() {
-        let mut todo = example_todo(false);
+        let mut todo = example_todo();
         todo.set_active(ToDoData::Pending, 2);
         let subject = todo.get_active().unwrap().subject.clone();
         // Item after
@@ -654,7 +658,7 @@ mod tests {
 
     #[test]
     fn actual_consistency_swap() {
-        let mut todo = example_todo(false);
+        let mut todo = example_todo();
         todo.set_active(ToDoData::Pending, 2);
         let subject = todo.get_active().unwrap().subject.clone();
         // Item outside
@@ -672,11 +676,11 @@ mod tests {
 
     #[test]
     fn move_data() {
-        let todo = example_todo(false);
+        let todo = example_todo();
         let mut empty = ToDo::default();
         assert!(empty.pending.is_empty());
         assert!(empty.done.is_empty());
-        empty.move_data(example_todo(false));
+        empty.move_data(example_todo());
         assert_eq!(todo.pending, empty.pending);
         assert_eq!(todo.done, empty.done);
     }
@@ -685,14 +689,14 @@ mod tests {
     fn version() {
         let mut todo = ToDo::default();
         assert_eq!(todo.get_version(), 0);
-        todo.move_data(example_todo(false));
+        todo.move_data(example_todo());
         assert_eq!(todo.get_version(), 1);
         todo.move_task(ToDoData::Done, 1);
     }
 
     #[test]
     fn toggle_filter() {
-        let mut todo = example_todo(false);
+        let mut todo = example_todo();
         assert!(todo.project_filters.is_empty());
         todo.toggle_filter(ToDoCategory::Projects, "project1");
         assert!(todo.project_filters.contains("project1"));
@@ -728,7 +732,7 @@ mod tests {
 
     #[test]
     fn update_active() -> Result<(), todo_txt::Error> {
-        let mut todo = example_todo(false);
+        let mut todo = example_todo();
         todo.active = Some((ToDoData::Pending, 0));
         todo.update_active("New subject")?;
         assert_eq!(todo.pending[0].subject, "New subject");

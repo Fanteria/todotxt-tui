@@ -4,7 +4,7 @@ pub use ui_event::*;
 
 use crate::{
     file_worker::FileWorkerCommands, layout::Layout, layout::Render, todo::autocomplete, ToDo,
-    CONFIG,
+    config::Config,
 };
 use crossterm::{
     self,
@@ -18,12 +18,12 @@ use crossterm::{
 use std::{
     io::{self, Result as ioResult},
     sync::mpsc::Sender,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex}, time::Duration,
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout as tuiLayout, Rect},
-    style::Style,
+    style::{Style, Color},
     widgets::Paragraph,
     widgets::{Block, BorderType, Borders},
     Terminal,
@@ -48,6 +48,9 @@ pub struct UI {
     tx: Sender<FileWorkerCommands>,
     event_handler: EventHandlerUI,
     quit: bool,
+    window_title: String,
+    list_refresh_rate: Duration,
+    active_color: Color,
 }
 
 impl UI {
@@ -62,7 +65,7 @@ impl UI {
     /// # Returns
     ///
     /// A new `UI` instance.
-    pub fn new(layout: Layout, data: Arc<Mutex<ToDo>>, tx: Sender<FileWorkerCommands>) -> UI {
+    pub fn new(layout: Layout, data: Arc<Mutex<ToDo>>, tx: Sender<FileWorkerCommands>, config: &Config) -> UI {
         UI {
             input_chunk: Rect::default(),
             tinput: Input::default(),
@@ -70,8 +73,11 @@ impl UI {
             mode: Mode::Normal,
             data,
             tx,
-            event_handler: CONFIG.window_keybind.clone(),
+            event_handler: config.window_keybind.clone(),
             quit: false,
+            window_title: config.window_title.clone(),
+            list_refresh_rate: config.list_refresh_rate,
+            active_color: config.active_color,
         }
     }
 
@@ -106,7 +112,7 @@ impl UI {
         execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
 
         let mut backend = CrosstermBackend::new(stdout);
-        backend.execute(SetTitle(CONFIG.window_title.clone()))?;
+        backend.execute(SetTitle(self.window_title.clone()))?;
 
         let mut terminal = Terminal::new(backend)?;
         terminal.hide_cursor()?;
@@ -140,7 +146,7 @@ impl UI {
         let mut version = self.data.lock().unwrap().get_version();
         let mut new_version;
         loop {
-            if event::poll(CONFIG.list_refresh_rate)? {
+            if event::poll(self.list_refresh_rate)? {
                 if self.handle_event()? {
                     break;
                 }
@@ -172,7 +178,7 @@ impl UI {
             .title("Input")
             .border_type(BorderType::Rounded);
         if self.mode == Mode::Input || self.mode == Mode::Edit {
-            block = block.border_style(Style::default().fg(CONFIG.active_color));
+            block = block.border_style(Style::default().fg(self.active_color));
         }
         terminal.draw(|f| {
             f.render_widget(

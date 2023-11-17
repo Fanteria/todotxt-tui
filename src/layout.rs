@@ -346,7 +346,7 @@ mod tests {
         "#;
         Layout::from_str(
             mock_layout,
-            Arc::new(Mutex::new(ToDo::new(false))),
+            Arc::new(Mutex::new(ToDo::default())),
             &Config::default(),
         )
         .unwrap()
@@ -415,7 +415,7 @@ mod tests {
             Direction: ERROR,
         "#;
 
-        Layout::from_str(str_layout, Arc::new(Mutex::new(ToDo::new(false))), &Config::default())?;
+        Layout::from_str(str_layout, Arc::new(Mutex::new(ToDo::default())), &Config::default())?;
         Ok(())
     }
 }

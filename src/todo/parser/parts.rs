@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn fill() -> ToDoRes<()> {
-        let mut todo = ToDo::new(false);
+        let mut todo = ToDo::default();
         todo.new_task("task").unwrap();
         todo.new_task("(A) task").unwrap();
         todo.new_task("2023-11-12 task").unwrap();

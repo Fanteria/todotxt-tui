@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn fill() -> ToDoRes<()> {
         let parser = Parser::from_str("some text")?;
-        let mut todo = ToDo::new(false);
+        let mut todo = ToDo::default();
         todo.new_task("task").unwrap();
         todo.new_task("x done task").unwrap();
 
