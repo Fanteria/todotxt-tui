@@ -137,15 +137,15 @@ impl FromStr for TextStyle {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut ret = TextStyle::default();
         for word in s.split_whitespace() {
-            if word.starts_with("^") {
-                match Color::from_str(&word[1..]) {
+            if let Some(stripped) = word.strip_prefix('^') {
+                match Color::from_str(stripped) {
                     Ok(c) => ret = ret.bg(c),
                     Err(_) => return Err(ToDoError::ParseTextStyle(word.to_string())),
                 }
             } else if let Ok(color) = Color::from_str(word) {
                 ret = ret.fg(color);
             } else if let Ok(modifier) = TextModifier::from_str(word) {
-                ret = ret.modifier(modifier.into());
+                ret = ret.modifier(modifier);
             } else {
                 match TextStyleList::default().0.get(word) {
                     Some(style) => ret = ret.combine(style),

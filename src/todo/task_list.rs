@@ -163,7 +163,7 @@ impl<'a> From<TaskSlice<'a>> for Vec<ListItem<'a>> {
         val.vec
             .iter()
             .map(|(_, task)| {
-                ListItem::new(Line::from(TaskList::parse_task_string(task, &val.styles)))
+                ListItem::new(Line::from(TaskList::parse_task_string(task, val.styles)))
             })
             .collect::<Vec<ListItem<'a>>>()
     }

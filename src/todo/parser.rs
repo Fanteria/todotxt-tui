@@ -38,12 +38,8 @@ impl Parser {
         let mut ret = Vec::new();
         let mut line = Line::default();
         let mut act = String::default();
-        let mut iter = template.chars().into_iter();
-        loop {
-            let c = match iter.next() {
-                Some(c) => c,
-                None => break,
-            };
+        let mut iter = template.chars();
+        while let Some(c) = iter.next() {
             match c {
                 '[' => {
                     let block = Parser::read_block(&mut iter, ']')?;

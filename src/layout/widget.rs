@@ -61,7 +61,7 @@ impl Widget {
                 config.pending_sort,
             )),
             Done => Self::List(StateList::new(
-                WidgetList::new(&widget_type, data, &config),
+                WidgetList::new(&widget_type, data, config),
                 ToDoData::Done,
                 config
                     .list_active_color

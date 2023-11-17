@@ -20,11 +20,7 @@ impl LineBlock {
         let mut read_variable = false;
         let mut variable_block = false;
         let mut read = String::new();
-        loop {
-            let c = match iter.next() {
-                Some(c) => c,
-                None => break,
-            };
+        while let Some(c) = iter.next() {
             match c {
                 '$' => {
                     read_variable = true;

@@ -3,6 +3,7 @@ use crate::{error::ToDoRes, todo::Parser, ui::UIEvent};
 use std::str::FromStr;
 use tui::{
     backend::Backend,
+    text::{Line, Span},
     widgets::{Paragraph, Wrap},
     Frame,
 };
@@ -44,13 +45,12 @@ impl State for StatePreview {
         let mut paragraph = Paragraph::new(
             lines
                 .iter()
-                .map(|line| {
-                    let mut l = tui::text::Line::default();
-                    l.spans = line
+                .map(|line| Line {
+                    spans: line
                         .iter()
-                        .map(|(text, style)| tui::text::Span::styled(text, *style))
-                        .collect::<Vec<_>>();
-                    l
+                        .map(|(text, style)| Span::styled(text, *style))
+                        .collect::<Vec<_>>(),
+                    ..Default::default()
                 })
                 .collect::<Vec<_>>(),
         )

@@ -212,7 +212,7 @@ impl UI {
                         self.data
                             .lock()
                             .unwrap()
-                            .new_task(&self.tinput.value())
+                            .new_task(self.tinput.value())
                             .unwrap(); // TODO fix
                         self.tinput.reset();
                         self.mode = Mode::Normal;
@@ -224,7 +224,7 @@ impl UI {
                     }
                     KeyCode::Tab => {
                         if let Some(input) =
-                            autocomplete(&self.data.lock().unwrap(), &self.tinput.value())
+                            autocomplete(&self.data.lock().unwrap(), self.tinput.value())
                         {
                             self.tinput = input.into();
                         }
@@ -238,7 +238,7 @@ impl UI {
                         self.data
                             .lock()
                             .unwrap()
-                            .update_active(&self.tinput.value())
+                            .update_active(self.tinput.value())
                             .unwrap();
                         self.tinput.reset();
                         self.mode = Mode::Normal;
@@ -251,7 +251,7 @@ impl UI {
                     }
                     KeyCode::Tab => {
                         if let Some(input) =
-                            autocomplete(&self.data.lock().unwrap(), &self.tinput.value())
+                            autocomplete(&self.data.lock().unwrap(), self.tinput.value())
                         {
                             self.tinput = input.into();
                         }
