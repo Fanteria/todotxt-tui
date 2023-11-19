@@ -3,7 +3,9 @@ mod event_entry;
 use crossterm::event::KeyCode;
 use event_entry::EventEntry;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, str::FromStr};
+
+use crate::error::ToDoError;
 
 /// Enum representing various UI events that can be triggered.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Debug)]
@@ -29,6 +31,38 @@ pub enum UIEvent {
     Select, // State categories + State list
     // State preview
     None, // without bind
+}
+
+impl FromStr for UIEvent {
+    type Err = ToDoError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use UIEvent::*;
+        Ok(match s {
+            "Quit" => Quit,
+			"Save" => Save,
+			"Load" => Load,
+			"MoveLeft" => MoveLeft,
+			"MoveRight" => MoveRight,
+			"MoveUp" => MoveUp,
+			"MoveDown" => MoveDown,
+			"InsertMode" => InsertMode,
+			"EditMode" => EditMode,
+
+			"ListDown" => ListDown,
+			"ListUp" => ListUp,
+			"ListFirst" => ListFirst,
+			"ListLast" => ListLast,
+			"SwapUpItem" => SwapUpItem,
+			"SwapDownItem" => SwapDownItem,
+			"RemoveItem" => RemoveItem,
+			"MoveItem" => MoveItem,
+			"Select" => Select,
+			"None" => None,
+
+            _ => todo!() // Error TODO
+        })
+    }
 }
 
 /// Trait for handling UI events.

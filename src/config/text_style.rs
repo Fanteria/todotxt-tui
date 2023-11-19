@@ -196,6 +196,30 @@ impl Default for TextStyleList {
     }
 }
 
+impl FromStr for TextStyleList {
+    type Err = ToDoError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut ret = HashMap::new();
+        for s in s.split(",") {
+            match s.find(":") {
+                Some(index) => {
+                    for priority in PRIORITIES {
+                        let key = s[..index].trim();
+                        if priority == key {
+                            ret.insert(key.to_string(), TextStyle::from_str(s[..index].trim())?);
+                            break;
+                        }
+                    }
+                }
+                None => todo!(), // error TODO
+            }
+        }
+
+        Ok(TextStyleList(ret))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::error::ToDoRes;
@@ -306,5 +330,14 @@ mod tests {
             TextStyle::from_str("unknown_style").unwrap_err(),
             ToDoError::ParseTextStyle("unknown_style".to_string())
         );
+    }
+
+    #[test]
+    fn text_style_list_from_str() -> ToDoRes<()> {
+        let mut expected = HashMap::<String, TextStyle>::new();
+        expected.insert("A".to_string(), TextStyle::default().fg(Color::Red));
+        assert_eq!(TextStyleList::from_str("A:green")?, TextStyleList(expected));
+
+        Ok(())
     }
 }

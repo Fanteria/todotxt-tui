@@ -17,7 +17,7 @@ use std::{
 extern crate enum_dispatch;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let config = Config::default().load();
+    let config = Config::load_default()?;
     Logger::new(&config).init()?;
     log::trace!("===== PROGRAM START =====");
     let todo = Arc::new(Mutex::new(ToDo::new(&config)));

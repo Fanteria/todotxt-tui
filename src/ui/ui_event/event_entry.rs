@@ -1,4 +1,5 @@
-use std::cmp::Ordering;
+use crate::error::ToDoError;
+use std::{cmp::Ordering, str::FromStr};
 use crate::config::KeyCodeDef;
 use crossterm::event::KeyCode;
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,13 @@ pub struct EventEntry {
     #[serde(with = "KeyCodeDef")]
     pub key: KeyCode,
     pub event: UIEvent,
+}
+
+impl FromStr for EventEntry {
+    type Err = ToDoError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    }
 }
 
 impl PartialEq for EventEntry {
@@ -53,3 +61,12 @@ impl From<&(KeyCode, UIEvent)> for EventEntry {
         }
     }
 }
+
+// impl FromStr for EventEntry {
+//     type Err = ToDoError;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         // KeyCode::try_from<String>();
+//
+//     }
+// }
