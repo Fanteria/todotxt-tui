@@ -21,8 +21,13 @@ use crossterm::event::KeyCode;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap, env::var, fs::File, io, io::Read, num::ParseIntError, path::PathBuf,
+    collections::HashMap,
+    env::var,
+    fs::File,
+    num::ParseIntError,
+    path::PathBuf,
     time::Duration,
+    io::{self, Read, Write}, error::Error,
 };
 use tui::style::Color;
 
@@ -35,6 +40,14 @@ pub struct Config {
     #[serde(skip)]
     #[arg(short, long, value_name = "FILE")]
     config_path: Option<PathBuf>,
+
+    #[serde(skip)]
+    #[arg(long, value_name = "FILE")]
+    export_config: Option<PathBuf>,
+
+    #[serde(skip)]
+    #[arg(long, value_name = "FILE")]
+    export_default_config: Option<PathBuf>,
 
     #[serde(default, with = "opt_color")]
     #[arg(long, value_name = "COLOR")]
@@ -194,6 +207,8 @@ impl Config {
     pub fn merge(self, other: Config) -> Self {
         Self {
             config_path: self.config_path.or(other.config_path),
+            export_config: self.export_config.or(other.export_config),
+            export_default_config: self.export_default_config.or(other.export_default_config),
             active_color: self.active_color.or(other.active_color),
             init_widget: self.init_widget.or(other.init_widget),
             window_title: self.window_title.or(other.window_title),
@@ -225,6 +240,59 @@ impl Config {
             hashtags_style: self.hashtags_style.or(other.hashtags_style),
             custom_category_style: self.custom_category_style.or(other.custom_category_style),
         }
+    }
+
+    pub fn fill(&self) -> Self {
+        Self {
+            config_path: self.config_path.clone(),
+            export_config: self.export_config.clone(),
+            export_default_config: self.export_default_config.clone(),
+			active_color: Some(self.get_active_color()),
+			init_widget: Some(self.get_init_widget()),
+			window_title: Some(self.get_window_title()),
+			todo_path: Some(self.get_todo_path()),
+			archive_path: self.get_archive_path(),
+			priority_colors: Some(self.get_priority_colors()),
+			wrap_preview: Some(self.get_wrap_preview()),
+			list_active_color: Some(self.get_list_active_color()),
+			pending_active_color: Some(self.get_pending_active_color()),
+			done_active_color: Some(self.get_done_active_color()),
+			autosave_duration: Some(self.get_autosave_duration()),
+			log_file: Some(self.get_log_file()),
+			log_format: Some(self.get_log_format()),
+			log_level: Some(self.get_log_level()),
+			file_watcher: Some(self.get_file_watcher()),
+			list_refresh_rate: Some(self.get_list_refresh_rate()),
+			list_shift: Some(self.get_list_shift()),
+			pending_sort: Some(self.get_pending_sort()),
+			done_sort: Some(self.get_done_sort()),
+			preview_format: Some(self.get_preview_format()),
+			layout: Some(self.get_layout()),
+			tasks_keybind: Some(self.get_tasks_keybind()),
+			category_keybind: Some(self.get_category_keybind()),
+			list_keybind: Some(self.get_list_keybind()),
+			window_keybind: Some(self.get_window_keybind()),
+			category_style: Some(self.get_category_style()),
+			projects_style: Some(self.get_projects_style()),
+			contexts_style: Some(self.get_contexts_style()),
+			hashtags_style: Some(self.get_hashtags_style()),
+			custom_category_style: Some(self.get_custom_category_style()),
+        }
+    }
+
+    pub fn export(&self) -> Result<bool, Box<dyn Error>> {
+        let mut ret = false;
+        if let Some(path) = &self.export_config {
+            let mut output = File::create(path)?;
+            write!(output, "{}", toml::to_string_pretty(&self.fill())?)?;
+            ret = true
+        }
+        if let Some(path) = &self.export_default_config {
+            let mut output = File::create(path)?;
+            write!(output, "{}", toml::to_string_pretty(&Config::default().fill())?)?;
+            ret = true
+        }
+        Ok(ret)
     }
 
     pub fn get_active_color(&self) -> Color {

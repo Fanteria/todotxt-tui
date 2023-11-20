@@ -201,8 +201,8 @@ impl FromStr for TextStyleList {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut ret = HashMap::new();
-        for s in s.split(",") {
-            match s.find(":") {
+        for s in s.split(',') {
+            match s.find(':') {
                 Some(index) => {
                     for priority in PRIORITIES {
                         let key = s[..index].trim();

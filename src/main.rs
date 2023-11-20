@@ -26,6 +26,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let config = Config::parse();
     let load_config = config.load_config()?;
     let config = config.merge(load_config);
+    if config.export()? {
+        return Ok(())
+    }
 
     Logger::new(&config).init()?;
     log::trace!("===== PROGRAM START =====");
