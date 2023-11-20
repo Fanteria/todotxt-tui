@@ -16,55 +16,115 @@ use crate::{
     todo::task_list::TaskSort,
     ui::{EventHandlerUI, UIEvent},
 };
+use clap::Parser;
 use crossterm::event::KeyCode;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, env::var, fs::File, io, io::Read, time::Duration};
+use std::{
+    collections::HashMap, env::var, fs::File, io, io::Read, num::ParseIntError, path::PathBuf,
+    time::Duration,
+};
 use tui::style::Color;
-use clap::Parser;
-
-#[derive(Parser)]
-pub struct Aux {
-    priority_colors: Option<TextStyleList>,
-    // autosave_duration: Option<Duration>,
-    // tasks_keybind: Option<EventHandlerUI>,
-}
 
 /// Configuration struct for the ToDo TUI application.
-#[derive(Serialize, Deserialize, Default)]
-// #[command(author, version, about, long_about = None)]
+#[derive(Serialize, Deserialize, Default, Parser)]
+#[command(author, version, about, long_about = None)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct Config {
+    /// Path to configuration file
+    #[serde(skip)]
+    #[arg(short, long, value_name = "FILE")]
+    config_path: Option<PathBuf>,
+
     #[serde(default, with = "opt_color")]
+    #[arg(long, value_name = "COLOR")]
     active_color: Option<Color>,
+
+    #[arg(short, long, value_name = "WIDGET_TYPE")]
     init_widget: Option<WidgetType>,
+
+    #[arg(short = 'T', long, value_name = "STRING")]
     window_title: Option<String>,
+
+    #[arg(short, long, value_name = "STRING")]
     todo_path: Option<String>,
+
+    #[arg(short, long, value_name = "STRING")]
     archive_path: Option<String>,
+
+    #[arg(long)] // TODO value type
     priority_colors: Option<TextStyleList>,
+
+    #[arg(short, long, value_name = "FLAG")]
     wrap_preview: Option<bool>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
     list_active_color: Option<TextStyle>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
     pending_active_color: Option<TextStyle>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
     done_active_color: Option<TextStyle>,
+
+    #[arg(short = 'd', long, value_parser = parse_duration, value_name = "DURATION")]
     autosave_duration: Option<Duration>,
-    log_file: Option<String>,
+
+    #[arg(long, value_name = "FILE")]
+    log_file: Option<PathBuf>,
+
+    #[arg(long, value_name = "FILE")]
     log_format: Option<String>,
+
+    #[arg(long, value_name = "LOG_LEVEL")]
     log_level: Option<LevelFilter>,
+
+    #[arg(short, long, value_name = "FLAG")]
     file_watcher: Option<bool>,
+
+    #[arg(short = 'L', long, value_parser = parse_duration, value_name = "DURATION")]
     list_refresh_rate: Option<Duration>,
+
+    #[arg(short, long, value_name = "NUMBER")]
     list_shift: Option<usize>,
+
+    #[arg(long, value_name = "TASK_SORT")]
     pending_sort: Option<TaskSort>,
+
+    #[arg(long, value_name = "TASK_SORT")]
     done_sort: Option<TaskSort>,
+
+    #[arg(short, long, value_name = "STRING")]
     preview_format: Option<String>,
+
+    #[arg(long, value_name = "STRING")]
     layout: Option<String>,
+
+    #[clap(skip)]
     tasks_keybind: Option<EventHandlerUI>,
+
+    #[clap(skip)]
     category_keybind: Option<EventHandlerUI>,
+
+    #[clap(skip)]
     list_keybind: Option<EventHandlerUI>,
+
+    #[clap(skip)]
     window_keybind: Option<EventHandlerUI>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
     category_style: Option<TextStyle>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
     projects_style: Option<TextStyle>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
     contexts_style: Option<TextStyle>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
     hashtags_style: Option<TextStyle>,
+
+    #[clap(skip)]
     custom_category_style: Option<HashMap<String, TextStyle>>,
 }
 
@@ -77,7 +137,14 @@ impl Config {
     ///
     /// A `Result` containing the loaded configuration (`Ok`) or an error (`Err`) if loading fails.
     pub fn load(path: &str) -> io::Result<Self> {
-        Ok(Self::load_config(File::open(path)?))
+        Ok(Self::load_from_buffer(File::open(path)?))
+    }
+
+    pub fn load_config(&self) -> io::Result<Self> {
+        match &self.config_path {
+            Some(path) => Ok(Self::load_from_buffer(File::open(path)?)),
+            None => Self::load_default(),
+        }
     }
 
     /// Returns the default configuration file path based on environment variables.
@@ -94,7 +161,7 @@ impl Config {
             .or_else(|_| var("HOME").map(|home| format!("{home}{CONFIG_FOLDER}")))
             .unwrap_or(String::from("~") + CONFIG_FOLDER)
             + CONFIG_NAME;
-        Ok(Self::load_config(File::open(path)?))
+        Ok(Self::load_from_buffer(File::open(path)?))
     }
 
     /// Loads a configuration from a provided reader.
@@ -106,7 +173,7 @@ impl Config {
     /// # Returns
     ///
     /// The loaded configuration.
-    fn load_config<R>(mut reader: R) -> Self
+    fn load_from_buffer<R>(mut reader: R) -> Self
     where
         R: Read,
     {
@@ -126,6 +193,7 @@ impl Config {
 
     pub fn merge(self, other: Config) -> Self {
         Self {
+            config_path: self.config_path.or(other.config_path),
             active_color: self.active_color.or(other.active_color),
             init_widget: self.init_widget.or(other.init_widget),
             window_title: self.window_title.or(other.window_title),
@@ -208,8 +276,8 @@ impl Config {
         self.autosave_duration.unwrap_or(Duration::from_secs(900))
     }
 
-    fn get_log_file(&self) -> String {
-        self.log_file.clone().unwrap_or(String::from("log.log"))
+    fn get_log_file(&self) -> PathBuf {
+        self.log_file.clone().unwrap_or(PathBuf::from("log.log"))
     }
 
     fn get_log_format(&self) -> String {
@@ -342,6 +410,10 @@ Link: $link",
     }
 }
 
+fn parse_duration(arg: &str) -> Result<Duration, ParseIntError> {
+    Ok(Duration::from_secs(arg.parse()?))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -380,7 +452,7 @@ mod tests {
         todo_path = "path to todo file"
         "#;
 
-        let c = Config::load_config(s.as_bytes());
+        let c = Config::load_from_buffer(s.as_bytes());
         assert_eq!(c.active_color, Some(Color::Blue));
         assert_eq!(c.init_widget, None);
         assert_eq!(c.get_init_widget(), WidgetType::List);
@@ -391,10 +463,8 @@ mod tests {
         Ok(())
     }
 
-    // #[test]
-    // fn test_default() -> Result<()> {
-    //     assert_eq!(Config::load_config("".as_bytes()), Config::default());
-    //
-    //     Ok(())
-    // }
+    #[test]
+    fn help_can_be_generated() {
+        Config::parse();
+    }
 }

@@ -1,1 +1,2 @@
-file = "todo.txt"
+[alias]
+lcov = "llvm-cov --lcov --output-path lcov.info"

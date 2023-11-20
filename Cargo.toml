@@ -2,6 +2,7 @@
 name = "todo-tui"
 version = "0.1.0"
 edition = "2021"
+authors = ["Jiří Alexanrovič"]
 
 [dependencies]
 tui = { package = "ratatui", version = "0.22.0", features = ["all-widgets", "crossterm"]}

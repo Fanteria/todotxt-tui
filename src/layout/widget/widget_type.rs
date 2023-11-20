@@ -2,12 +2,13 @@ use crate::{
     error::ToDoError,
     todo::{ToDoCategory, ToDoData},
 };
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 /// An enumeration representing different types of widgets used in the application.
 /// Widgets are UI components with specific functionalities, such as task lists, project lists, and previews.
-#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize, ValueEnum)]
 pub enum WidgetType {
     List,
     Done,

@@ -1,4 +1,5 @@
 use crate::config::Styles;
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::convert::From;
 use std::ops::Index;
@@ -10,7 +11,7 @@ use tui::widgets::ListItem;
 type Item<'a> = (usize, &'a Task);
 
 /// Represents the possible sorting options for tasks.
-#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+#[derive(Clone, Copy, Serialize, Deserialize, Default, ValueEnum)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub enum TaskSort {
     #[default]

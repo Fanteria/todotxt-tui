@@ -1,9 +1,8 @@
-use crate::error::ToDoError;
-use std::{cmp::Ordering, str::FromStr};
+use super::UIEvent;
 use crate::config::KeyCodeDef;
 use crossterm::event::KeyCode;
 use serde::{Deserialize, Serialize};
-use super::UIEvent;
+use std::cmp::Ordering;
 
 /// Struct representing an entry that maps a `KeyCode` to a `UIEvent`.
 #[derive(Serialize, Deserialize, Clone)]
@@ -14,12 +13,12 @@ pub struct EventEntry {
     pub event: UIEvent,
 }
 
-impl FromStr for EventEntry {
-    type Err = ToDoError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-    }
-}
+// impl FromStr for EventEntry {
+//     type Err = ToDoError;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//     }
+// }
 
 impl PartialEq for EventEntry {
     fn eq(&self, other: &Self) -> bool {
@@ -55,18 +54,9 @@ impl Ord for EventEntry {
 
 impl From<&(KeyCode, UIEvent)> for EventEntry {
     fn from(value: &(KeyCode, UIEvent)) -> Self {
-        Self{
+        Self {
             key: value.0,
             event: value.1,
         }
     }
 }
-
-// impl FromStr for EventEntry {
-//     type Err = ToDoError;
-//
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//         // KeyCode::try_from<String>();
-//
-//     }
-// }

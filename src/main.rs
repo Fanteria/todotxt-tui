@@ -5,19 +5,28 @@ mod layout;
 mod todo;
 mod ui;
 
-use crate::{config::{Config, Logger}, file_worker::FileWorker, todo::ToDo, ui::UI};
+use crate::{
+    config::{Config, Logger},
+    file_worker::FileWorker,
+    todo::ToDo,
+    ui::UI,
+};
+use clap::Parser;
 use file_worker::FileWorkerCommands;
 use layout::Layout;
 use std::{
     error::Error,
-    sync::{Arc, Mutex}, env,
+    sync::{Arc, Mutex},
 };
 
 #[macro_use]
 extern crate enum_dispatch;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let config = Config::load_default()?;
+    let config = Config::parse();
+    let load_config = config.load_config()?;
+    let config = config.merge(load_config);
+
     Logger::new(&config).init()?;
     log::trace!("===== PROGRAM START =====");
     let todo = Arc::new(Mutex::new(ToDo::new(&config)));

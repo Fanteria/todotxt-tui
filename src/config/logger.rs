@@ -5,10 +5,10 @@ use log4rs::{
     config::{Appender, Config as LogConfig, Root},
     encode::pattern::PatternEncoder,
 };
-use std::error::Error;
+use std::{error::Error, path::PathBuf};
 
 pub struct Logger {
-    file: String,
+    file: PathBuf,
     format: String,
     level: LevelFilter,
 }
