@@ -11,7 +11,7 @@ use crate::{
     todo::ToDo,
     ui::UI,
 };
-use clap::Parser;
+use clap::{Parser, CommandFactory};
 use file_worker::FileWorkerCommands;
 use layout::Layout;
 use std::{
@@ -24,6 +24,7 @@ extern crate enum_dispatch;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let config = Config::parse();
+    Config::command_for_update();
     let load_config = config.load_config()?;
     let config = config.merge(load_config);
     if config.export()? {

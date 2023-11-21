@@ -1,24 +1,10 @@
-mod colors;
-mod keycode;
-mod logger;
-mod styles;
-mod text_modifier;
-mod text_style;
-
-pub use self::keycode::KeyCodeDef;
-pub use self::logger::Logger;
-pub use self::styles::Styles;
-pub use self::text_style::TextStyle;
-
 use self::{colors::opt_color, text_style::*};
 use crate::{
     layout::widget::widget_type::WidgetType,
     todo::task_list::TaskSort,
     ui::{EventHandlerUI, UIEvent},
 };
-use clap::{arg, Args, Command, FromArgMatches as _};
-use clap::{Parser, CommandFactory};
-
+use clap::Parser;
 use crossterm::event::KeyCode;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
@@ -32,7 +18,6 @@ use std::{
     io::{self, Read, Write}, error::Error,
 };
 use tui::style::Color;
-use clap_complete::{generate, shells::Bash};
 
 /// Configuration struct for the ToDo TUI application.
 #[derive(Serialize, Deserialize, Default, Parser)]
@@ -43,10 +28,6 @@ pub struct Config {
     #[serde(skip)]
     #[arg(short, long, value_name = "FILE")]
     config_path: Option<PathBuf>,
-
-    #[serde(skip)]
-    #[arg(long, value_name = "FILE")]
-    generate_autocomplete: Option<PathBuf>,
 
     #[serde(skip)]
     #[arg(long, value_name = "FILE")]
@@ -214,7 +195,6 @@ impl Config {
     pub fn merge(self, other: Config) -> Self {
         Self {
             config_path: self.config_path.or(other.config_path),
-            generate_autocomplete: self.generate_autocomplete.or(other.generate_autocomplete),
             export_config: self.export_config.or(other.export_config),
             export_default_config: self.export_default_config.or(other.export_default_config),
             active_color: self.active_color.or(other.active_color),
@@ -253,7 +233,6 @@ impl Config {
     pub fn fill(&self) -> Self {
         Self {
             config_path: self.config_path.clone(),
-            generate_autocomplete: self.generate_autocomplete.clone(),
             export_config: self.export_config.clone(),
             export_default_config: self.export_default_config.clone(),
 			active_color: Some(self.get_active_color()),
@@ -291,10 +270,6 @@ impl Config {
 
     pub fn export(&self) -> Result<bool, Box<dyn Error>> {
         let mut ret = false;
-        if let Some(path) = &self.generate_autocomplete {
-            generate(Bash, &mut Self::command(), "myapp", &mut File::create(path)?);
-            ret = true
-        }
         if let Some(path) = &self.export_config {
             let mut output = File::create(path)?;
             write!(output, "{}", toml::to_string_pretty(&self.fill())?)?;

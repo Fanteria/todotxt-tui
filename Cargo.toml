@@ -5,19 +5,20 @@ edition = "2021"
 authors = ["Jiří Alexanrovič"]
 
 [dependencies]
-tui = { package = "ratatui", version = "0.22.0", features = ["all-widgets", "crossterm"]}
-log = "0.4"
-serde = { version = "1.0", features = ["derive"] }
-crossterm = "0.27"
-todo-txt = "3.1"
-toml = "0.7"
-enum_dispatch = "0.3"
-clap = { version = "4.4", features = ["derive"] }
 chrono = "0.4"
+clap = { version = "4.4", features = ["derive"] }
+clap_complete = "4.4"
+crossterm = "0.27"
+enum_dispatch = "0.3"
+log = "0.4"
 log4rs = "1.2"
 notify = "6.0"
-tui-input = { version = "0.8", features = ["crossterm"], default-features = false }
 regex = { version = "1.3", default-features = false, features = ["std"] }
+serde = { version = "1.0", features = ["derive"] }
+todo-txt = "3.1"
+toml = "0.7"
+tui = { package = "ratatui", version = "0.22.0", features = ["all-widgets", "crossterm"]}
+tui-input = { version = "0.8", features = ["crossterm"], default-features = false }
 
 [dev-dependencies]
 test-log = "0.2.13"
