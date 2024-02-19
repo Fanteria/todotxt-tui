@@ -23,10 +23,11 @@ use std::{
 extern crate enum_dispatch;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let config = Config::parse();
+    let mut config = Config::parse();
     Config::command_for_update();
-    let load_config = config.load_config()?;
-    let config = config.merge(load_config);
+    if let Ok(load_config) = config.load_config() {
+        config = config.merge(load_config);
+    }
     if config.export()? {
         return Ok(())
     }

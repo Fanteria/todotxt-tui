@@ -339,7 +339,7 @@ mod tests {
                 "\n-----{}-----\nGET:\n{}\n----------------\nEXPECTED:\n{}\n",
                 msg,
                 String::from_utf8(buf.clone()).unwrap(),
-                expected.clone()
+                expected
             );
             Ok(())
         };

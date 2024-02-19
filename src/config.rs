@@ -16,8 +16,7 @@ use crate::{
     todo::task_list::TaskSort,
     ui::{EventHandlerUI, UIEvent},
 };
-use clap::{arg, Args, Command, FromArgMatches as _};
-use clap::{Parser, CommandFactory};
+use clap::{arg, CommandFactory, Parser};
 
 use crossterm::event::KeyCode;
 use log::LevelFilter;
@@ -39,30 +38,38 @@ use clap_complete::{generate, shells::Bash};
 #[command(author, version, about, long_about = None)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct Config {
-    /// Path to configuration file
+    /// Path to configuration file.
     #[serde(skip)]
     #[arg(short, long, value_name = "FILE")]
     config_path: Option<PathBuf>,
 
+    /// Generate autocomplete script to given file path.
     #[serde(skip)]
-    #[arg(long, value_name = "FILE")]
+    #[arg(long, value_name = "FILE", help_heading = "export")]
     generate_autocomplete: Option<PathBuf>,
 
+    /// Generate full configuration file for actual session 
+    /// so present configuration file and command lines 
+    /// options are taken in account.
     #[serde(skip)]
-    #[arg(long, value_name = "FILE")]
+    #[arg(long, value_name = "FILE", help_heading = "export")]
     export_config: Option<PathBuf>,
 
+    /// Generate configuration file with default values
+    /// to given file path.
     #[serde(skip)]
-    #[arg(long, value_name = "FILE")]
+    #[arg(long, value_name = "FILE", help_heading = "export")]
     export_default_config: Option<PathBuf>,
 
     #[serde(default, with = "opt_color")]
     #[arg(long, value_name = "COLOR")]
     active_color: Option<Color>,
 
+    /// Widget that will be active after start of the application.
     #[arg(short, long, value_name = "WIDGET_TYPE")]
     init_widget: Option<WidgetType>,
 
+    /// Title of window with opened todo-tui {env!("CARGO_PKG_NAME")} {AAAA}
     #[arg(short = 'T', long, value_name = "STRING")]
     window_title: Option<String>,
 
@@ -156,13 +163,13 @@ impl Config {
     /// # Returns
     ///
     /// A `Result` containing the loaded configuration (`Ok`) or an error (`Err`) if loading fails.
-    pub fn load(path: &str) -> io::Result<Self> {
+    pub fn load(path: &PathBuf) -> io::Result<Self> {
         Ok(Self::load_from_buffer(File::open(path)?))
     }
 
     pub fn load_config(&self) -> io::Result<Self> {
         match &self.config_path {
-            Some(path) => Ok(Self::load_from_buffer(File::open(path)?)),
+            Some(path) => Config::load(path),
             None => Self::load_default(),
         }
     }
@@ -292,7 +299,7 @@ impl Config {
     pub fn export(&self) -> Result<bool, Box<dyn Error>> {
         let mut ret = false;
         if let Some(path) = &self.generate_autocomplete {
-            generate(Bash, &mut Self::command(), "myapp", &mut File::create(path)?);
+            generate(Bash, &mut Self::command(), env!("CARGO_PKG_NAME"), &mut File::create(path)?);
             ret = true
         }
         if let Some(path) = &self.export_config {

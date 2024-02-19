@@ -76,7 +76,7 @@ impl Parser {
     }
 
     pub fn fill(&self, todo: &ToDo) -> Vec<Vec<(String, Style)>> {
-        self.lines.iter().map(|line| line.fill(todo)).collect()
+        self.lines.iter().filter_map(|line| line.fill(todo)).collect()
     }
 }
 
@@ -247,16 +247,29 @@ mod tests {
     }
 
     #[test]
-    fn fill() -> ToDoRes<()> {
+    fn fill_base() -> ToDoRes<()> {
         let parser = Parser::from_str("some text")?;
         let mut todo = ToDo::default();
         todo.new_task("task").unwrap();
         todo.new_task("x done task").unwrap();
-
-        assert_eq!(parser.fill(&todo), vec![vec![]]);
+        
+        assert_eq!(parser.fill(&todo), Vec::<Vec<(String, Style)>>::new());
 
         todo.set_active(ToDoData::Pending, 0);
         assert_eq!(parser.fill(&todo), vec![vec![(String::from("some text"), Style::default())]]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn fill_counts() -> ToDoRes<()> {
+        let parser = Parser::from_str("Done: $done Pending: $pending")?;
+        let mut todo = ToDo::default();
+        todo.new_task("task").unwrap();
+        todo.new_task("x done task").unwrap();
+        todo.set_active(ToDoData::Pending, 0);
+
+        assert_eq!(parser.fill(&todo), vec![vec![(String::from("Done: 1 Pending: 1"), Style::default())]]);
 
         Ok(())
     }

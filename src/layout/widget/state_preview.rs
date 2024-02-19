@@ -1,5 +1,5 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{error::ToDoRes, todo::Parser, ui::UIEvent, config::Config};
+use crate::{config::Config, error::ToDoRes, todo::Parser, ui::UIEvent};
 use std::str::FromStr;
 use tui::{
     backend::Backend,
@@ -45,6 +45,7 @@ impl State for StatePreview {
         let mut paragraph = Paragraph::new(
             lines
                 .iter()
+                // .filter(|line| !line.is_empty())
                 .map(|line| Line {
                     spans: line
                         .iter()
