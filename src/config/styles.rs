@@ -13,6 +13,8 @@ pub struct Styles {
     pub contexts_style: TextStyle,
     pub hashtags_style: TextStyle,
     pub category_style: TextStyle,
+    pub category_select_style: TextStyle,
+    pub category_remove_style: TextStyle,
     pub custom_category_style: HashMap<String, TextStyle>,
 }
 
@@ -56,7 +58,9 @@ impl Styles {
         let category_style = config.get_category_style();
         let mut styles = Styles {
             priority_style: config.get_priority_colors(),
-            category_style,
+            category_style: config.get_category_style(),
+            category_select_style: config.get_category_select_style(),
+            category_remove_style: config.get_category_remove_style(),
             projects_style: config.get_projects_style().combine(&category_style),
             contexts_style: config.get_contexts_style().combine(&category_style),
             hashtags_style: config.get_hashtags_style().combine(&category_style),

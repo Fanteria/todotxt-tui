@@ -17,7 +17,6 @@ impl Line {
         styles: &Styles,
     ) -> ToDoRes<()> {
         if !parts.is_empty() {
-            println!("TEST");
             self.0
                 .push(LineBlock::try_from_styled(parts, style, styles)?);
         }

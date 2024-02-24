@@ -22,20 +22,21 @@ use crate::{
 };
 use clap::{arg, CommandFactory, Parser};
 
+use clap_complete::{generate, shells::Bash};
 use crossterm::event::KeyCode;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     env::var,
+    error::Error,
     fs::File,
+    io::{self, Read, Write},
     num::ParseIntError,
     path::PathBuf,
     time::Duration,
-    io::{self, Read, Write}, error::Error,
 };
 use tui::style::Color;
-use clap_complete::{generate, shells::Bash};
 
 /// Configuration struct for the ToDo TUI application.
 #[derive(Serialize, Deserialize, Default, Parser)]
@@ -52,8 +53,8 @@ pub struct Config {
     #[arg(long, value_name = "FILE", help_heading = "export")]
     generate_autocomplete: Option<PathBuf>,
 
-    /// Generate full configuration file for actual session 
-    /// so present configuration file and command lines 
+    /// Generate full configuration file for actual session
+    /// so present configuration file and command lines
     /// options are taken in account.
     #[serde(skip)]
     #[arg(long, value_name = "FILE", help_heading = "export")]
@@ -145,6 +146,12 @@ pub struct Config {
 
     #[arg(long, value_name = "TEXT_STYLE")]
     category_style: Option<TextStyle>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
+    category_select_style: Option<TextStyle>,
+
+    #[arg(long, value_name = "TEXT_STYLE")]
+    category_remove_style: Option<TextStyle>,
 
     #[arg(long, value_name = "TEXT_STYLE")]
     projects_style: Option<TextStyle>,
@@ -254,6 +261,8 @@ impl Config {
             list_keybind: self.list_keybind.or(other.list_keybind),
             window_keybind: self.window_keybind.or(other.window_keybind),
             category_style: self.category_style.or(other.category_style),
+            category_select_style: self.category_select_style.or(other.category_select_style),
+            category_remove_style: self.category_remove_style.or(other.category_remove_style),
             projects_style: self.projects_style.or(other.projects_style),
             contexts_style: self.contexts_style.or(other.contexts_style),
             hashtags_style: self.hashtags_style.or(other.hashtags_style),
@@ -267,43 +276,50 @@ impl Config {
             generate_autocomplete: self.generate_autocomplete.clone(),
             export_config: self.export_config.clone(),
             export_default_config: self.export_default_config.clone(),
-			active_color: Some(self.get_active_color()),
-			init_widget: Some(self.get_init_widget()),
-			window_title: Some(self.get_window_title()),
-			todo_path: Some(self.get_todo_path()),
-			archive_path: self.get_archive_path(),
-			priority_colors: Some(self.get_priority_colors()),
-			wrap_preview: Some(self.get_wrap_preview()),
-			list_active_color: Some(self.get_list_active_color()),
-			pending_active_color: Some(self.get_pending_active_color()),
-			done_active_color: Some(self.get_done_active_color()),
-			autosave_duration: Some(self.get_autosave_duration()),
-			log_file: Some(self.get_log_file()),
-			log_format: Some(self.get_log_format()),
-			log_level: Some(self.get_log_level()),
-			file_watcher: Some(self.get_file_watcher()),
-			list_refresh_rate: Some(self.get_list_refresh_rate()),
-			list_shift: Some(self.get_list_shift()),
-			pending_sort: Some(self.get_pending_sort()),
-			done_sort: Some(self.get_done_sort()),
-			preview_format: Some(self.get_preview_format()),
-			layout: Some(self.get_layout()),
-			tasks_keybind: Some(self.get_tasks_keybind()),
-			category_keybind: Some(self.get_category_keybind()),
-			list_keybind: Some(self.get_list_keybind()),
-			window_keybind: Some(self.get_window_keybind()),
-			category_style: Some(self.get_category_style()),
-			projects_style: Some(self.get_projects_style()),
-			contexts_style: Some(self.get_contexts_style()),
-			hashtags_style: Some(self.get_hashtags_style()),
-			custom_category_style: Some(self.get_custom_category_style()),
+            active_color: Some(self.get_active_color()),
+            init_widget: Some(self.get_init_widget()),
+            window_title: Some(self.get_window_title()),
+            todo_path: Some(self.get_todo_path()),
+            archive_path: self.get_archive_path(),
+            priority_colors: Some(self.get_priority_colors()),
+            wrap_preview: Some(self.get_wrap_preview()),
+            list_active_color: Some(self.get_list_active_color()),
+            pending_active_color: Some(self.get_pending_active_color()),
+            done_active_color: Some(self.get_done_active_color()),
+            autosave_duration: Some(self.get_autosave_duration()),
+            log_file: Some(self.get_log_file()),
+            log_format: Some(self.get_log_format()),
+            log_level: Some(self.get_log_level()),
+            file_watcher: Some(self.get_file_watcher()),
+            list_refresh_rate: Some(self.get_list_refresh_rate()),
+            list_shift: Some(self.get_list_shift()),
+            pending_sort: Some(self.get_pending_sort()),
+            done_sort: Some(self.get_done_sort()),
+            preview_format: Some(self.get_preview_format()),
+            layout: Some(self.get_layout()),
+            tasks_keybind: Some(self.get_tasks_keybind()),
+            category_keybind: Some(self.get_category_keybind()),
+            list_keybind: Some(self.get_list_keybind()),
+            window_keybind: Some(self.get_window_keybind()),
+            category_style: Some(self.get_category_style()),
+            category_select_style: Some(self.get_category_select_style()),
+            category_remove_style: Some(self.get_category_remove_style()),
+            projects_style: Some(self.get_projects_style()),
+            contexts_style: Some(self.get_contexts_style()),
+            hashtags_style: Some(self.get_hashtags_style()),
+            custom_category_style: Some(self.get_custom_category_style()),
         }
     }
 
     pub fn export(&self) -> Result<bool, Box<dyn Error>> {
         let mut ret = false;
         if let Some(path) = &self.generate_autocomplete {
-            generate(Bash, &mut Self::command(), env!("CARGO_PKG_NAME"), &mut File::create(path)?);
+            generate(
+                Bash,
+                &mut Self::command(),
+                env!("CARGO_PKG_NAME"),
+                &mut File::create(path)?,
+            );
             ret = true
         }
         if let Some(path) = &self.export_config {
@@ -313,7 +329,11 @@ impl Config {
         }
         if let Some(path) = &self.export_default_config {
             let mut output = File::create(path)?;
-            write!(output, "{}", toml::to_string_pretty(&Config::default().fill())?)?;
+            write!(
+                output,
+                "{}",
+                toml::to_string_pretty(&Config::default().fill())?
+            )?;
             ret = true
         }
         Ok(ret)
@@ -447,7 +467,10 @@ Link: $link",
     pub fn get_category_keybind(&self) -> EventHandlerUI {
         self.category_keybind
             .clone()
-            .unwrap_or(EventHandlerUI::new(&[(KeyCode::Enter, UIEvent::Select)]))
+            .unwrap_or(EventHandlerUI::new(&[
+                (KeyCode::Enter, UIEvent::Select),
+                (KeyCode::Backspace, UIEvent::Remove),
+            ]))
     }
 
     pub fn get_list_keybind(&self) -> EventHandlerUI {
@@ -475,6 +498,18 @@ Link: $link",
 
     fn get_category_style(&self) -> TextStyle {
         self.category_style.unwrap_or_default()
+    }
+
+    fn get_category_select_style(&self) -> TextStyle {
+        self.category_select_style.unwrap_or_else(|| {
+            TextStyle::default().fg(Color::Green)
+        })
+    }
+
+    fn get_category_remove_style(&self) -> TextStyle {
+        self.category_remove_style.unwrap_or_else(|| {
+            TextStyle::default().fg(Color::Red)
+        })
     }
 
     fn get_projects_style(&self) -> TextStyle {

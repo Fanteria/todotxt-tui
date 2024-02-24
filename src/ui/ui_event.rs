@@ -29,6 +29,7 @@ pub enum UIEvent {
     RemoveItem,
     MoveItem,
     Select, // State categories + State list
+    Remove, // State categories
     // State preview
     None, // without bind
 }
@@ -123,8 +124,10 @@ impl EventHandlerUI {
     ///
     /// A new `EventHandler` instance.
     pub fn new(events: &[(KeyCode, UIEvent)]) -> Self {
-        let mut events: Vec<_> = events.iter().map(|e| e.into()).collect();
-        events.sort();
+        let mut events: Vec<EventEntry> = events.iter().map(|e| e.into()).collect();
+        events.sort_by(|left, right| {
+            left.key.partial_cmp(&right.key).unwrap_or(Ordering::Equal)
+        });
         Self { events }
     }
 

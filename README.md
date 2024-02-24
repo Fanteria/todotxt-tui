@@ -316,6 +316,14 @@ key.Char = "q"
 event = "Load"
 key.Char = "u"
 
+# Style for categories to filter
+[category_select_style]
+fg = "Green"
+
+# Style for categories removes while filtering
+[category_remove_style]
+fg = "Red"
+
 # Category style
 [category_style]
 fg = "DarkGray"

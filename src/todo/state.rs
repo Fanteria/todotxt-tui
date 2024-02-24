@@ -1,7 +1,9 @@
-use std::collections::btree_set::BTreeSet;
+use std::collections::BTreeMap;
 use todo_txt::Task;
 
-use super::ToDo;
+use crate::config::ToDoConfig;
+
+use super::{task_list::TaskSort, ToDo};
 
 /// Enum to represent the state of ToDo data (pending or done).
 #[derive(Clone, Copy)]
@@ -35,6 +37,14 @@ impl ToDoData {
             Self::Done => &mut todo.done,
         }
     }
+
+    pub fn get_sorting(&self, config: &ToDoConfig) -> TaskSort {
+        use ToDoData::*;
+        match self {
+            Pending => config.pending_sort,
+            Done => config.done_sort,
+        }
+    }
 }
 
 /// Enum to represent different categories.
@@ -54,17 +64,30 @@ impl ToDoCategory {
             Hashtags => &task.hashtags,
         }
     }
+
+    pub fn get_all() -> &'static [ToDoCategory] {
+        use ToDoCategory::*;
+        static ALL_CATEGORIES: [ToDoCategory; 3] = [Projects, Contexts, Hashtags];
+        &ALL_CATEGORIES
+    }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum FilterState {
+    Select,
+    Remove,
+}
+
+#[derive(Default)]
 pub struct ToDoState {
     pub active: Option<(ToDoData, usize)>,
-    pub project_filters: BTreeSet<String>,
-    pub context_filters: BTreeSet<String>,
-    pub hashtag_filters: BTreeSet<String>,
+    pub project_filters: BTreeMap<String, FilterState>,
+    pub context_filters: BTreeMap<String, FilterState>,
+    pub hashtag_filters: BTreeMap<String, FilterState>,
 }
 
 impl ToDoState {
-    pub fn get_category(&self, category: ToDoCategory) -> &BTreeSet<String> {
+    pub fn get_category(&self, category: ToDoCategory) -> &BTreeMap<String, FilterState> {
         use ToDoCategory::*;
         match category {
             Projects => &self.project_filters,
@@ -73,7 +96,10 @@ impl ToDoState {
         }
     }
 
-    pub fn get_mut_category(&mut self, category: ToDoCategory) -> &mut BTreeSet<String> {
+    pub fn get_mut_category(
+        &mut self,
+        category: ToDoCategory,
+    ) -> &mut BTreeMap<String, FilterState> {
         use ToDoCategory::*;
         match category {
             Projects => &mut self.project_filters,
@@ -81,15 +107,36 @@ impl ToDoState {
             Hashtags => &mut self.hashtag_filters,
         }
     }
-}
 
-impl Default for ToDoState {
-    fn default() -> Self {
-        Self {
-            active: None,
-            project_filters: BTreeSet::new(),
-            context_filters: BTreeSet::new(),
-            hashtag_filters: BTreeSet::new(),
+    pub fn filter_out(&self, task: &Task) -> bool {
+        fn filter(category: &BTreeMap<String, FilterState>, task_categories: &[String]) -> bool {
+            category.iter().all(|(category, state)| {
+                let contains = task_categories.contains(category);
+                match state {
+                    FilterState::Select => contains,
+                    FilterState::Remove => !contains,
+                }
+            })
+        }
+        filter(&self.project_filters, task.projects())
+            && filter(&self.context_filters, task.contexts())
+            && filter(&self.hashtag_filters, &task.hashtags)
+    }
+
+    pub fn set_filter(&mut self, category: ToDoCategory, filter: &str, filter_state: FilterState) {
+        let category = self.get_mut_category(category);
+        match category.get_mut(filter) {
+            Some(a) => {
+                if filter_state == *a {
+                    category.remove(filter);
+                } else {
+                    *a = filter_state;
+                }
+            }
+            None => {
+                category.insert(filter.to_owned(), filter_state);
+            }
         }
     }
 }
+

@@ -13,13 +13,6 @@ pub struct EventEntry {
     pub event: UIEvent,
 }
 
-// impl FromStr for EventEntry {
-//     type Err = ToDoError;
-//
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//     }
-// }
-
 impl PartialEq for EventEntry {
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key
@@ -32,12 +25,6 @@ impl PartialEq<KeyCode> for EventEntry {
     }
 }
 
-impl PartialOrd for EventEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.key.partial_cmp(&other.key)
-    }
-}
-
 impl PartialOrd<KeyCode> for EventEntry {
     fn partial_cmp(&self, other: &KeyCode) -> Option<Ordering> {
         self.key.partial_cmp(other)
@@ -45,12 +32,6 @@ impl PartialOrd<KeyCode> for EventEntry {
 }
 
 impl Eq for EventEntry {}
-
-impl Ord for EventEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or(Ordering::Equal)
-    }
-}
 
 impl From<&(KeyCode, UIEvent)> for EventEntry {
     fn from(value: &(KeyCode, UIEvent)) -> Self {
