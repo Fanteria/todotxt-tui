@@ -1,6 +1,10 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{config::Config, error::ToDoRes, todo::Parser, ui::UIEvent};
-use std::str::FromStr;
+use crate::{
+    config::{Config, Styles},
+    error::ToDoRes,
+    todo::Parser,
+    ui::UIEvent,
+};
 use tui::{
     backend::Backend,
     text::{Line, Span},
@@ -29,7 +33,7 @@ impl StatePreview {
     pub fn new(base: WidgetBase, config: &Config) -> ToDoRes<Self> {
         Ok(StatePreview {
             base,
-            parser: Parser::from_str(&config.get_preview_format())?,
+            parser: Parser::new(&config.get_preview_format(), Styles::new(config))?,
             wrap_preview: config.get_wrap_preview(),
         })
     }
@@ -45,7 +49,6 @@ impl State for StatePreview {
         let mut paragraph = Paragraph::new(
             lines
                 .iter()
-                // .filter(|line| !line.is_empty())
                 .map(|line| Line {
                     spans: line
                         .iter()

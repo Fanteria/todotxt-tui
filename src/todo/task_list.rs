@@ -127,7 +127,7 @@ impl<'a> TaskList<'a> {
 
         let style = styles
             .priority_style
-            .get_style(usize::from(u8::from(task.priority.clone())));
+            .get_style(u8::from(task.priority.clone()));
 
         if indexes.is_empty() {
             return vec![Span::styled(&task.subject, style)];
@@ -140,13 +140,13 @@ impl<'a> TaskList<'a> {
             |((act_index, act_len), (next_index, _))| {
                 let end_index = act_index + act_len;
                 let s = &task.subject[*act_index..end_index];
-                parsed.push(Span::styled(s, styles.get_style(s).get_style()));
+                parsed.push(Span::styled(s, styles.get_category_style(s).get_style()));
                 parsed.push(Span::styled(&task.subject[end_index..*next_index], style));
             },
         );
         let (last_index, last_len) = indexes.last().unwrap();
         let s = &task.subject[*last_index..last_index + last_len];
-        parsed.push(Span::styled(s, styles.get_style(s).get_style()));
+        parsed.push(Span::styled(s, styles.get_category_style(s).get_style()));
 
         parsed
     }

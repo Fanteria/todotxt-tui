@@ -8,9 +8,11 @@ mod text_style;
 pub use self::keycode::KeyCodeDef;
 pub use self::logger::Logger;
 pub use self::styles::Styles;
+pub use self::styles::StylesValue;
 pub use self::text_style::TextStyle;
+pub use self::text_style::TextStyleList;
 
-use self::{colors::opt_color, text_style::*};
+use self::colors::opt_color;
 use crate::{
     layout::widget::widget_type::WidgetType,
     todo::task_list::TaskSort,

@@ -97,10 +97,7 @@ mod tests {
         todo.new_task("task spec:some-text").unwrap();
         todo.new_task("x 2023-11-12 2023-11-12 done task").unwrap();
 
-        assert_eq!(
-            Parts::Text("Text".to_string()).fill(&todo),
-            None
-        );
+        assert_eq!(Parts::Text("Text".to_string()).fill(&todo), None);
 
         todo.set_active(ToDoData::Pending, 0);
         assert_eq!(
@@ -108,31 +105,16 @@ mod tests {
             Some(String::from("Text"))
         );
 
-        assert_eq!(
-            Parts::Pending.fill(&todo),
-            Some(String::from("9"))
-        );
+        assert_eq!(Parts::Pending.fill(&todo), Some(String::from("9")));
 
-        assert_eq!(
-            Parts::Done.fill(&todo),
-            Some(String::from("1"))
-        );
+        assert_eq!(Parts::Done.fill(&todo), Some(String::from("1")));
 
-        assert_eq!(
-            Parts::Subject.fill(&todo),
-            Some(String::from("task"))
-        );
+        assert_eq!(Parts::Subject.fill(&todo), Some(String::from("task")));
 
-        assert_eq!(
-            Parts::Priority.fill(&todo),
-            None
-        );
+        assert_eq!(Parts::Priority.fill(&todo), None);
 
         todo.set_active(ToDoData::Pending, 1);
-        assert_eq!(
-            Parts::Priority.fill(&todo),
-            Some(String::from("A"))
-        );
+        assert_eq!(Parts::Priority.fill(&todo), Some(String::from("A")));
 
         todo.set_active(ToDoData::Pending, 2);
         assert_eq!(
@@ -140,10 +122,7 @@ mod tests {
             Some(String::from("2023-11-12"))
         );
 
-        assert_eq!(
-            Parts::FinishDate.fill(&todo),
-            None
-        );
+        assert_eq!(Parts::FinishDate.fill(&todo), None);
 
         todo.set_active(ToDoData::Done, 0);
         assert_eq!(
@@ -152,15 +131,9 @@ mod tests {
         );
 
         todo.set_active(ToDoData::Done, 0);
-        assert_eq!(
-            Parts::Finished.fill(&todo),
-            Some(String::from("true"))
-        );
+        assert_eq!(Parts::Finished.fill(&todo), Some(String::from("true")));
 
-        assert_eq!(
-            Parts::TresholdDate.fill(&todo),
-            None
-        );
+        assert_eq!(Parts::TresholdDate.fill(&todo), None);
 
         todo.set_active(ToDoData::Pending, 3);
         assert_eq!(
@@ -168,54 +141,27 @@ mod tests {
             Some(String::from("2023-11-12"))
         );
 
-        assert_eq!(
-            Parts::DueDate.fill(&todo),
-            None
-        );
+        assert_eq!(Parts::DueDate.fill(&todo), None);
 
         todo.set_active(ToDoData::Pending, 4);
-        assert_eq!(
-            Parts::DueDate.fill(&todo),
-            Some(String::from("2023-11-12"))
-        );
+        assert_eq!(Parts::DueDate.fill(&todo), Some(String::from("2023-11-12")));
 
-        assert_eq!(
-            Parts::Contexts.fill(&todo),
-            None
-        );
+        assert_eq!(Parts::Contexts.fill(&todo), None);
 
         todo.set_active(ToDoData::Pending, 5);
-        assert_eq!(
-            Parts::Contexts.fill(&todo),
-            Some(String::from("context"))
-        );
+        assert_eq!(Parts::Contexts.fill(&todo), Some(String::from("context")));
 
-        assert_eq!(
-            Parts::Projects.fill(&todo),
-            None
-        );
+        assert_eq!(Parts::Projects.fill(&todo), None);
 
         todo.set_active(ToDoData::Pending, 6);
-        assert_eq!(
-            Parts::Projects.fill(&todo),
-            Some(String::from("project"))
-        );
+        assert_eq!(Parts::Projects.fill(&todo), Some(String::from("project")));
 
-        assert_eq!(
-            Parts::Hashtags.fill(&todo),
-            None
-        );
+        assert_eq!(Parts::Hashtags.fill(&todo), None);
 
         todo.set_active(ToDoData::Pending, 7);
-        assert_eq!(
-            Parts::Hashtags.fill(&todo),
-            Some(String::from("hashtag"))
-        );
+        assert_eq!(Parts::Hashtags.fill(&todo), Some(String::from("hashtag")));
 
-        assert_eq!(
-            Parts::Special(String::from("spec")).fill(&todo),
-            None
-        );
+        assert_eq!(Parts::Special(String::from("spec")).fill(&todo), None);
 
         todo.set_active(ToDoData::Pending, 8);
         assert_eq!(

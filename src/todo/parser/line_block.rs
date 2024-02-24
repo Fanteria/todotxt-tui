@@ -1,16 +1,16 @@
 use super::Parts;
 
 use super::ToDo;
-use crate::config::TextStyle;
+use crate::config::{Styles, StylesValue};
 use crate::error::ToDoError;
 use crate::error::ToDoRes;
-use std::str::FromStr;
 use tui::style::Style;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct LineBlock {
     pub parts: Vec<Parts>,
-    pub style: Style,
+    pub style: StylesValue,
 }
 
 impl LineBlock {
@@ -65,20 +65,26 @@ impl LineBlock {
         Ok(ret)
     }
 
-    pub fn fill(&self, todo: &ToDo) -> Option<(String, Style)> {
+    pub fn fill(&self, todo: &ToDo, styles: &Styles) -> Option<(String, Style)> {
         let mut ret = String::new();
         for part in &self.parts {
             ret += &part.fill(todo)?;
         }
-        Some((ret, self.style))
+        Some((
+            ret,
+            match todo.get_active() {
+                Some(task) => self.style.get_style(task, styles),
+                None => Style::default(),
+            },
+        ))
     }
 
-    pub fn try_from_styled(value: &str, style: Option<String>) -> ToDoRes<Self> {
+    pub fn try_from_styled(value: &str, style: Option<String>, styles: &Styles) -> ToDoRes<Self> {
         Ok(LineBlock {
             parts: Self::parse_variables(value)?,
             style: match style {
-                Some(style) => TextStyle::from_str(&style)?.get_style(),
-                None => Style::default(),
+                Some(style) => styles.get_style(&style)?,
+                None => styles.get_style_default(),
             },
         })
     }
