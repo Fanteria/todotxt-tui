@@ -4,6 +4,7 @@ mod logger;
 mod styles;
 mod text_modifier;
 mod text_style;
+mod todo_config;
 
 pub use self::keycode::KeyCodeDef;
 pub use self::logger::Logger;
@@ -11,6 +12,7 @@ pub use self::styles::Styles;
 pub use self::styles::StylesValue;
 pub use self::text_style::TextStyle;
 pub use self::text_style::TextStyleList;
+pub use self::todo_config::ToDoConfig;
 
 use self::colors::opt_color;
 use crate::{

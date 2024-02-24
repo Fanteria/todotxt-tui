@@ -1,14 +1,15 @@
 pub mod autocomplete;
 pub mod category_list;
 pub mod parser;
+pub mod state;
 pub mod task_list;
 
-use self::task_list::TaskSort;
 pub use self::{
-    autocomplete::autocomplete, category_list::CategoryList, parser::Parser, task_list::TaskList,
+    autocomplete::autocomplete, category_list::CategoryList, parser::Parser, state::*,
+    task_list::TaskList,
 };
 
-use crate::config::{Styles, Config};
+use crate::config::{Config, Styles, ToDoConfig};
 use chrono::Utc;
 use std::{collections::btree_set::BTreeSet, convert::From, str::FromStr};
 use todo_txt::Task;
@@ -16,35 +17,13 @@ use todo_txt::Task;
 /// Type alias for a tuple representing filter data.
 type FilterData<'a> = (&'a BTreeSet<String>, fn(&'a Task) -> &'a [String]);
 
-/// Enum to represent the state of ToDo data (pending or done).
-#[derive(Clone, Copy)]
-pub enum ToDoData {
-    Pending,
-    Done,
-}
-use ToDoData::*;
-
-/// Enum to represent different categories.
-#[derive(Clone, Copy, PartialEq)]
-pub enum ToDoCategory {
-    Projects,
-    Contexts,
-    Hashtags,
-}
-use ToDoCategory::*;
-
 /// Struct to manage ToDo tasks and theirs state.
 pub struct ToDo {
     pub pending: Vec<Task>,
     pub done: Vec<Task>,
-    use_done: bool,
-    active: Option<(ToDoData, usize)>,
     version: usize,
-    pub pending_sort: TaskSort,
-    pub done_sort: TaskSort,
-    project_filters: BTreeSet<String>,
-    context_filters: BTreeSet<String>,
-    hashtag_filters: BTreeSet<String>,
+    state: ToDoState,
+    config: ToDoConfig,
     styles: Styles,
 }
 
@@ -58,14 +37,9 @@ impl ToDo {
         Self {
             pending: Vec::new(),
             done: Vec::new(),
-            use_done: false, // TODO add to config
-            active: None,
             version: 0,
-            pending_sort: config.get_pending_sort(),
-            done_sort: config.get_done_sort(),
-            project_filters: BTreeSet::new(),
-            context_filters: BTreeSet::new(),
-            hashtag_filters: BTreeSet::new(),
+            state: ToDoState::default(),
+            config: ToDoConfig::new(config),
             styles: Styles::new(config),
         }
     }
@@ -79,31 +53,6 @@ impl ToDo {
         self.pending = other.pending;
         self.done = other.done;
         self.version += 1;
-    }
-
-    /// Gets a reference to the specified ToDo data.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - The type of ToDo data to retrieve.
-    pub fn get_data(&self, data: ToDoData) -> &Vec<Task> {
-        match data {
-            Pending => &self.pending,
-            Done => &self.done,
-        }
-    }
-
-    /// Gets a mutable reference to the specified ToDo data (pending or done).
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - The type of ToDo data to retrieve (Pending or Done).
-    fn get_data_mut(&mut self, data: ToDoData) -> &mut Vec<Task> {
-        self.version += 1;
-        match data {
-            Pending => &mut self.pending,
-            Done => &mut self.done,
-        }
     }
 
     /// Gets the current version of the ToDo data.
@@ -144,60 +93,32 @@ impl ToDo {
     ///
     /// # Arguments
     ///
-    /// * `category` - The type of category to retrieve (Projects, Contexts, or Hashtags).
-    ///
-    /// # Returns
-    ///
-    /// A `CategoryList` containing the filtered categories and their selection status.
-    fn get_btree<'a>(
-        tasks: Vec<&'a Vec<Task>>,
-        f: fn(&Task) -> &[String],
-        selected: &BTreeSet<String>,
-        styles: &'a Styles,
-    ) -> CategoryList<'a> {
-        let mut btree = BTreeSet::<&String>::new();
-        tasks.iter().for_each(|list| {
-            list.iter().for_each(|task| {
-                f(task).iter().for_each(|project| {
-                    btree.insert(project);
-                })
-            })
-        });
-        CategoryList{
-            vec: btree
-                .iter()
-                .map(|item| (*item, selected.contains(*item)))
-                .collect(),
-            styles,
-        }
-    }
-
-    /// Gets a filtered list of categories from the ToDo data.
-    ///
-    /// # Arguments
-    ///
     /// * `category` - The type of category to retrieve.
     ///
     /// # Returns
     ///
     /// A `CategoryList` containing the filtered categories and their selection status.
     pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
-        let get_btree_done_switch = |f, selected| {
-            Self::get_btree(
-                if self.use_done {
-                    vec![&self.pending, &self.done]
-                } else {
-                    vec![&self.pending]
-                },
-                f,
-                selected,
-                &self.styles,
-            )
+        let mut btree = BTreeSet::<&String>::new();
+        let tasks = if self.config.use_done {
+            vec![&self.pending, &self.done]
+        } else {
+            vec![&self.pending]
         };
-        match category {
-            Projects => get_btree_done_switch(|t| t.projects(), &self.project_filters),
-            Contexts => get_btree_done_switch(|t| t.contexts(), &self.context_filters),
-            Hashtags => get_btree_done_switch(|t| &t.hashtags, &self.hashtag_filters),
+        tasks.iter().for_each(|list| {
+            list.iter().for_each(|task| {
+                category.get_data(task).iter().for_each(|project| {
+                    btree.insert(project);
+                })
+            })
+        });
+        let selected = self.state.get_category(category);
+        CategoryList {
+            vec: btree
+                .iter()
+                .map(|item| (*item, selected.contains(*item)))
+                .collect(),
+            styles: &self.styles,
         }
     }
 
@@ -219,10 +140,9 @@ impl ToDo {
             task.finished = !task.finished;
             to.push(task)
         };
+        use ToDoData::*;
         match data {
-            Pending => {
-                move_task_logic(&mut self.pending, &mut self.done);
-            }
+            Pending => move_task_logic(&mut self.pending, &mut self.done),
             Done => move_task_logic(&mut self.done, &mut self.pending),
         };
         self.fix_active(index)
@@ -235,11 +155,7 @@ impl ToDo {
     /// * `category` - The type of category to which the filter applies (Projects, Contexts, or Hashtags).
     /// * `filter` - The filter string to toggle.
     pub fn toggle_filter(&mut self, category: ToDoCategory, filter: &str) {
-        let filter_set = match category {
-            Projects => &mut self.project_filters,
-            Contexts => &mut self.context_filters,
-            Hashtags => &mut self.hashtag_filters,
-        };
+        let filter_set = self.state.get_mut_category(category);
         if !filter_set.insert(String::from(filter)) {
             filter_set.remove(filter);
         }
@@ -275,17 +191,17 @@ impl ToDo {
             }
         }
         let mut task_list = get_filtered_tasks(
-            self.get_data(data),
+            data.get_data(self),
             &[
-                (&self.project_filters, |t| t.projects()),
-                (&self.context_filters, |t| t.contexts()),
-                (&self.hashtag_filters, |t| &t.hashtags),
+                (&self.state.project_filters, |t| t.projects()),
+                (&self.state.context_filters, |t| t.contexts()),
+                (&self.state.hashtag_filters, |t| &t.hashtags),
             ],
             &self.styles,
         );
         match data {
-            ToDoData::Pending => task_list.sort(self.pending_sort),
-            ToDoData::Done => task_list.sort(self.done_sort),
+            ToDoData::Pending => task_list.sort(self.config.pending_sort),
+            ToDoData::Done => task_list.sort(self.config.done_sort),
         }
         task_list
     }
@@ -326,7 +242,7 @@ impl ToDo {
     /// * `index` - The index of the task to be removed in the specified data.
     pub fn remove_task(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
-        self.get_data_mut(data).remove(index);
+        data.get_data_mut(self).remove(index);
         self.fix_active(index);
     }
 
@@ -340,8 +256,8 @@ impl ToDo {
     pub fn swap_tasks(&mut self, data: ToDoData, from: usize, to: usize) {
         let from = self.get_actual_index(data, from);
         let to = self.get_actual_index(data, to);
-        self.get_data_mut(data).swap(from, to);
-        if let Some((_, act_index)) = &mut self.active {
+        data.get_data_mut(self).swap(from, to);
+        if let Some((_, act_index)) = &mut self.state.active {
             if *act_index == from {
                 *act_index = to;
             } else if *act_index == to {
@@ -358,7 +274,7 @@ impl ToDo {
     /// * `index` - The index of the task to be set as active in the specified data.
     pub fn set_active(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
-        self.active = Some((data, index));
+        self.state.active = Some((data, index));
     }
 
     /// Gets the currently active task for potential editing.
@@ -367,8 +283,8 @@ impl ToDo {
     ///
     /// An `Option` containing a reference to the active `Task`, or `None` if no task is active.
     pub fn get_active(&self) -> Option<&Task> {
-        match self.active {
-            Some((data, index)) => Some(&self.get_data(data)[index]),
+        match self.state.active {
+            Some((data, index)) => Some(&data.get_data(self)[index]),
             None => None,
         }
     }
@@ -383,8 +299,8 @@ impl ToDo {
     ///
     /// A `Result` indicating success or an error if the updated task string cannot be parsed.
     pub fn update_active(&mut self, task: &str) -> Result<(), todo_txt::Error> {
-        if let Some((data, index)) = self.active {
-            self.get_data_mut(data)[index] = Task::from_str(task)?;
+        if let Some((data, index)) = self.state.active {
+            data.get_data_mut(self)[index] = Task::from_str(task)?;
         }
         Ok(())
     }
@@ -398,11 +314,11 @@ impl ToDo {
     ///
     /// * `index` - The index of a task that was moved or removed.
     fn fix_active(&mut self, index: usize) {
-        if let Some((_, act_index)) = &mut self.active {
+        if let Some((_, act_index)) = &mut self.state.active {
             log::trace!("act: {}, moved: {}", act_index, index);
             match index.cmp(act_index) {
                 std::cmp::Ordering::Less => *act_index -= 1,
-                std::cmp::Ordering::Equal => self.active = None,
+                std::cmp::Ordering::Equal => self.state.active = None,
                 std::cmp::Ordering::Greater => {}
             }
         }
@@ -423,7 +339,9 @@ impl ToDo {
 }
 
 impl Default for ToDo {
-    fn default() -> Self { ToDo::new(&Config::default()) }
+    fn default() -> Self {
+        ToDo::new(&Config::default())
+    }
 }
 
 #[cfg(test)]
@@ -474,7 +392,7 @@ mod tests {
     #[test]
     fn test_add_task() {
         let mut todo = example_todo();
-        todo.use_done = true;
+        todo.config.use_done = true;
 
         assert_eq!(todo.done.len(), 2);
         assert_eq!(todo.pending.len(), 4);
@@ -536,7 +454,7 @@ mod tests {
             create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
         );
 
-        todo.use_done = true;
+        todo.config.use_done = true;
         assert_eq!(
             todo.get_categories(ToDoCategory::Projects).vec,
             create_vec(&[
@@ -580,12 +498,14 @@ mod tests {
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 12);
 
-        todo.project_filters.insert(String::from("project9999"));
+        todo.state
+            .project_filters
+            .insert(String::from("project9999"));
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 0);
 
-        todo.project_filters.clear();
-        todo.project_filters.insert(String::from("project1"));
+        todo.state.project_filters.clear();
+        todo.state.project_filters.insert(String::from("project1"));
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 4);
         assert_eq!(filtered[0].subject, "task 2 +project1");
@@ -593,24 +513,24 @@ mod tests {
         assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
         assert_eq!(filtered[3].subject, "task 5 +project1 +project2 +project3");
 
-        todo.project_filters.insert(String::from("project2"));
+        todo.state.project_filters.insert(String::from("project2"));
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
         assert_eq!(filtered[1].subject, "task 5 +project1 +project2 +project3");
 
-        todo.project_filters.insert(String::from("project3"));
+        todo.state.project_filters.insert(String::from("project3"));
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
 
-        todo.project_filters.insert(String::from("project1"));
+        todo.state.project_filters.insert(String::from("project1"));
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
 
-        todo.project_filters.clear();
-        todo.context_filters.insert(String::from("context1"));
+        todo.state.project_filters.clear();
+        todo.state.context_filters.insert(String::from("context1"));
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(
@@ -698,24 +618,24 @@ mod tests {
     #[test]
     fn toggle_filter() {
         let mut todo = example_todo();
-        assert!(todo.project_filters.is_empty());
+        assert!(todo.state.project_filters.is_empty());
         todo.toggle_filter(ToDoCategory::Projects, "project1");
-        assert!(todo.project_filters.contains("project1"));
-        assert_eq!(todo.project_filters.len(), 1);
+        assert!(todo.state.project_filters.contains("project1"));
+        assert_eq!(todo.state.project_filters.len(), 1);
         todo.toggle_filter(ToDoCategory::Projects, "project1");
-        assert!(todo.project_filters.is_empty());
+        assert!(todo.state.project_filters.is_empty());
 
         todo.toggle_filter(ToDoCategory::Contexts, "context1");
-        assert!(todo.context_filters.contains("context1"));
-        assert_eq!(todo.context_filters.len(), 1);
+        assert!(todo.state.context_filters.contains("context1"));
+        assert_eq!(todo.state.context_filters.len(), 1);
         todo.toggle_filter(ToDoCategory::Contexts, "context1");
-        assert!(todo.context_filters.is_empty());
+        assert!(todo.state.context_filters.is_empty());
 
         todo.toggle_filter(ToDoCategory::Hashtags, "hashtag1");
-        assert!(todo.hashtag_filters.contains("hashtag1"));
-        assert_eq!(todo.hashtag_filters.len(), 1);
+        assert!(todo.state.hashtag_filters.contains("hashtag1"));
+        assert_eq!(todo.state.hashtag_filters.len(), 1);
         todo.toggle_filter(ToDoCategory::Hashtags, "hashtag1");
-        assert!(todo.hashtag_filters.is_empty());
+        assert!(todo.state.hashtag_filters.is_empty());
     }
 
     #[test]
@@ -734,11 +654,11 @@ mod tests {
     #[test]
     fn update_active() -> Result<(), todo_txt::Error> {
         let mut todo = example_todo();
-        todo.active = Some((ToDoData::Pending, 0));
+        todo.state.active = Some((ToDoData::Pending, 0));
         todo.update_active("New subject")?;
         assert_eq!(todo.pending[0].subject, "New subject");
 
-        todo.active = Some((ToDoData::Done, 0));
+        todo.state.active = Some((ToDoData::Done, 0));
         todo.update_active("New done subject")?;
         assert_eq!(todo.done[0].subject, "New done subject");
 
