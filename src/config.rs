@@ -102,6 +102,9 @@ pub struct Config {
     #[arg(short = 'd', long, value_parser = parse_duration, value_name = "DURATION")]
     autosave_duration: Option<Duration>,
 
+    #[arg(long, value_name = "FILE", help_heading = "export")]
+    save_state_path: Option<PathBuf>,
+
     #[arg(long, value_name = "FILE")]
     log_file: Option<PathBuf>,
 
@@ -167,6 +170,15 @@ pub struct Config {
 }
 
 impl Config {
+
+    pub fn new() -> Self {
+        let mut config = Config::parse();
+        if let Ok(load_config) = config.load_config() {
+            config = config.merge(load_config);
+        }
+        config
+    }
+
     /// Loads the default configuration settings.
     ///
     /// This function first attempts to load the configuration file, and if it fails, it returns the default configuration.
@@ -211,7 +223,7 @@ impl Config {
     /// # Returns
     ///
     /// The loaded configuration.
-    fn load_from_buffer<R>(mut reader: R) -> Self
+    pub fn load_from_buffer<R>(mut reader: R) -> Self
     where
         R: Read,
     {
@@ -246,6 +258,7 @@ impl Config {
             pending_active_color: self.pending_active_color.or(other.pending_active_color),
             done_active_color: self.done_active_color.or(other.done_active_color),
             autosave_duration: self.autosave_duration.or(other.autosave_duration),
+            save_state_path: self.save_state_path.or(other.save_state_path),
             log_file: self.log_file.or(other.log_file),
             log_format: self.log_format.or(other.log_format),
             log_level: self.log_level.or(other.log_level),
@@ -287,6 +300,7 @@ impl Config {
             pending_active_color: Some(self.get_pending_active_color()),
             done_active_color: Some(self.get_done_active_color()),
             autosave_duration: Some(self.get_autosave_duration()),
+            save_state_path: self.get_save_state_path(),
             log_file: Some(self.get_log_file()),
             log_format: Some(self.get_log_format()),
             log_level: Some(self.get_log_level()),
@@ -386,6 +400,10 @@ impl Config {
 
     pub fn get_autosave_duration(&self) -> Duration {
         self.autosave_duration.unwrap_or(Duration::from_secs(900))
+    }
+
+    pub fn get_save_state_path(&self) -> Option<PathBuf> {
+        self.save_state_path.clone()
     }
 
     fn get_log_file(&self) -> PathBuf {
@@ -593,5 +611,27 @@ mod tests {
     #[test]
     fn help_can_be_generated() {
         Config::parse();
+    }
+
+    #[test]
+    fn test_parse_duration() {
+        assert_eq!(parse_duration("1000"), Ok(Duration::from_secs(1000)));
+        assert!(parse_duration("-1000").is_err());
+    }
+
+    #[test]
+    fn test_merge() {
+        let mut conf1 = Config::default();
+        let mut conf2 = Config::default();
+        conf1.todo_path = Some("path/to/todo/file".to_string());
+        conf2.archive_path = Some("path/to/archive_path/file".to_string());
+
+        conf1.window_title = Some("Window title".to_string());
+        conf2.window_title = Some("Different title".to_string());
+
+        let new_conf = conf1.merge(conf2);
+        assert_eq!(new_conf.todo_path, Some("path/to/todo/file".to_string()));
+        assert_eq!(new_conf.archive_path, Some("path/to/archive_path/file".to_string()));
+        assert_eq!(new_conf.window_title, Some("Window title".to_string()));
     }
 }
