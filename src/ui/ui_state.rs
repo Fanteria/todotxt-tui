@@ -7,6 +7,7 @@ use serde::{Serialize, Deserialize};
 use crate::layout::Layout;
 use crate::layout::widget::widget_type::WidgetType;
 use crate::todo::{ToDo, ToDoState};
+use crate::error::{ToDoError, ToDoRes};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct UIState {
@@ -30,9 +31,9 @@ impl UIState {
         writer.write_all(toml::to_string_pretty(&self).unwrap().as_bytes())
     }
 
-    pub fn load(path: &Path) -> Self {
-        let file = File::open(path).unwrap(); // TODO remove unwrap here
-        UIState::deserialize(file)
+    pub fn load(path: &Path) -> ToDoRes<Self> {
+        let file = File::open(path).map_err(|e| ToDoError::IOoperationFailed(path.to_path_buf(), e.kind()))?;
+        Ok(UIState::deserialize(file))
     }
 
     fn deserialize<R: Read>(mut reader: R) -> Self {

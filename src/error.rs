@@ -2,6 +2,7 @@ use std::{
     error::Error,
     fmt::{self, Display},
     num::{IntErrorKind, ParseIntError},
+    path::PathBuf,
 };
 
 /// Define a custom result type for ToDo related operations.
@@ -31,6 +32,7 @@ pub enum ToDoError {
     ParseVariableNotClosed(String),
     EmptyVariableName(String),
     ActiveIsNotWidget,
+    IOoperationFailed(PathBuf, std::io::ErrorKind),
 }
 
 /// Implement the Error trait for ToDoError.
@@ -56,6 +58,13 @@ impl Display for ToDoError {
                 format!("Block \"{}\" constraint empty variable name", block)
             }
             ActiveIsNotWidget => String::from(ACTIVE_IS_NOT_WIDGET),
+            IOoperationFailed(path, kind) => {
+                let x = match path.to_str() {
+                    Some(name) => String::from(name),
+                    None => String::from(""),
+                };
+                format!("{} {}", x, kind)
+            }
             _ => String::new(),
         };
         if !msg.is_empty() {
@@ -84,6 +93,7 @@ impl ToDoError {
             ParseVariableNotClosed(_) => "parse variable not closed",
             EmptyVariableName(_) => "empty variable name",
             ActiveIsNotWidget => "active is not widget",
+            IOoperationFailed(_, _) => "IO operation failed",
         }
     }
 }

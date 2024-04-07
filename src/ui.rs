@@ -101,7 +101,7 @@ impl UI {
         let mut todo = ToDo::new(&config);
 
         if let Some(path) = &config.get_save_state_path() {
-            let state = UIState::load(path);
+            let state = UIState::load(path)?;
             let (_active, todo_state) = (state.active, state.todo_state);
             todo.update_state(todo_state);
         }
