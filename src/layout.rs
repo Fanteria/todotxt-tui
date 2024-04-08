@@ -2,10 +2,9 @@ pub mod container;
 mod render_trait;
 pub mod widget;
 
-use self::{
-    container::{Container, Item, RcCon},
-    widget::{widget_type::WidgetType, Widget},
-};
+use container::{Container, Item, RcCon};
+use widget::{widget_type::WidgetType, Widget};
+
 use crate::Config;
 use crate::{
     error::{ToDoError, ToDoRes},
@@ -13,7 +12,9 @@ use crate::{
     ui::HandleEvent,
 };
 use crossterm::event::KeyEvent;
+
 pub use render_trait::Render;
+
 use std::{
     rc::Rc,
     sync::{Arc, Mutex},
@@ -31,8 +32,10 @@ use tui::{
 /// consists of a tree of containers and widgets, which are used to organize and display the various
 /// components of the application.
 pub struct Layout {
-    root: Rc<RefCell<Container>>,
-    actual: Rc<RefCell<Container>>,
+    containers: Vec<Container>,
+    act: usize,
+    // root: Rc<RefCell<Container>>,
+    // actual: Rc<RefCell<Container>>,
 }
 
 impl Layout {
@@ -131,7 +134,8 @@ impl Layout {
                         // } TODO remove comment
                         return Ok(Layout { root, actual });
                     }
-                    let c = Item::Container(Container::new(cont.2, cont.3, cont.0, None));
+                    // let c = Item::Container(Container::new(cont.2, cont.3, cont.0, None));
+                    // TODO
                     container.last_mut().unwrap().2.push(c);
                     container.last_mut().unwrap().3.push(cont.1);
                     string.clear();

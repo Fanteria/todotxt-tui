@@ -10,11 +10,16 @@ pub use item::Item;
 use std::{cell::RefCell, rc::Rc};
 use tui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout as TuiLayout, Rect},
     Frame,
 };
 
 pub type RcCon = Rc<RefCell<Container>>;
+
+pub enum It {
+    Cont(usize),
+    Item(Widget),
+}
 
 /// Represents a container that can hold widgets and other containers.
 ///
@@ -22,10 +27,11 @@ pub type RcCon = Rc<RefCell<Container>>;
 /// widgets or nested containers. It provides methods for rendering, focusing, and updating
 /// the contained items.
 pub struct Container {
-    items: Vec<IItem>,
-    layout: Layout,
+    // items: Vec<IItem>,
+    items: Vec<It>,
+    layout: TuiLayout,
     pub direction: Direction,
-    pub parent: Option<RcCon>,
+    pub parent: Option<usize>,
     act_index: usize,
 }
 
@@ -45,38 +51,33 @@ impl Container {
     ///
     /// A reference-counted (`Rc`) reference to the newly created `Container`.
     pub fn new(
-        items: Vec<Item>,
         constraints: Vec<Constraint>,
         direction: Direction,
-        parent: Option<RcCon>,
-    ) -> RcCon {
-        let container = Rc::new(RefCell::new(Container {
+        parent: Option<usize>,
+    ) -> Container {
+        Container {
             items: Vec::new(),
-            layout: Layout::default()
+            layout: TuiLayout::default()
                 .direction(direction.clone())
                 .constraints(constraints),
             direction,
             parent,
             act_index: 0,
-        }));
-
-        items.into_iter().for_each(|item| {
-            container
-                .borrow_mut()
-                .items
-                .push(IItem::new(item, container.clone()))
-        });
-        container
+        }
     }
 
-    /// Returns focused item as reference.
-    fn actual_item(&self) -> &IItem {
-        &self.items[self.act_index]
+    pub fn add_widget(&mut self, widget: Widget) {
+        self.items.push(It::Item(widget));
     }
 
-    /// Returns focused item as mutable reference.
-    fn actual_item_mut(&mut self) -> &mut IItem {
-        &mut self.items[self.act_index]
+    pub fn add_container(containers: &mut Vec<Self>, container: Container) -> usize {
+        let index = containers.len();
+        // check if container have parent
+        if let Some(parent_index) = container.parent {
+            containers[parent_index].items.push(It::Cont(index));
+        }
+        containers.push(container);
+        index
     }
 
     /// Returns a reference to the currently active item within the container.
@@ -86,8 +87,11 @@ impl Container {
     /// A result containing a reference to the active `Widget` or an error if the active item
     /// is not a widget.
     #[allow(dead_code)]
-    pub fn actual(&self) -> ToDoRes<&Widget> {
-        self.actual_item().actual()
+    pub fn actual(&self) -> Option<&Widget> {
+        match &self.items[self.act_index] {
+            It::Item(w) => Some(w),
+            It::Cont(_) => None,
+        }
     }
 
     /// Returns a mutable reference to the currently active item within the container.
@@ -96,49 +100,11 @@ impl Container {
     ///
     /// A result containing a mutable reference to the active `Widget` or an error if the active
     /// item is not a widget.
-    pub fn actual_mut(&mut self) -> ToDoRes<&mut Widget> {
-        self.actual_item_mut().actual_mut()
-    }
-
-    /// Updates the currently active item within the container.
-    /// This function recursively searches for the next active item based on the container's layout.
-    fn update_actual(container: &RcCon) -> RcCon {
-        let mut borrow = container.borrow_mut();
-        match borrow.actual_item() {
-            IItem::Widget(_) => {
-                borrow.focus();
-                Rc::clone(container)
-            }
-            IItem::Container(cont) => Container::update_actual(cont),
+    pub fn actual_mut(&mut self) -> Option<&mut Widget> {
+        match &mut self.items[self.act_index] {
+            It::Item(w) => Some(w),
+            It::Cont(_) => None,
         }
-    }
-
-    /// Attempts to change the active item within the container based on a condition.
-    ///
-    /// # Parameters
-    ///
-    /// - `container`: A reference-counted (Rc) reference to the container to navigate within.
-    /// - `condition`: A function that takes a reference to the current container and returns
-    ///   `true` if the condition to change the active item is met, or `false` otherwise.
-    /// - `change`: A function that takes a mutable reference to the current container and
-    ///   performs the necessary changes to the active item.
-    ///
-    /// # Returns
-    ///
-    /// An option containing either an updated reference to the container with the active item
-    /// changed, or `None` if the condition is not met.
-    fn change_item(
-        container: &RcCon,
-        condition: fn(&Container) -> bool,
-        change: fn(&mut Container),
-    ) -> Option<RcCon> {
-        if condition(&container.borrow()) {
-            return None;
-        }
-        container.borrow_mut().unfocus();
-        change(&mut container.borrow_mut());
-        container.borrow_mut().focus();
-        Some(Container::update_actual(container))
     }
 
     /// Attempts to select the next item within the container.
@@ -151,12 +117,13 @@ impl Container {
     ///
     /// An option containing either an updated reference to the container with the next item
     /// as the active item, or `None` if there is no next item to select within the container.
-    pub fn next_item(container: RcCon) -> Option<RcCon> {
-        Container::change_item(
-            &container,
-            |c| c.act_index + 1 >= c.items.len(),
-            |c| c.act_index += 1,
-        )
+    pub fn next_item(&mut self) -> bool {
+        if self.items.len() < self.act_index + 1 {
+            self.act_index += 1;
+            true
+        } else {
+            false
+        }
     }
 
     /// Attempts to select the previous item within the container.
@@ -170,8 +137,13 @@ impl Container {
     /// An option containing either an updated reference to the container with the previous item
     /// as the active item, or `None` if there is no previous item to select within the container.
     ///
-    pub fn previous_item(container: RcCon) -> Option<RcCon> {
-        Container::change_item(&container, |c| c.act_index == 0, |c| c.act_index -= 1)
+    pub fn previous_item(&mut self) -> bool {
+        if self.act_index > 0 {
+            self.act_index -= 1;
+            true
+        } else {
+            false
+        }
     }
 
     /// Finds and selects a specific widget type within the container.
@@ -185,21 +157,23 @@ impl Container {
     ///
     /// A result containing either an updated reference to the container with the selected widget
     /// type as the active item, or an error if the widget type is not found within the container.
-    pub fn select_widget(container: RcCon, widget_type: WidgetType) -> ToDoRes<RcCon> {
-        let mut borrowed = container.borrow_mut();
-        for (index, item) in borrowed.items.iter().enumerate() {
+    pub fn select_widget(
+        containers: &Vec<Self>,
+        index: usize,
+        widget_type: WidgetType,
+    ) -> ToDoRes<usize> {
+        for (index, item) in containers[index].items.iter().enumerate() {
             match item {
-                IItem::Widget(w) => {
+                It::Item(w) => {
                     if w.widget_type() == widget_type {
-                        borrowed.act_index = index;
-                        return Ok(container.clone());
+                        containers[index].act_index = index;
+                        return Ok(0);
                     }
                 }
-                IItem::Container(container) => {
-                    let cont = Container::select_widget(container.clone(), widget_type);
-                    if cont.is_ok() {
-                        borrowed.act_index = index;
-                        return cont;
+                It::Cont(container) => {
+                    if let Ok(index) = Container::select_widget(containers, *container, widget_type)
+                    {
+                        return Ok(index);
                     }
                 }
             }
@@ -208,33 +182,10 @@ impl Container {
     }
 
     pub fn get_active_type(&self) -> WidgetType {
-        if let IItem::Widget(w) = self.actual_item() {
-            return w.data.widget_type();
-        };
-        panic!("The current item is expected to be a widget.");
-    }
-
-}
-
-impl Render for Container {
-    fn render<B: Backend>(&self, f: &mut Frame<B>) {
-        self.items.iter().for_each(|i| i.render(f));
-    }
-
-    fn focus(&mut self) {
-        self.actual_item_mut().focus();
-    }
-
-    fn unfocus(&mut self) {
-        self.actual_item_mut().unfocus();
-    }
-
-    fn update_chunk(&mut self, chunk: Rect) {
-        let chunks = self.layout.split(chunk);
-        self.items
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, item)| item.update_chunk(chunks[i]));
+        match self.actual() {
+            Some(w) => w.widget_type(),
+            None => panic!("The current item is expected to be a widget."),
+        }
     }
 }
 
@@ -243,60 +194,94 @@ mod tests {
     use super::*;
     use crate::{config::Config, todo::ToDo};
     use std::sync::{Arc, Mutex};
-    use tui::layout::Direction::{Horizontal, Vertical};
+    use tui::layout::Direction::*;
     use WidgetType::*;
 
-    fn create_testing_container() -> RcCon {
+    fn create_testing_container() -> Vec<Container> {
         let todo = Arc::new(Mutex::new(ToDo::default()));
-        let list_widget = Widget::new(WidgetType::List, todo.clone(), &Config::default()).unwrap();
-        let done_widget = Widget::new(WidgetType::Done, todo.clone(), &Config::default()).unwrap();
-        let project_widget = Widget::new(WidgetType::Project, todo, &Config::default()).unwrap();
-        Container::new(
-            vec![Item::Container(Container::new(
-                vec![
-                    Item::Widget(list_widget),
-                    Item::Container(Container::new(
-                        vec![Item::Widget(done_widget), Item::Widget(project_widget)],
-                        vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-                        Vertical,
-                        None,
-                    )),
-                ],
-                vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-                Horizontal,
+
+        // Main container
+        let mut containers: Vec<Container> = Vec::new();
+        let index = Container::add_container(
+            &mut containers,
+            Container::new(
+                vec![Constraint::Length(3), Constraint::Percentage(30)],
+                Vertical,
                 None,
-            ))],
-            vec![Constraint::Length(3), Constraint::Percentage(30)],
+            ),
+        );
+
+        // Holder container
+        let mut cont = Container::new(
+            vec![Constraint::Percentage(50), Constraint::Percentage(50)],
+            Horizontal,
+            Some(index),
+        );
+        // Left widget
+        cont.add_widget(Widget::new(WidgetType::List, todo.clone(), &Config::default()).unwrap());
+        let index = Container::add_container(&mut containers, cont);
+
+        // Right container
+        let mut cont = Container::new(
+            vec![Constraint::Percentage(50), Constraint::Percentage(50)],
             Vertical,
-            None,
-        )
+            Some(index),
+        );
+        cont.add_widget(Widget::new(WidgetType::Done, todo.clone(), &Config::default()).unwrap());
+        cont.add_widget(Widget::new(WidgetType::Project, todo, &Config::default()).unwrap());
+        Container::add_container(&mut containers, cont);
+
+        // Container::new(
+        //     vec![Item::Container(Container::new(
+        //         vec![
+        //             Item::Widget(list_widget),
+        //             Item::Container(Container::new(
+        //                 vec![Item::Widget(done_widget), Item::Widget(project_widget)],
+        //                 vec![Constraint::Percentage(50), Constraint::Percentage(50)],
+        //                 Vertical,
+        //                 None,
+        //             )),
+        //         ],
+        //         vec![Constraint::Percentage(50), Constraint::Percentage(50)],
+        //         Horizontal,
+        //         None,
+        //     ))],
+        //     vec![Constraint::Length(3), Constraint::Percentage(30)],
+        //     Vertical,
+        //     None,
+        // )
+        containers
     }
 
-    fn check_active_test(container: &RcCon, widget_type: WidgetType) {
-        let active = container.borrow().get_active_type();
+    fn check_active_test(
+        containers: &Vec<Container>,
+        active_index: usize,
+        widget_type: WidgetType,
+    ) {
+        let active = containers[active_index].get_active_type();
         if active != widget_type {
             panic!("Active widget must be {:?} not {:?}.", widget_type, active)
         }
     }
 
     #[test]
-    fn test_selecting_widget() {
-        let c = create_testing_container();
-        let check = |widget_type| match Container::select_widget(c.clone(), widget_type) {
-            Ok(c) => {
-                check_active_test(&c, widget_type);
-                Ok(())
-            }
-            Err(e) => Err(e),
+    fn test_selecting_widget() -> ToDoRes<()> {
+        let containers = create_testing_container();
+        let check = |widget_type| -> ToDoRes<()> {
+            let index = Container::select_widget(&containers, 0, widget_type)?;
+            check_active_test(&containers, index, widget_type);
+            Ok(())
         };
 
-        check(List).unwrap();
-        check(Done).unwrap();
-        check(Project).unwrap();
+        check(List)?;
+        check(Done)?;
+        check(Project)?;
         assert!(
             check(Context).is_err(),
             "Widget with type Context is not in container."
         );
+
+        Ok(())
     }
 
     #[test]
@@ -304,26 +289,26 @@ mod tests {
         let c = create_testing_container();
 
         // Test next widget in child container.
-        let actual = Container::select_widget(c.clone(), List)?;
-        let next = Container::next_item(actual).unwrap();
-        check_active_test(&next, Done);
+        let index = Container::select_widget(&c, 0, List)?;
+        assert!(c[index].next_item());
+        check_active_test(&c, index, Done);
 
         // Test next widget in same container.
-        let actual = Container::select_widget(c.clone(), Done)?;
-        let next = Container::next_item(actual).unwrap();
-        check_active_test(&next, Project);
+        let index = Container::select_widget(&c, 0, Done)?;
+        assert!(c[index].next_item());
+        check_active_test(&c, index, Project);
 
         // Test next in container have not default value
-        let actual = Container::select_widget(c, List)?;
-        let next = Container::next_item(actual.clone()).unwrap();
-        check_active_test(&next, Project);
+        let index = Container::select_widget(&c, 0, List)?;
+        assert!(c[index].next_item());
+        check_active_test(&c, index, Project);
 
         // Test return value if there is no next item
-        assert!(Container::next_item(actual.clone()).is_none());
-        assert!(Container::next_item(actual.clone()).is_none());
-        assert!(Container::next_item(actual.clone()).is_none());
-        assert_eq!(actual.borrow().act_index, 1);
-        check_active_test(&next, Project);
+        assert!(!c[index].next_item());
+        assert!(!c[index].next_item());
+        assert!(!c[index].next_item());
+        assert_eq!(c[index].act_index, 1);
+        check_active_test(&c, index, Project);
 
         Ok(())
     }
@@ -333,15 +318,15 @@ mod tests {
         let c = create_testing_container();
 
         // Test previous widget in same container.
-        let actual = Container::select_widget(c, Project)?;
-        let prev = Container::previous_item(actual).unwrap();
+        let index = Container::select_widget(&c, 0, Project)?;
+        assert!(c[index].previous_item());
 
         // Test return value if there is no previous item
-        assert!(Container::previous_item(prev.clone()).is_none());
-        assert!(Container::previous_item(prev.clone()).is_none());
-        assert!(Container::previous_item(prev.clone()).is_none());
-        assert_eq!(prev.borrow().act_index, 0);
-        check_active_test(&prev, Done);
+        assert!(!c[index].previous_item());
+        assert!(!c[index].previous_item());
+        assert!(!c[index].previous_item());
+        assert_eq!(c[index].act_index, 0);
+        check_active_test(&c, index, Done);
 
         Ok(())
     }
