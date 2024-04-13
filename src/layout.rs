@@ -2,7 +2,9 @@ pub mod container;
 mod render_trait;
 pub mod widget;
 
-use container::{Container, Item, RcCon};
+use container::Container;
+use std::sync::Arc;
+use std::sync::Mutex;
 use widget::{widget_type::WidgetType, Widget};
 
 use crate::Config;
@@ -15,11 +17,7 @@ use crossterm::event::KeyEvent;
 
 pub use render_trait::Render;
 
-use std::{
-    rc::Rc,
-    sync::{Arc, Mutex},
-    {cell::RefCell, str::FromStr},
-};
+use std::str::FromStr;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Direction::Horizontal, Direction::Vertical, Rect},
@@ -34,8 +32,6 @@ use tui::{
 pub struct Layout {
     containers: Vec<Container>,
     act: usize,
-    // root: Rc<RefCell<Container>>,
-    // actual: Rc<RefCell<Container>>,
 }
 
 impl Layout {
@@ -97,47 +93,29 @@ impl Layout {
         let mut string = String::new();
         let mut item = String::new();
 
-        let mut container: Vec<(Direction, Constraint, Vec<Item>, Vec<Constraint>)> = Vec::new();
-        container.push((
-            Direction::Vertical,
-            Constraint::Percentage(50),
-            Vec::new(),
-            Vec::new(),
-        ));
+        let mut constraints: Vec<Constraint> = Vec::new();
+        let mut containers: Vec<Container> = Vec::new();
+        let mut layout = Layout {
+            act: Container::add_container(&mut containers, Container::default()),
+            containers,
+        };
 
         for ch in template.chars() {
             match ch {
                 START_CONTAINER => {
-                    let new_direction = match container.last().unwrap().0 {
-                        Vertical => Horizontal,
-                        Horizontal => Vertical,
-                    };
-                    container.push((
-                        new_direction,
-                        Constraint::Percentage(50),
-                        Vec::new(),
-                        Vec::new(),
-                    ));
-
                     string.clear();
+                    let mut cont = Container::default();
+                    cont.parent = Some(layout.act);
+                    layout.act = Container::add_container(&mut layout.containers, cont);
                 }
                 END_CONTAINER => {
-                    let cont = container.pop().unwrap();
-                    // End of the brackets stack, end cycle
-                    if container.is_empty() {
-                        let root = Container::new(cont.2, cont.3, cont.0, None);
-                        let actual =
-                            Container::select_widget(root.clone(), config.get_init_widget()).unwrap();
-                        actual.borrow_mut().actual_mut()?.focus();
-                        // if let IItem::Widget(w) = actual.borrow_mut().actual_item_mut() {
-                        //     w.widget.focus();
-                        // } TODO remove comment
-                        return Ok(Layout { root, actual });
-                    }
-                    // let c = Item::Container(Container::new(cont.2, cont.3, cont.0, None));
-                    // TODO
-                    container.last_mut().unwrap().2.push(c);
-                    container.last_mut().unwrap().3.push(cont.1);
+                    layout.act_mut().set_constraints(constraints);
+                    layout.act = match layout.act().parent {
+                        Some(parent) => parent,
+                        // We are at root. Return created layout.
+                        None => return Ok(layout),
+                    };
+                    constraints = Vec::new();
                     string.clear();
                 }
                 ARG_SEPARATOR => {
@@ -158,28 +136,21 @@ impl Layout {
                     }
                     match item.as_str() {
                         "direction" => match string.as_str() {
-                            "" | "vertical" => {
-                                let direction = &mut container.last_mut().unwrap().0;
-                                *direction = Direction::Vertical;
-                            }
-                            "horizontal" => {
-                                let direction = &mut container.last_mut().unwrap().0;
-                                *direction = Direction::Horizontal;
-                            }
+                            "" | "vertical" => layout.act_mut().set_direction(Direction::Vertical),
+                            "horizontal" => layout.act_mut().set_direction(Direction::Horizontal),
                             _ => return Err(ToDoError::ParseInvalidDirection(string)),
                         },
                         "size" => {
-                            container.last_mut().unwrap().1 = Self::value_from_string(&string)?;
+                            constraints.push(Self::value_from_string(&string)?);
                         }
                         _ => {
                             let widget_type = WidgetType::from_str(&item)?;
-                            let cont = container.last_mut().unwrap();
-                            cont.2.push(Item::Widget(Widget::new(
+                            layout.act_mut().add_widget(Widget::new(
                                 widget_type,
                                 data.clone(),
                                 config,
-                            )?));
-                            cont.3.push(Self::value_from_string(&string)?);
+                            )?);
+                            constraints.push(Self::value_from_string(&string)?);
                         }
                     }
                     item.clear();
@@ -193,39 +164,12 @@ impl Layout {
         Err(ToDoError::ParseNotEnd)
     }
 
-    /// Move the focus within the layout hierarchy.
-    ///
-    /// # Parameters
-    ///
-    /// - `container`: An `RcCon` representing the current container being focused.
-    /// - `direction`: A reference to the `Direction` indicating the movement direction.
-    /// - `f`: A function pointer that determines the action for moving the focus.
-    ///
-    /// # Returns
-    ///
-    /// Returns an `Option<RcCon>` containing the new focused container or `None` if no valid
-    /// container is found in the specified direction.
-    fn move_focus(
-        container: RcCon,
-        direction: &Direction,
-        f: fn(RcCon) -> Option<RcCon>,
-    ) -> Option<RcCon> {
-        let move_to_parent = || {
-            let mut c = container.borrow_mut();
-            if let Some(parent) = &c.parent {
-                return Layout::move_focus(parent.clone(), direction, f).map(|ret| {
-                    c.unfocus();
-                    ret
-                });
-            }
-            None
-        };
+    fn act(&self) -> &Container {
+        &self.containers[self.act]
+    }
 
-        if container.borrow().direction == *direction {
-            return f(container.clone()).or_else(move_to_parent);
-        }
-
-        move_to_parent()
+    fn act_mut(&mut self) -> &mut Container {
+        &mut self.containers[self.act]
     }
 
     /// Change the focus within the layout.
@@ -233,62 +177,45 @@ impl Layout {
     /// # Parameters
     ///
     /// - `next`: An `Option<RcCon>` representing the new container to focus.
-    fn change_focus(&mut self, next: Option<RcCon>) {
-        let next = match next {
-            Some(s) => s,
-            None => return,
-        };
-        self.actual.borrow_mut().unfocus();
-        next.borrow_mut().focus();
-        self.actual = next;
+    fn change_focus(&mut self, direction: Direction, f: impl Fn(&mut Container) -> bool) -> bool {
+        if f(self.act_mut()) {
+            Container::actualize_layout(self);
+        }
+        todo!();
+        // return f(self.containers[index]);
+        return false;
     }
 
     /// Move the focus to the left.
     ///
     /// This method moves the focus to the container or widget to the left of the currently focused
     /// element within the layout.
-    pub fn left(&mut self) {
-        self.change_focus(Self::move_focus(
-            Rc::clone(&self.actual),
-            &Horizontal,
-            Container::previous_item,
-        ));
+    pub fn left(&mut self) -> bool {
+        self.change_focus(Horizontal, Container::previous_item)
     }
 
     /// Move the focus to the right.
     ///
     /// This method moves the focus to the container or widget to the right of the currently focused
     /// element within the layout.
-    pub fn right(&mut self) {
-        self.change_focus(Self::move_focus(
-            Rc::clone(&self.actual),
-            &Horizontal,
-            Container::next_item,
-        ));
+    pub fn right(&mut self) -> bool {
+        self.change_focus(Horizontal, Container::next_item)
     }
 
     /// Move the focus upwards.
     ///
     /// This method moves the focus to the container or widget above the currently focused element
     /// within the layout.
-    pub fn up(&mut self) {
-        self.change_focus(Self::move_focus(
-            Rc::clone(&self.actual),
-            &Vertical,
-            Container::previous_item,
-        ));
+    pub fn up(&mut self) -> bool {
+        self.change_focus(Vertical, Container::previous_item)
     }
 
     /// Move the focus downwards.
     ///
     /// This method moves the focus to the container or widget below the currently focused element
     /// within the layout.
-    pub fn down(&mut self) {
-        self.change_focus(Self::move_focus(
-            Rc::clone(&self.actual),
-            &Vertical,
-            Container::next_item,
-        ));
+    pub fn down(&mut self) -> bool {
+        self.change_focus(Vertical, Container::next_item)
     }
 
     /// Handle a key event.
@@ -299,34 +226,45 @@ impl Layout {
     /// # Parameters
     ///
     /// - `event`: A reference to the `KeyEvent` to be handled.
-    pub fn handle_key(&self, event: &KeyEvent) -> bool {
-        self.actual
-            .borrow_mut()
-            .actual_mut()
-            .unwrap() // TODO remove
-            .handle_key(&event.code)
+    pub fn handle_key(&mut self, event: &KeyEvent) -> bool {
+        match self.act_mut().actual_mut() {
+            Some(widget) => widget.handle_key(&event.code),
+            None => panic!("Actual is not widget"),
+        }
     }
 
     pub fn get_active_widget(&self) -> WidgetType {
-        self.actual.borrow().get_active_type()
+        match self.act().get_active_type() {
+            Some(widget_type) => widget_type,
+            None => panic!("Actual is not widget"),
+        }
     }
 }
 
 impl Render for Layout {
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
-        self.root.borrow().render(f);
+        self.act().render(f, &self.containers);
     }
 
     fn unfocus(&mut self) {
-        self.actual.borrow_mut().unfocus();
+        match self.act_mut().actual_mut() {
+            Some(w) => w.unfocus(),
+            None => panic!("Actual to unfocus is  not a widget"),
+        }
     }
 
     fn focus(&mut self) {
-        self.actual.borrow_mut().focus();
+        match self.act_mut().actual_mut() {
+            Some(w) => w.focus(),
+            None => panic!("Actual to focus is not a widget"),
+        }
     }
 
-    fn update_chunk(&mut self, chunk: Rect) {
-        self.root.borrow_mut().update_chunk(chunk);
+    fn update_chunk(&mut self, _: Rect) {
+        // let mut index = 0;
+        todo!();
+        // self.containers[index].items
+        // ContainerHolder::from(self).root().update_chunk(chunk);
     }
 }
 
@@ -423,7 +361,11 @@ mod tests {
             Direction: ERROR,
         "#;
 
-        Layout::from_str(str_layout, Arc::new(Mutex::new(ToDo::default())), &Config::default())?;
+        Layout::from_str(
+            str_layout,
+            Arc::new(Mutex::new(ToDo::default())),
+            &Config::default(),
+        )?;
         Ok(())
     }
 }

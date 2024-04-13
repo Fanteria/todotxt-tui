@@ -358,10 +358,18 @@ impl HandleEvent for UI {
                 self.mode = Mode::Input;
                 self.layout.unfocus();
             }
-            MoveRight => self.layout.right(),
-            MoveLeft => self.layout.left(),
-            MoveUp => self.layout.up(),
-            MoveDown => self.layout.down(),
+            MoveRight => { 
+                self.layout.right();
+            },
+            MoveLeft => {
+                self.layout.left();
+            },
+            MoveUp => {
+                self.layout.up();
+            },
+            MoveDown => {
+                self.layout.down();
+            },
             Save => {
                 if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
                     log::error!("Error while send signal to save todo list: {}", e);

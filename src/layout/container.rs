@@ -1,20 +1,16 @@
 mod holder;
 mod item;
 
-use self::holder::Holder;
 use super::render_trait::Render;
 use super::widget::{widget_type::WidgetType, Widget};
+use super::Layout;
 use crate::error::{ToDoError, ToDoRes};
-use item::IItem;
-pub use item::Item;
-use std::{cell::RefCell, rc::Rc};
+#[allow(unused_imports)]
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},
     Frame,
 };
-
-pub type RcCon = Rc<RefCell<Container>>;
 
 pub enum It {
     Cont(usize),
@@ -27,10 +23,9 @@ pub enum It {
 /// widgets or nested containers. It provides methods for rendering, focusing, and updating
 /// the contained items.
 pub struct Container {
-    // items: Vec<IItem>,
     items: Vec<It>,
     layout: TuiLayout,
-    pub direction: Direction,
+    direction: Direction,
     pub parent: Option<usize>,
     act_index: usize,
 }
@@ -50,21 +45,20 @@ impl Container {
     /// # Returns
     ///
     /// A reference-counted (`Rc`) reference to the newly created `Container`.
-    pub fn new(
-        constraints: Vec<Constraint>,
-        direction: Direction,
-        parent: Option<usize>,
-    ) -> Container {
-        Container {
-            items: Vec::new(),
-            layout: TuiLayout::default()
-                .direction(direction.clone())
-                .constraints(constraints),
-            direction,
-            parent,
-            act_index: 0,
-        }
-    }
+    // pub fn new(
+    //     constraints: Vec<Constraint>,
+    //     direction: Direction,
+    //     parent: Option<usize>,
+    // ) -> Container {
+    //     Container {
+    //         layout: TuiLayout::default()
+    //             .direction(direction.clone())
+    //             .constraints(constraints),
+    //         direction,
+    //         parent,
+    //         ..Container::default()
+    //     }
+    // }
 
     pub fn add_widget(&mut self, widget: Widget) {
         self.items.push(It::Item(widget));
@@ -78,6 +72,20 @@ impl Container {
         }
         containers.push(container);
         index
+    }
+
+    pub fn set_direction(&mut self, direction: Direction) {
+        self.direction = direction.clone();
+        self.layout = self.layout.clone().direction(direction);
+    }
+
+    #[allow(dead_code)]
+    pub fn get_direction(&self) -> &Direction {
+        &self.direction
+    }
+
+    pub fn set_constraints(&mut self, constraints: Vec<Constraint>) {
+        self.layout = self.layout.clone().constraints(constraints);
     }
 
     /// Returns a reference to the currently active item within the container.
@@ -107,6 +115,19 @@ impl Container {
         }
     }
 
+    // TODO Change to actual widget index
+    pub fn actualize_layout(layout: &mut Layout) {
+        if let It::Cont(mut index) = layout.act().items[layout.act().act_index] {
+            loop {
+                match &layout.containers[index].items[layout.containers[index].act_index] {
+                    It::Cont(cont) => index = *cont,
+                    It::Item(_) => break,
+                }
+            }
+            layout.act = index;
+        }
+    }
+
     /// Attempts to select the next item within the container.
     ///
     /// # Parameters
@@ -118,7 +139,7 @@ impl Container {
     /// An option containing either an updated reference to the container with the next item
     /// as the active item, or `None` if there is no next item to select within the container.
     pub fn next_item(&mut self) -> bool {
-        if self.items.len() < self.act_index + 1 {
+        if self.items.len() > self.act_index + 1 {
             self.act_index += 1;
             true
         } else {
@@ -157,119 +178,126 @@ impl Container {
     ///
     /// A result containing either an updated reference to the container with the selected widget
     /// type as the active item, or an error if the widget type is not found within the container.
-    pub fn select_widget(
-        containers: &Vec<Self>,
-        index: usize,
-        widget_type: WidgetType,
-    ) -> ToDoRes<usize> {
-        for (index, item) in containers[index].items.iter().enumerate() {
-            match item {
-                It::Item(w) => {
-                    if w.widget_type() == widget_type {
-                        containers[index].act_index = index;
-                        return Ok(0);
-                    }
-                }
-                It::Cont(container) => {
-                    if let Ok(index) = Container::select_widget(containers, *container, widget_type)
-                    {
-                        return Ok(index);
-                    }
-                }
+    #[allow(dead_code)]
+    pub fn select_widget(layout: &mut Layout, widget_type: WidgetType) -> ToDoRes<()> {
+        // Set everything to first item
+        layout
+            .containers
+            .iter_mut()
+            .for_each(|cont| cont.act_index = 0);
+        layout.act = 0;
+        Container::actualize_layout(layout);
+
+        loop {
+            if layout.act().get_active_type() == Some(widget_type) {
+                break;
             }
+            let mut next = layout.act_mut().next_item();
+            while !next {
+                match layout.act().parent {
+                    Some(index) => {
+                        layout.act = index;
+                    }
+                    None => return Err(ToDoError::WidgetDoesNotExist),
+                }
+                next = layout.act_mut().next_item();
+            }
+            Container::actualize_layout(layout)
         }
-        Err(ToDoError::WidgetDoesNotExist)
+        Ok(())
     }
 
-    pub fn get_active_type(&self) -> WidgetType {
-        match self.actual() {
-            Some(w) => w.widget_type(),
-            None => panic!("The current item is expected to be a widget."),
+    pub fn get_active_type(&self) -> Option<WidgetType> {
+        Some(self.actual()?.widget_type())
+    }
+
+    pub fn render<B: Backend>(&self, f: &mut Frame<B>, containers: &Vec<Self>) {
+        self.items.iter().for_each(|cont| match cont {
+            It::Cont(index) => containers[*index].render(f, containers),
+            It::Item(widget) => widget.render(f),
+        });
+    }
+
+    // pub fn update_chunk(&mut self, chunk: Rect, containers: &mut Vec<Self>) {
+    //     self.items.iter_mut().for_each(|cont| match cont {
+    //         It::Cont(index) => containers[*index].update_chunk(chunk, &mut containers), // TODO may be splitted
+    //         It::Item(widget) => widget.update_chunk(chunk),
+    //     });
+    // }
+}
+
+impl Default for Container {
+    fn default() -> Self {
+        Container {
+            items: Vec::new(),
+            layout: TuiLayout::default(),
+            direction: Direction::Vertical,
+            parent: None,
+            act_index: 0,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::Layout;
     use super::*;
     use crate::{config::Config, todo::ToDo};
     use std::sync::{Arc, Mutex};
     use tui::layout::Direction::*;
     use WidgetType::*;
 
-    fn create_testing_container() -> Vec<Container> {
+    fn testing_layout() -> Layout {
         let todo = Arc::new(Mutex::new(ToDo::default()));
 
         // Main container
         let mut containers: Vec<Container> = Vec::new();
-        let index = Container::add_container(
-            &mut containers,
-            Container::new(
-                vec![Constraint::Length(3), Constraint::Percentage(30)],
-                Vertical,
-                None,
-            ),
-        );
+        let index = Container::add_container(&mut containers, Container::default());
+        containers[index].set_direction(Vertical);
+        containers[index].set_constraints(vec![Constraint::Percentage(30)]);
 
         // Holder container
-        let mut cont = Container::new(
-            vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-            Horizontal,
-            Some(index),
-        );
+        let mut cont = Container {
+            parent: Some(index),
+            direction: Horizontal,
+            ..Container::default()
+        };
+        cont.set_constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
         // Left widget
         cont.add_widget(Widget::new(WidgetType::List, todo.clone(), &Config::default()).unwrap());
         let index = Container::add_container(&mut containers, cont);
 
         // Right container
-        let mut cont = Container::new(
-            vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-            Vertical,
-            Some(index),
-        );
+        let mut cont = Container {
+            parent: Some(index),
+            direction: Vertical,
+            ..Container::default()
+        };
+        cont.set_constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
         cont.add_widget(Widget::new(WidgetType::Done, todo.clone(), &Config::default()).unwrap());
         cont.add_widget(Widget::new(WidgetType::Project, todo, &Config::default()).unwrap());
-        Container::add_container(&mut containers, cont);
+        let index = Container::add_container(&mut containers, cont);
 
-        // Container::new(
-        //     vec![Item::Container(Container::new(
-        //         vec![
-        //             Item::Widget(list_widget),
-        //             Item::Container(Container::new(
-        //                 vec![Item::Widget(done_widget), Item::Widget(project_widget)],
-        //                 vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-        //                 Vertical,
-        //                 None,
-        //             )),
-        //         ],
-        //         vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-        //         Horizontal,
-        //         None,
-        //     ))],
-        //     vec![Constraint::Length(3), Constraint::Percentage(30)],
-        //     Vertical,
-        //     None,
-        // )
-        containers
+        Layout {
+            containers,
+            act: index,
+        }
     }
 
-    fn check_active_test(
-        containers: &Vec<Container>,
-        active_index: usize,
-        widget_type: WidgetType,
-    ) {
-        let active = containers[active_index].get_active_type();
-        if active != widget_type {
-            panic!("Active widget must be {:?} not {:?}.", widget_type, active)
+    fn check_active(layout: &Layout, widget_type: WidgetType) {
+        match layout.act().get_active_type() {
+            Some(active) if active == widget_type => {}
+            Some(active) => panic!("Active widget must be {:?} not {:?}.", widget_type, active),
+            None => panic!("Active item is not widget"),
         }
     }
 
     #[test]
     fn test_selecting_widget() -> ToDoRes<()> {
-        let containers = create_testing_container();
-        let check = |widget_type| -> ToDoRes<()> {
-            let index = Container::select_widget(&containers, 0, widget_type)?;
-            check_active_test(&containers, index, widget_type);
+        let mut layout = testing_layout();
+        let mut check = |widget_type| -> ToDoRes<()> {
+            Container::select_widget(&mut layout, widget_type)?;
+            check_active(&layout, widget_type);
             Ok(())
         };
 
@@ -286,47 +314,57 @@ mod tests {
 
     #[test]
     fn test_next_item() -> ToDoRes<()> {
-        let c = create_testing_container();
+        let mut layout = testing_layout();
 
         // Test next widget in child container.
-        let index = Container::select_widget(&c, 0, List)?;
-        assert!(c[index].next_item());
-        check_active_test(&c, index, Done);
+        Container::select_widget(&mut layout, List)?;
+        assert!(layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        check_active(&layout, Done);
 
         // Test next widget in same container.
-        let index = Container::select_widget(&c, 0, Done)?;
-        assert!(c[index].next_item());
-        check_active_test(&c, index, Project);
+        Container::select_widget(&mut layout, Done)?;
+        assert!(layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        check_active(&layout, Project);
 
         // Test next in container have not default value
-        let index = Container::select_widget(&c, 0, List)?;
-        assert!(c[index].next_item());
-        check_active_test(&c, index, Project);
+        Container::select_widget(&mut layout, List)?;
+        assert!(layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        check_active(&layout, Project);
 
         // Test return value if there is no next item
-        assert!(!c[index].next_item());
-        assert!(!c[index].next_item());
-        assert!(!c[index].next_item());
-        assert_eq!(c[index].act_index, 1);
-        check_active_test(&c, index, Project);
+        assert!(!layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        assert!(!layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        assert!(!layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        assert_eq!(layout.act().act_index, 1);
+        check_active(&layout, Project);
 
         Ok(())
     }
 
     #[test]
     fn test_previous_item() -> ToDoRes<()> {
-        let c = create_testing_container();
+        let mut layout = testing_layout();
 
         // Test previous widget in same container.
-        let index = Container::select_widget(&c, 0, Project)?;
-        assert!(c[index].previous_item());
+        Container::select_widget(&mut layout, Project)?;
+        assert!(layout.act_mut().previous_item());
+        Container::actualize_layout(&mut layout);
 
         // Test return value if there is no previous item
-        assert!(!c[index].previous_item());
-        assert!(!c[index].previous_item());
-        assert!(!c[index].previous_item());
-        assert_eq!(c[index].act_index, 0);
-        check_active_test(&c, index, Done);
+        assert!(!layout.act_mut().previous_item());
+        Container::actualize_layout(&mut layout);
+        assert!(!layout.act_mut().previous_item());
+        Container::actualize_layout(&mut layout);
+        assert!(!layout.act_mut().previous_item());
+        Container::actualize_layout(&mut layout);
+        assert_eq!(layout.act().act_index, 0);
+        check_active(&layout, Done);
 
         Ok(())
     }
