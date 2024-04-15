@@ -70,7 +70,10 @@ impl FromStr for WidgetType {
             "contexts" => Ok(Context),
             "hashtags" => Ok(Hashtag),
             "preview" => Ok(Preview),
-            _ => Err(ToDoError::ParseWidgetType),
+            _ => {
+                println!("Error parse widget type: {}", s);
+                Err(ToDoError::ParseWidgetType)
+            }
         }
     }
 }

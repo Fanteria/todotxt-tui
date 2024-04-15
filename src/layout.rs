@@ -3,6 +3,7 @@ mod render_trait;
 pub mod widget;
 
 use container::Container;
+use std::fmt::Debug;
 use std::sync::Arc;
 use std::sync::Mutex;
 use widget::{widget_type::WidgetType, Widget};
@@ -29,6 +30,7 @@ use tui::{
 /// The `Layout` struct defines the layout of the user interface for the todo-tui application. It
 /// consists of a tree of containers and widgets, which are used to organize and display the various
 /// components of the application.
+#[derive(Debug)]
 pub struct Layout {
     containers: Vec<Container>,
     act: usize,
@@ -52,6 +54,7 @@ impl Layout {
         match value.find('%') {
             Some(i) => {
                 if i + 1 < value.len() {
+                    println!("Error: {}", value);
                     Err(ToDoError::ParseUnknownValue)
                 } else {
                     Ok(Constraint::Percentage(value[..i].parse()?))
@@ -83,6 +86,8 @@ impl Layout {
             None => return Err(ToDoError::ParseNotStart),
         };
         let template = &template[index + 1..];
+        log::debug!("Layout from str: {}", template);
+        println!("{}", template);
 
         // Define separators
         const ITEM_SEPARATOR: char = ',';
@@ -93,7 +98,8 @@ impl Layout {
         let mut string = String::new();
         let mut item = String::new();
 
-        let mut constraints: Vec<Constraint> = Vec::new();
+        let mut constraints_stack: Vec<Vec<Constraint>> = Vec::new();
+        constraints_stack.push(Vec::new());
         let mut containers: Vec<Container> = Vec::new();
         let mut layout = Layout {
             act: Container::add_container(&mut containers, Container::default()),
@@ -103,19 +109,31 @@ impl Layout {
         for ch in template.chars() {
             match ch {
                 START_CONTAINER => {
+                    println!("ERROR: |{}|{}|", string, item);
                     string.clear();
                     let mut cont = Container::default();
                     cont.parent = Some(layout.act);
+                    cont.set_direction(match layout.act().get_direction() {
+                        Direction::Horizontal => Direction::Vertical,
+                        Direction::Vertical => Direction::Horizontal,
+                    });
                     layout.act = Container::add_container(&mut layout.containers, cont);
+                    constraints_stack.push(Vec::new());
                 }
                 END_CONTAINER => {
-                    layout.act_mut().set_constraints(constraints);
+                    println!("Act: {}, Constraints: {:?}", layout.act, constraints_stack.last());
+                    layout
+                        .act_mut()
+                        .set_constraints(constraints_stack.pop().unwrap());
                     layout.act = match layout.act().parent {
                         Some(parent) => parent,
                         // We are at root. Return created layout.
-                        None => return Ok(layout),
+                        None => {
+                            Container::actualize_layout(&mut layout);
+                            return Ok(layout);
+                        }
                     };
-                    constraints = Vec::new();
+                    // constraints_stack.pop() = Vec::new();
                     string.clear();
                 }
                 ARG_SEPARATOR => {
@@ -127,6 +145,8 @@ impl Layout {
                     if string.is_empty() {
                         continue;
                     }
+                    // let x: Vec<&str> = string.splitn(2,':').map(|s| s.trim()).collect();
+                    // println!("String: {}, Item: {}", string, item);
                     if item.is_empty() {
                         item = string.to_lowercase();
                         string.clear();
@@ -141,7 +161,11 @@ impl Layout {
                             _ => return Err(ToDoError::ParseInvalidDirection(string)),
                         },
                         "size" => {
-                            constraints.push(Self::value_from_string(&string)?);
+                            println!("size: {}", string);
+                            constraints_stack
+                                .last_mut()
+                                .unwrap()
+                                .push(Self::value_from_string(&string)?);
                         }
                         _ => {
                             let widget_type = WidgetType::from_str(&item)?;
@@ -150,7 +174,10 @@ impl Layout {
                                 data.clone(),
                                 config,
                             )?);
-                            constraints.push(Self::value_from_string(&string)?);
+                            constraints_stack
+                                .last_mut()
+                                .unwrap()
+                                .push(Self::value_from_string(&string)?);
                         }
                     }
                     item.clear();
@@ -178,12 +205,35 @@ impl Layout {
     ///
     /// - `next`: An `Option<RcCon>` representing the new container to focus.
     fn change_focus(&mut self, direction: Direction, f: impl Fn(&mut Container) -> bool) -> bool {
+        let old_act = self.act;
+        while *self.act().get_direction() != direction {
+            match self.act().parent {
+                Some(index) => self.act = index,
+                None => return false,
+            }
+        }
         if f(self.act_mut()) {
             Container::actualize_layout(self);
+            true
+        } else {
+            match self.act().parent {
+                // check if there is upper container that can handle change
+                Some(index) => {
+                    self.act = index;
+                    if self.change_focus(direction, f) {
+                        true
+                    } else {
+                        self.act = old_act;
+                        false
+                    }
+                }
+                None => {
+                    // Do not move from starting position if you can't.
+                    self.act = old_act;
+                    false
+                }
+            }
         }
-        todo!();
-        // return f(self.containers[index]);
-        return false;
     }
 
     /// Move the focus to the left.
@@ -260,11 +310,8 @@ impl Render for Layout {
         }
     }
 
-    fn update_chunk(&mut self, _: Rect) {
-        // let mut index = 0;
-        todo!();
-        // self.containers[index].items
-        // ContainerHolder::from(self).root().update_chunk(chunk);
+    fn update_chunk(&mut self, chunk: Rect) {
+        Container::update_chunk(chunk, &mut self.containers, 0);
     }
 }
 
@@ -301,45 +348,32 @@ mod tests {
     #[test]
     fn test_basic_movement() -> ToDoRes<()> {
         let mut l = mock_layout();
-        let check_type = |widget_type, l: &Layout| -> ToDoRes<()> {
-            let active = l.get_active_widget();
-            if active != widget_type {
-                panic!("Active widget must be {:?} not {:?}.", widget_type, active)
-            }
-            Ok(())
-        };
+        assert_eq!(l.get_active_widget(), WidgetType::List);
 
-        check_type(WidgetType::List, &l)?;
-
-        l.right();
-        check_type(WidgetType::Done, &l)?;
-
-        l.right();
-        check_type(WidgetType::Done, &l)?;
-
-        l.down();
-        check_type(WidgetType::Context, &l)?;
-
-        l.right();
-        check_type(WidgetType::Project, &l)?;
-
-        l.down();
-        check_type(WidgetType::Project, &l)?;
-
-        l.left();
-        check_type(WidgetType::Context, &l)?;
-
-        l.left();
-        check_type(WidgetType::List, &l)?;
-
-        l.right();
-        check_type(WidgetType::Context, &l)?;
-
-        l.left();
-        check_type(WidgetType::List, &l)?;
-
-        l.up();
-        check_type(WidgetType::List, &l)?;
+        assert!(l.right());
+        assert_eq!(l.get_active_widget(), WidgetType::Done);
+        assert!(l.left());
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+        assert!(l.right());
+        assert_eq!(l.get_active_widget(), WidgetType::Done);
+        assert!(!l.right());
+        assert_eq!(l.get_active_widget(), WidgetType::Done);
+        assert!(l.down());
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+        assert!(l.right());
+        assert_eq!(l.get_active_widget(), WidgetType::Project);
+        assert!(!l.down());
+        assert_eq!(l.get_active_widget(), WidgetType::Project);
+        assert!(l.left());
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+        assert!(l.left());
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+        assert!(l.right());
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+        assert!(l.left());
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+        assert!(!l.up());
+        assert_eq!(l.get_active_widget(), WidgetType::List);
 
         Ok(())
     }
@@ -348,10 +382,10 @@ mod tests {
     fn test_from_string() -> ToDoRes<()> {
         let str_layout = r#"
             [
-              Direction:Horizontal,
+              dIrEcTiOn:HoRiZoNtAl,
               Size: 50%,
               List: 50%,
-              [ dIrEcTiOn: VeRtIcAl,
+              [
                 Done,
                 Hashtags: 50%,
               ],
@@ -361,11 +395,43 @@ mod tests {
             Direction: ERROR,
         "#;
 
-        Layout::from_str(
+        let mut layout = Layout::from_str(
             str_layout,
             Arc::new(Mutex::new(ToDo::default())),
             &Config::default(),
         )?;
+        assert_eq!(layout.containers.len(), 2);
+
+        assert_eq!(*layout.containers[0].get_direction(), Horizontal);
+        assert_eq!(layout.containers[0].parent, None);
+        while layout.containers[0].previous_item() {}
+        assert_eq!(
+            layout.containers[0].get_active_type(),
+            Some(WidgetType::List)
+        );
+        assert!(layout.containers[0].next_item());
+        assert_eq!(layout.containers[0].get_active_type(), None);
+        assert!(layout.containers[0].next_item());
+        assert_eq!(
+            layout.containers[0].get_active_type(),
+            Some(WidgetType::Project)
+        );
+        assert!(!layout.containers[0].next_item());
+
+        assert_eq!(*layout.containers[1].get_direction(), Vertical);
+        assert_eq!(layout.containers[1].parent, Some(0));
+        while layout.containers[1].previous_item() {}
+        assert_eq!(
+            layout.containers[1].get_active_type(),
+            Some(WidgetType::Done)
+        );
+        assert!(layout.containers[1].next_item());
+        assert_eq!(
+            layout.containers[1].get_active_type(),
+            Some(WidgetType::Hashtag)
+        );
+        assert!(!layout.containers[1].next_item());
+
         Ok(())
     }
 }

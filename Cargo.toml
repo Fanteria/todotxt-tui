@@ -19,6 +19,7 @@ todo-txt = "3.1"
 toml = "0.7"
 tui = { package = "ratatui", version = "0.22.0", features = ["all-widgets", "crossterm"]}
 tui-input = { version = "0.8", features = ["crossterm"], default-features = false }
+thiserror = "1.0"
 
 [dev-dependencies]
 test-log = "0.2.13"

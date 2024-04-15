@@ -455,16 +455,18 @@ Link: $link",
             "
 [
     Direction: Horizontal,
-    Size: 50%,
+    Size: 30%,
     [
-        List: 50%,
-        Preview,
+        List: 20%,
+        Preview: 80%,
     ],
+    Size: 70%,
     [ Direction: Vertical,
-      Done,
+      Done: 60%,
+      Size: 40%,
       [ 
-        Contexts,
-        Projects,
+        Contexts: 10%,
+        Projects: 90%,
       ],
     ],
 ]

@@ -17,7 +17,8 @@ use crossterm::event::KeyCode;
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
-use std::sync::{Arc, Mutex};
+use std::{fmt::{Pointer, Write}, sync::{Arc, Mutex}};
+use std::fmt::Debug;
 use tui::widgets::Block;
 use tui::{backend::Backend, Frame};
 use widget_base::WidgetBase;
@@ -94,5 +95,12 @@ impl Widget {
             Widget::Category(categories) => categories.category.into(),
             Widget::Preview(_) => Preview,
         }
+    }
+}
+
+impl Debug for Widget {
+    // TODO improve
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        _f.write_fmt(format_args!("{:#?}", self.widget_type()))
     }
 }

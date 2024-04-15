@@ -12,6 +12,7 @@ use tui::{
     Frame,
 };
 
+#[derive(Debug)]
 pub enum It {
     Cont(usize),
     Item(Widget),
@@ -22,6 +23,7 @@ pub enum It {
 /// A `Container` is a component that can hold a collection of `Item`s, which can be either
 /// widgets or nested containers. It provides methods for rendering, focusing, and updating
 /// the contained items.
+#[derive(Debug)]
 pub struct Container {
     items: Vec<It>,
     layout: TuiLayout,
@@ -31,35 +33,6 @@ pub struct Container {
 }
 
 impl Container {
-    /// Creates a new container with the given items, constraints, direction, and parent.
-    ///
-    /// # Parameters
-    ///
-    /// - `items`: A vector of items (widgets or containers) to be placed within the container.
-    /// - `constraints`: A vector of constraints defining how items should be laid out within
-    ///   the container.
-    /// - `direction`: The layout direction of the container (Vertical or Horizontal).
-    /// - `parent`: An optional reference to the parent container, if this container is nested
-    ///   within another container.
-    ///
-    /// # Returns
-    ///
-    /// A reference-counted (`Rc`) reference to the newly created `Container`.
-    // pub fn new(
-    //     constraints: Vec<Constraint>,
-    //     direction: Direction,
-    //     parent: Option<usize>,
-    // ) -> Container {
-    //     Container {
-    //         layout: TuiLayout::default()
-    //             .direction(direction.clone())
-    //             .constraints(constraints),
-    //         direction,
-    //         parent,
-    //         ..Container::default()
-    //     }
-    // }
-
     pub fn add_widget(&mut self, widget: Widget) {
         self.items.push(It::Item(widget));
     }
@@ -180,30 +153,35 @@ impl Container {
     /// type as the active item, or an error if the widget type is not found within the container.
     #[allow(dead_code)]
     pub fn select_widget(layout: &mut Layout, widget_type: WidgetType) -> ToDoRes<()> {
-        // Set everything to first item
-        layout
+        let mut index_item = 0;
+        let (index_container, _) = layout
             .containers
-            .iter_mut()
-            .for_each(|cont| cont.act_index = 0);
-        layout.act = 0;
-        Container::actualize_layout(layout);
+            .iter()
+            .enumerate()
+            .find(|(_i_cont, cont)| {
+                cont.items
+                    .iter()
+                    .enumerate()
+                    .find(|(i_item, item)| match item {
+                        It::Item(item) if item.widget_type() == widget_type => {
+                            index_item = *i_item;
+                            true
+                        }
+                        _ => false,
+                    })
+                    .is_some()
+            })
+            .ok_or_else(|| ToDoError::WidgetDoesNotExist)?;
+        layout.containers[index_container].act_index = index_item;
+        layout.act = index_container;
 
-        loop {
-            if layout.act().get_active_type() == Some(widget_type) {
-                break;
-            }
-            let mut next = layout.act_mut().next_item();
-            while !next {
-                match layout.act().parent {
-                    Some(index) => {
-                        layout.act = index;
-                    }
-                    None => return Err(ToDoError::WidgetDoesNotExist),
-                }
-                next = layout.act_mut().next_item();
-            }
-            Container::actualize_layout(layout)
+        // Reproduce path back to root.
+        let mut index_container = index_container;
+        while let Some(index_parent) = layout.containers[index_container].parent {
+            layout.containers[index_parent].act_index = index_container;
+            index_container = index_parent;
         }
+
         Ok(())
     }
 
@@ -218,12 +196,30 @@ impl Container {
         });
     }
 
-    // pub fn update_chunk(&mut self, chunk: Rect, containers: &mut Vec<Self>) {
-    //     self.items.iter_mut().for_each(|cont| match cont {
-    //         It::Cont(index) => containers[*index].update_chunk(chunk, &mut containers), // TODO may be splitted
-    //         It::Item(widget) => widget.update_chunk(chunk),
-    //     });
-    // }
+    pub fn update_chunk(chunk: Rect, containers: &mut Vec<Self>, index: usize) {
+        // TODO chunk should be splitted
+        // todo!();
+        // println!("--------------------------------------------");
+        // println!("--------------------------------------------");
+        // containers.iter().for_each(|c| println!("--------\n{:?}\n---\n{:#?}",c.items, c.layout));
+        let chunks = containers[index].layout.split(chunk);
+        // println!("--------------------------------------------");
+        // println!("index: {} -> {:#?}", index, containers[index].layout);
+        // println!("--------------------------------------------");
+        // println!("{:#?}", chunks);
+        // println!("--------------------------------------------");
+        // println!("--------------------------------------------");
+        for i in 0..containers[index].items.len() {
+            let index = match &mut containers[index].items[i] {
+                It::Cont(index) => *index,
+                It::Item(widget) => {
+                    widget.update_chunk(chunks[i]);
+                    continue;
+                }
+            };
+            Self::update_chunk(chunks[i], containers, index); // TODO may be splitted
+        }
+    }
 }
 
 impl Default for Container {
@@ -242,7 +238,7 @@ impl Default for Container {
 mod tests {
     use super::super::Layout;
     use super::*;
-    use crate::{config::Config, todo::ToDo};
+    use crate::{config::Config, layout::widget::State, todo::ToDo};
     use std::sync::{Arc, Mutex};
     use tui::layout::Direction::*;
     use WidgetType::*;
@@ -257,22 +253,18 @@ mod tests {
         containers[index].set_constraints(vec![Constraint::Percentage(30)]);
 
         // Holder container
-        let mut cont = Container {
-            parent: Some(index),
-            direction: Horizontal,
-            ..Container::default()
-        };
+        let mut cont = Container::default();
+        cont.parent = Some(index);
+        cont.set_direction(Horizontal);
         cont.set_constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
         // Left widget
         cont.add_widget(Widget::new(WidgetType::List, todo.clone(), &Config::default()).unwrap());
         let index = Container::add_container(&mut containers, cont);
 
         // Right container
-        let mut cont = Container {
-            parent: Some(index),
-            direction: Vertical,
-            ..Container::default()
-        };
+        let mut cont = Container::default();
+        cont.parent = Some(index);
+        cont.set_direction(Vertical);
         cont.set_constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
         cont.add_widget(Widget::new(WidgetType::Done, todo.clone(), &Config::default()).unwrap());
         cont.add_widget(Widget::new(WidgetType::Project, todo, &Config::default()).unwrap());
@@ -367,5 +359,33 @@ mod tests {
         check_active(&layout, Done);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_update_chunk() {
+        let mut layout = testing_layout();
+        layout.update_chunk(Rect::new(0, 0, 20, 20));
+        let count_widgets = |index: usize| -> usize {
+            layout.containers[index]
+                .items
+                .iter()
+                .filter(|item| match item {
+                    It::Cont(_) => false,
+                    It::Item(_) => true,
+                })
+                .count()
+        };
+        let check_chunk = |c_index: usize, i_index: usize, rect| {
+            match &layout.containers[c_index].items[i_index] {
+                It::Cont(_) => panic!("Cointainer does not hold widget"),
+                It::Item(widget) => assert_eq!(widget.get_base().chunk, rect),
+            };
+        };
+        assert_eq!(0, count_widgets(0));
+        assert_eq!(1, count_widgets(1));
+        check_chunk(1, 0, Rect::new(0, 0, 10, 20));
+        assert_eq!(2, count_widgets(2));
+        check_chunk(2, 0, Rect::new(10, 0, 10, 10));
+        check_chunk(2, 1, Rect::new(10, 10, 10, 10));
     }
 }
