@@ -25,6 +25,12 @@ use tui::{
     Frame,
 };
 
+// Define separators
+const ITEM_SEPARATOR: char = ',';
+const ARG_SEPARATOR: char = ':';
+const START_CONTAINER: char = '[';
+const END_CONTAINER: char = ']';
+
 /// Represents the layout of the user interface.
 ///
 /// The `Layout` struct defines the layout of the user interface for the todo-tui application. It
@@ -46,21 +52,55 @@ impl Layout {
     /// # Returns
     ///
     /// Returns a `ToDoRes` containing the converted `Constraint` or an error if parsing fails.
-    fn value_from_string(value: &str) -> ToDoRes<Constraint> {
-        if value.is_empty() {
+    fn value_from_string(value: Option<&str>) -> ToDoRes<Constraint> {
+        if value.is_none() {
             return Ok(Constraint::Percentage(50));
         }
 
-        match value.find('%') {
+        // TODO unwrap
+        match value.unwrap().find('%') {
             Some(i) => {
-                if i + 1 < value.len() {
-                    println!("Error: {}", value);
+                if i + 1 < value.unwrap().len() {
+                    println!("Error: {:?}", value);
                     Err(ToDoError::ParseUnknownValue)
                 } else {
-                    Ok(Constraint::Percentage(value[..i].parse()?))
+                    Ok(Constraint::Percentage(value.unwrap()[..i].parse()?))
                 }
             }
-            None => Ok(Constraint::Length(value.parse()?)),
+            None => Ok(Constraint::Length(value.unwrap().parse()?)),
+        }
+    }
+
+    fn process_item(
+        item: &str,
+        container: &mut Container,
+        data: Arc<Mutex<ToDo>>,
+        config: &Config,
+    ) -> ToDoRes<Option<Constraint>> {
+        println!("String: {}", item);
+        let s = item.to_lowercase();
+        let x: Vec<&str> = s.splitn(2, ARG_SEPARATOR).map(|s| s.trim()).collect();
+        let x = (x[0], if x.len() > 1 { Some(x[1]) } else { None });
+        match x.0 {
+            "direction" => {
+                match x.1 {
+                    None | Some("vertical") => container.set_direction(Direction::Vertical),
+                    Some("horizontal") => container.set_direction(Direction::Horizontal),
+                    Some(direction) => {
+                        return Err(ToDoError::ParseInvalidDirection(direction.to_owned()))
+                    }
+                }
+                Ok(None)
+            }
+            "size" => Ok(Some(Self::value_from_string(x.1)?)),
+            _ => {
+                container.add_widget(Widget::new(
+                    WidgetType::from_str(x.0)?,
+                    data.clone(),
+                    config,
+                )?);
+                Ok(Some(Self::value_from_string(x.1)?))
+            }
         }
     }
 
@@ -89,14 +129,7 @@ impl Layout {
         log::debug!("Layout from str: {}", template);
         println!("{}", template);
 
-        // Define separators
-        const ITEM_SEPARATOR: char = ',';
-        const ARG_SEPARATOR: char = ':';
-        const START_CONTAINER: char = '[';
-        const END_CONTAINER: char = ']';
-
         let mut string = String::new();
-        let mut item = String::new();
 
         let mut constraints_stack: Vec<Vec<Constraint>> = Vec::new();
         constraints_stack.push(Vec::new());
@@ -109,8 +142,15 @@ impl Layout {
         for ch in template.chars() {
             match ch {
                 START_CONTAINER => {
-                    println!("ERROR: |{}|{}|", string, item);
+                    // TODO create error
+                    println!("ERROR: {}", string);
                     string.clear();
+                    if layout.act().item_count() >= constraints_stack.last().unwrap().len() {
+                        constraints_stack
+                            .last_mut()
+                            .unwrap()
+                            .push(Constraint::Percentage(50));
+                    }
                     let mut cont = Container::default();
                     cont.parent = Some(layout.act);
                     cont.set_direction(match layout.act().get_direction() {
@@ -121,7 +161,11 @@ impl Layout {
                     constraints_stack.push(Vec::new());
                 }
                 END_CONTAINER => {
-                    println!("Act: {}, Constraints: {:?}", layout.act, constraints_stack.last());
+                    println!(
+                        "Act: {}, Constraints: {:?}",
+                        layout.act,
+                        constraints_stack.last()
+                    );
                     layout
                         .act_mut()
                         .set_constraints(constraints_stack.pop().unwrap());
@@ -133,55 +177,19 @@ impl Layout {
                             return Ok(layout);
                         }
                     };
-                    // constraints_stack.pop() = Vec::new();
                     string.clear();
-                }
-                ARG_SEPARATOR => {
-                    item = string;
-                    string = String::new();
                 }
                 ITEM_SEPARATOR => {
                     // Skip leading ITEM_SEPARATOR
-                    if string.is_empty() {
-                        continue;
-                    }
-                    // let x: Vec<&str> = string.splitn(2,':').map(|s| s.trim()).collect();
-                    // println!("String: {}, Item: {}", string, item);
-                    if item.is_empty() {
-                        item = string.to_lowercase();
+                    if !string.is_empty() {
+                        if let Some(constrain) =
+                            Self::process_item(&string, layout.act_mut(), data.clone(), config)?
+                        {
+                            // TODO UNWRAP
+                            constraints_stack.last_mut().unwrap().push(constrain);
+                        }
                         string.clear();
-                    } else {
-                        item = item.to_lowercase();
-                        string = string.to_lowercase();
                     }
-                    match item.as_str() {
-                        "direction" => match string.as_str() {
-                            "" | "vertical" => layout.act_mut().set_direction(Direction::Vertical),
-                            "horizontal" => layout.act_mut().set_direction(Direction::Horizontal),
-                            _ => return Err(ToDoError::ParseInvalidDirection(string)),
-                        },
-                        "size" => {
-                            println!("size: {}", string);
-                            constraints_stack
-                                .last_mut()
-                                .unwrap()
-                                .push(Self::value_from_string(&string)?);
-                        }
-                        _ => {
-                            let widget_type = WidgetType::from_str(&item)?;
-                            layout.act_mut().add_widget(Widget::new(
-                                widget_type,
-                                data.clone(),
-                                config,
-                            )?);
-                            constraints_stack
-                                .last_mut()
-                                .unwrap()
-                                .push(Self::value_from_string(&string)?);
-                        }
-                    }
-                    item.clear();
-                    string.clear();
                 }
                 ' ' => {}
                 '\n' => {}
@@ -205,7 +213,14 @@ impl Layout {
     ///
     /// - `next`: An `Option<RcCon>` representing the new container to focus.
     fn change_focus(&mut self, direction: Direction, f: impl Fn(&mut Container) -> bool) -> bool {
-        let old_act = self.act;
+        let old_act_container = self.act;
+        let old_act_widget = self.act().get_index();
+        let unfocus = |s: &mut Self| {
+            if let Some(widget) = s.containers[old_act_container].get_widget_mut(old_act_widget)
+            {
+                widget.unfocus();
+            }
+        };
         while *self.act().get_direction() != direction {
             match self.act().parent {
                 Some(index) => self.act = index,
@@ -213,7 +228,9 @@ impl Layout {
             }
         }
         if f(self.act_mut()) {
+            unfocus(self);
             Container::actualize_layout(self);
+            // self.containers[old_act_container].items[old_act_widget];
             true
         } else {
             match self.act().parent {
@@ -221,15 +238,16 @@ impl Layout {
                 Some(index) => {
                     self.act = index;
                     if self.change_focus(direction, f) {
+                        unfocus(self);
                         true
                     } else {
-                        self.act = old_act;
+                        self.act = old_act_container;
                         false
                     }
                 }
                 None => {
                     // Do not move from starting position if you can't.
-                    self.act = old_act;
+                    self.act = old_act_container;
                     false
                 }
             }
@@ -293,7 +311,7 @@ impl Layout {
 
 impl Render for Layout {
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
-        self.act().render(f, &self.containers);
+        self.containers[0].render(f, &self.containers);
     }
 
     fn unfocus(&mut self) {

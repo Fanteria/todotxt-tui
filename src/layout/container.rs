@@ -25,7 +25,7 @@ pub enum It {
 /// the contained items.
 #[derive(Debug)]
 pub struct Container {
-    items: Vec<It>,
+    pub items: Vec<It>,
     layout: TuiLayout,
     direction: Direction,
     pub parent: Option<usize>,
@@ -61,6 +61,28 @@ impl Container {
         self.layout = self.layout.clone().constraints(constraints);
     }
 
+    pub fn item_count(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn get_index(&self) -> usize {
+        self.act_index
+    }
+
+    pub fn get_widget(&self, index: usize) -> Option<&Widget> {
+        match &self.items[index] {
+            It::Item(w) => Some(w),
+            It::Cont(_) => None,
+        }
+    }
+
+    pub fn get_widget_mut(&mut self, index: usize) -> Option<&mut Widget> {
+        match &mut self.items[index] {
+            It::Item(w) => Some(w),
+            It::Cont(_) => None,
+        }
+    }
+
     /// Returns a reference to the currently active item within the container.
     ///
     /// # Returns
@@ -69,10 +91,7 @@ impl Container {
     /// is not a widget.
     #[allow(dead_code)]
     pub fn actual(&self) -> Option<&Widget> {
-        match &self.items[self.act_index] {
-            It::Item(w) => Some(w),
-            It::Cont(_) => None,
-        }
+        self.get_widget(self.act_index)
     }
 
     /// Returns a mutable reference to the currently active item within the container.
@@ -82,23 +101,20 @@ impl Container {
     /// A result containing a mutable reference to the active `Widget` or an error if the active
     /// item is not a widget.
     pub fn actual_mut(&mut self) -> Option<&mut Widget> {
-        match &mut self.items[self.act_index] {
-            It::Item(w) => Some(w),
-            It::Cont(_) => None,
-        }
+        self.get_widget_mut(self.act_index)
     }
 
     // TODO Change to actual widget index
     pub fn actualize_layout(layout: &mut Layout) {
         if let It::Cont(mut index) = layout.act().items[layout.act().act_index] {
-            loop {
-                match &layout.containers[index].items[layout.containers[index].act_index] {
-                    It::Cont(cont) => index = *cont,
-                    It::Item(_) => break,
-                }
+            while let It::Cont(cont) =
+                &layout.containers[index].items[layout.containers[index].act_index]
+            {
+                index = *cont;
             }
             layout.act = index;
         }
+        layout.act_mut().actual_mut().unwrap().focus();
     }
 
     /// Attempts to select the next item within the container.
@@ -162,16 +178,15 @@ impl Container {
                 cont.items
                     .iter()
                     .enumerate()
-                    .find(|(i_item, item)| match item {
+                    .any(|(i_item, item)| match item {
                         It::Item(item) if item.widget_type() == widget_type => {
-                            index_item = *i_item;
+                            index_item = i_item;
                             true
                         }
                         _ => false,
                     })
-                    .is_some()
             })
-            .ok_or_else(|| ToDoError::WidgetDoesNotExist)?;
+            .ok_or(ToDoError::WidgetDoesNotExist)?;
         layout.containers[index_container].act_index = index_item;
         layout.act = index_container;
 
@@ -197,18 +212,7 @@ impl Container {
     }
 
     pub fn update_chunk(chunk: Rect, containers: &mut Vec<Self>, index: usize) {
-        // TODO chunk should be splitted
-        // todo!();
-        // println!("--------------------------------------------");
-        // println!("--------------------------------------------");
-        // containers.iter().for_each(|c| println!("--------\n{:?}\n---\n{:#?}",c.items, c.layout));
         let chunks = containers[index].layout.split(chunk);
-        // println!("--------------------------------------------");
-        // println!("index: {} -> {:#?}", index, containers[index].layout);
-        // println!("--------------------------------------------");
-        // println!("{:#?}", chunks);
-        // println!("--------------------------------------------");
-        // println!("--------------------------------------------");
         for i in 0..containers[index].items.len() {
             let index = match &mut containers[index].items[i] {
                 It::Cont(index) => *index,
@@ -217,7 +221,7 @@ impl Container {
                     continue;
                 }
             };
-            Self::update_chunk(chunks[i], containers, index); // TODO may be splitted
+            Self::update_chunk(chunks[i], containers, index);
         }
     }
 }

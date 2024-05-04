@@ -17,7 +17,7 @@ use crossterm::event::KeyCode;
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
-use std::{fmt::{Pointer, Write}, sync::{Arc, Mutex}};
+use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
 use tui::widgets::Block;
 use tui::{backend::Backend, Frame};

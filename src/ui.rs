@@ -98,7 +98,7 @@ impl UI {
     }
 
     pub fn build(config: &Config) -> Result<UI, Box<dyn Error>> {
-        let mut todo = ToDo::new(&config);
+        let mut todo = ToDo::new(config);
 
         if let Some(path) = &config.get_save_state_path() {
             let state = UIState::load(path)?;
@@ -116,14 +116,14 @@ impl UI {
         file_worker.load()?;
         let tx = file_worker.run(config.get_autosave_duration(), config.get_file_watcher());
 
-        let layout = Layout::from_str(&config.get_layout(), todo.clone(), &config)?;
+        let layout = Layout::from_str(&config.get_layout(), todo.clone(), config)?;
 
 
         Ok(UI::new(
             layout,
             todo,
             tx.clone(),
-            &config,
+            config,
         ))
     }
 
