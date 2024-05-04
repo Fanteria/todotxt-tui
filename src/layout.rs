@@ -215,8 +215,9 @@ impl Layout {
     fn change_focus(&mut self, direction: Direction, f: impl Fn(&mut Container) -> bool) -> bool {
         let old_act_container = self.act;
         let old_act_widget = self.act().get_index();
-        let unfocus = |s: &mut Self| {
-            if let Some(widget) = s.containers[old_act_container].get_widget_mut(old_act_widget)
+        let unfocus = |layout: &mut Self| {
+            if let Some(widget) =
+                layout.containers[old_act_container].get_widget_mut(old_act_widget)
             {
                 widget.unfocus();
             }
@@ -230,7 +231,6 @@ impl Layout {
         if f(self.act_mut()) {
             unfocus(self);
             Container::actualize_layout(self);
-            // self.containers[old_act_container].items[old_act_widget];
             true
         } else {
             match self.act().parent {

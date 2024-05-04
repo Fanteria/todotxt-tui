@@ -1,13 +1,13 @@
-use std::io::{Write, Read, Result as ioResult};
 use std::fs::File;
+use std::io::{Read, Result as ioResult, Write};
 use std::path::Path;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use crate::layout::Layout;
+use crate::error::{ToDoIoError, ToDoRes};
 use crate::layout::widget::widget_type::WidgetType;
+use crate::layout::Layout;
 use crate::todo::{ToDo, ToDoState};
-use crate::error::{ToDoError, ToDoRes};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct UIState {
@@ -32,7 +32,8 @@ impl UIState {
     }
 
     pub fn load(path: &Path) -> ToDoRes<Self> {
-        let file = File::open(path).map_err(|e| ToDoError::IOoperationFailed(path.to_path_buf(), e.kind()))?;
+        let file =
+            File::open(path).map_err(|err| ToDoIoError{ path: path.to_path_buf(), err })?;
         Ok(UIState::deserialize(file))
     }
 
