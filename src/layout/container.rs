@@ -1,11 +1,10 @@
-mod holder;
-mod item;
-
-use super::render_trait::Render;
-use super::widget::{widget_type::WidgetType, Widget};
-use super::Layout;
+use super::{
+    render_trait::Render,
+    widget::widget_type::WidgetType, 
+    Widget,
+    Layout,
+};
 use crate::error::{ToDoError, ToDoRes};
-#[allow(unused_imports)]
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},
@@ -13,7 +12,7 @@ use tui::{
 };
 
 #[derive(Debug)]
-pub enum It {
+enum It {
     Cont(usize),
     Item(Widget),
 }
@@ -25,7 +24,7 @@ pub enum It {
 /// the contained items.
 #[derive(Debug)]
 pub struct Container {
-    pub items: Vec<It>,
+    items: Vec<It>,
     layout: TuiLayout,
     direction: Direction,
     pub parent: Option<usize>,

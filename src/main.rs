@@ -1,19 +1,8 @@
-mod config;
-mod error;
-mod file_worker;
-mod layout;
-mod todo;
-mod ui;
-
-use crate::{
+use std::error::Error;
+use todo_tui::{
     config::{Config, Logger},
-    todo::ToDo,
     ui::UI,
 };
-use std::error::Error;
-
-#[macro_use]
-extern crate enum_dispatch;
 
 fn main() {
     let config = Config::new();
@@ -31,4 +20,3 @@ fn main() {
         eprintln!("{}", e);
     }
 }
-

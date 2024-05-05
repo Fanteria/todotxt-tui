@@ -1,20 +1,17 @@
-pub mod container;
+mod container;
 mod render_trait;
 pub mod widget;
 
-use container::Container;
-use std::fmt::Debug;
-use std::sync::Arc;
-use std::sync::Mutex;
-use widget::{widget_type::WidgetType, Widget};
-
-use crate::Config;
 use crate::{
     error::{ToDoError, ToDoRes},
     todo::ToDo,
     ui::HandleEvent,
+    config::Config,
 };
+use container::Container;
 use crossterm::event::KeyEvent;
+use std::{fmt::Debug, sync::Arc, sync::Mutex};
+use widget::{widget_type::WidgetType, Widget};
 
 pub use render_trait::Render;
 

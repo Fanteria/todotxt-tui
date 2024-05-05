@@ -10,7 +10,7 @@ use crate::{
     layout::Layout,
     layout::Render,
     todo::autocomplete,
-    ToDo,
+    todo::ToDo,
 };
 use crossterm::{
     self,
