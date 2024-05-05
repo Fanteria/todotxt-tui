@@ -96,22 +96,20 @@ impl ToDo {
     ///
     /// A `CategoryList` containing the filtered categories and their selection status.
     pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
-        let mut btree = BTreeSet::<&String>::new();
         let tasks = if self.config.use_done {
             vec![&self.pending, &self.done]
         } else {
             vec![&self.pending]
         };
-        tasks.iter().for_each(|list| {
-            list.iter().for_each(|task| {
-                category.get_data(task).iter().for_each(|project| {
-                    btree.insert(project);
-                })
-            })
-        });
+
         let selected = self.state.get_category(category);
         CategoryList {
-            vec: btree
+            vec: tasks
+                .iter()
+                .flat_map(|list| list.iter())
+                .flat_map(|task| category.get_data(task).iter())
+                .chain(self.state.get_category(category).keys())
+                .collect::<BTreeSet<&String>>()
                 .iter()
                 .map(|item| (*item, selected.get(*item).cloned()))
                 .collect(),
@@ -468,68 +466,67 @@ mod tests {
         Ok(())
     }
 
-    // TODO
-    // #[test]
-    // fn test_filtering() -> Result<(), Box<dyn Error>> {
-    //     let mut todo = ToDo::default();
-    //     todo.add_task(Task::from_str("task 1").unwrap());
-    //     todo.add_task(Task::from_str("task 2 +project1").unwrap());
-    //     todo.add_task(Task::from_str("task 3 +project1 +project2").unwrap());
-    //     todo.add_task(Task::from_str("task 4 +project1 +project3").unwrap());
-    //     todo.add_task(Task::from_str("task 5 +project1 +project2 +project3").unwrap());
-    //     todo.add_task(Task::from_str("task 6 +project3 @context2 #hashtag2 #hashtag1").unwrap());
-    //     todo.add_task(Task::from_str("task 7 +project2 @context1 #hashtag1 #hashtag2").unwrap());
-    //     todo.add_task(Task::from_str("task 8 +project2 @context2").unwrap());
-    //     todo.add_task(Task::from_str("task 9 +projects3 @context3").unwrap());
-    //     todo.add_task(Task::from_str("task 10 +project2 @context3 #hashtag1 #hashtag2").unwrap());
-    //     todo.add_task(Task::from_str("task 11 +project3 @context3 #hashtag2 #hashtag3").unwrap());
-    //     todo.add_task(Task::from_str("task 12 +project3 @context2 #hashtag2").unwrap());
-    //
-    //     let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
-    //     assert_eq!(filtered.len(), 12);
-    //
-    //     todo.state
-    //         .project_filters
-    //         .insert(String::from("project9999"));
-    //     let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
-    //     assert_eq!(filtered.len(), 0);
-    //
-    //     todo.state.project_filters.clear();
-    //     todo.state.project_filters.insert(String::from("project1"));
-    //     let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
-    //     assert_eq!(filtered.len(), 4);
-    //     assert_eq!(filtered[0].subject, "task 2 +project1");
-    //     assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
-    //     assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
-    //     assert_eq!(filtered[3].subject, "task 5 +project1 +project2 +project3");
-    //
-    //     todo.state.project_filters.insert(String::from("project2"));
-    //     let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
-    //     assert_eq!(filtered.len(), 2);
-    //     assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
-    //     assert_eq!(filtered[1].subject, "task 5 +project1 +project2 +project3");
-    //
-    //     todo.state.project_filters.insert(String::from("project3"));
-    //     let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
-    //     assert_eq!(filtered.len(), 1);
-    //     assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
-    //
-    //     todo.state.project_filters.insert(String::from("project1"));
-    //     let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
-    //     assert_eq!(filtered.len(), 1);
-    //     assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
-    //
-    //     todo.state.project_filters.clear();
-    //     todo.state.context_filters.insert(String::from("context1"));
-    //     let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
-    //     assert_eq!(filtered.len(), 1);
-    //     assert_eq!(
-    //         filtered[0].subject,
-    //         "task 7 +project2 @context1 #hashtag1 #hashtag2"
-    //     );
-    //
-    //     Ok(())
-    // }
+    #[test]
+    fn test_filtering() -> Result<(), Box<dyn Error>> {
+        let mut todo = ToDo::default();
+        todo.add_task(Task::from_str("task 1").unwrap());
+        todo.add_task(Task::from_str("task 2 +project1").unwrap());
+        todo.add_task(Task::from_str("task 3 +project1 +project2").unwrap());
+        todo.add_task(Task::from_str("task 4 +project1 +project3").unwrap());
+        todo.add_task(Task::from_str("task 5 +project1 +project2 +project3").unwrap());
+        todo.add_task(Task::from_str("task 6 +project3 @context2 #hashtag2 #hashtag1").unwrap());
+        todo.add_task(Task::from_str("task 7 +project2 @context1 #hashtag1 #hashtag2").unwrap());
+        todo.add_task(Task::from_str("task 8 +project2 @context2").unwrap());
+        todo.add_task(Task::from_str("task 9 +projects3 @context3").unwrap());
+        todo.add_task(Task::from_str("task 10 +project2 @context3 #hashtag1 #hashtag2").unwrap());
+        todo.add_task(Task::from_str("task 11 +project3 @context3 #hashtag2 #hashtag3").unwrap());
+        todo.add_task(Task::from_str("task 12 +project3 @context2 #hashtag2").unwrap());
+
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
+        assert_eq!(filtered.len(), 12);
+
+        todo.state
+            .project_filters
+            .insert(String::from("project9999"), FilterState::Select);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
+        assert_eq!(filtered.len(), 0);
+
+        todo.state.project_filters.clear();
+        todo.state.project_filters.insert(String::from("project1"), FilterState::Select);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
+        assert_eq!(filtered.len(), 4);
+        assert_eq!(filtered[0].subject, "task 2 +project1");
+        assert_eq!(filtered[1].subject, "task 3 +project1 +project2");
+        assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
+        assert_eq!(filtered[3].subject, "task 5 +project1 +project2 +project3");
+
+        todo.state.project_filters.insert(String::from("project2"), FilterState::Select);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
+        assert_eq!(filtered.len(), 2);
+        assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
+        assert_eq!(filtered[1].subject, "task 5 +project1 +project2 +project3");
+
+        todo.state.project_filters.insert(String::from("project3"), FilterState::Select);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
+
+        todo.state.project_filters.insert(String::from("project1"), FilterState::Select);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
+
+        todo.state.project_filters.clear();
+        todo.state.context_filters.insert(String::from("context1"), FilterState::Select);
+        let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(
+            filtered[0].subject,
+            "task 7 +project2 @context1 #hashtag1 #hashtag2"
+        );
+
+        Ok(())
+    }
 
     #[test]
     fn actual_consistency_move() {

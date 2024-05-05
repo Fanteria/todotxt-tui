@@ -40,6 +40,10 @@ impl<'a> TaskList<'a> {
         self.vec.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.vec.is_empty()
+    }
+
     /// Retrieves the actual index of a task based on its position in the list.
     ///
     /// # Arguments
