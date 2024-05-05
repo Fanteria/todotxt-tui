@@ -1,5 +1,5 @@
-use crate::todo::task_list::TaskSort;
 use super::Config;
+use crate::todo::task_list::TaskSort;
 
 pub struct ToDoConfig {
     pub use_done: bool,

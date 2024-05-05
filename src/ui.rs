@@ -23,11 +23,11 @@ use crossterm::{
 };
 use std::{
     error::Error,
-    io::{self, Result as ioResult},
+    io,
+    path::PathBuf,
     sync::mpsc::Sender,
     sync::{Arc, Mutex},
     time::Duration,
-    path::PathBuf,
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -118,13 +118,7 @@ impl UI {
 
         let layout = Layout::from_str(&config.get_layout(), todo.clone(), config)?;
 
-
-        Ok(UI::new(
-            layout,
-            todo,
-            tx.clone(),
-            config,
-        ))
+        Ok(UI::new(layout, todo, tx.clone(), config))
     }
 
     /// Updates the input chunk of the UI based on the main chunk's dimensions.
@@ -150,9 +144,9 @@ impl UI {
     ///
     /// # Returns
     ///
-    /// An `ioResult` indicating the success of running the user interface.
-    pub fn run(&mut self) -> ioResult<()> {
-        fn run_ui(this: &mut UI) -> ioResult<()> {
+    /// An `io::Result` indicating the success of running the user interface.
+    pub fn run(&mut self) -> io::Result<()> {
+        fn run_ui(this: &mut UI) -> io::Result<()> {
             // setup terminal
             enable_raw_mode()?;
             let mut stdout = io::stdout();
@@ -196,8 +190,8 @@ impl UI {
     ///
     /// # Returns
     ///
-    /// An `ioResult` indicating the success of the main loop.
-    fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> ioResult<()> {
+    /// An `io::Result` indicating the success of the main loop.
+    fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         let mut version = self.data.lock().unwrap().get_version();
         let mut new_version;
         loop {
@@ -226,8 +220,8 @@ impl UI {
     ///
     /// # Returns
     ///
-    /// An `ioResult` indicating the success of drawing.
-    fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> ioResult<()> {
+    /// An `io::Result` indicating the success of drawing.
+    fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> io::Result<()> {
         let mut block = Block::default()
             .borders(Borders::ALL)
             .title("Input")
@@ -260,8 +254,8 @@ impl UI {
     ///
     /// # Returns
     ///
-    /// An `ioResult` indicating whether the application should exit.
-    fn process_event(&mut self) -> ioResult<bool> {
+    /// An `io::Result` indicating whether the application should exit.
+    fn process_event(&mut self) -> io::Result<bool> {
         self.handle_event_window(read()?);
         Ok(self.quit)
     }
@@ -348,7 +342,9 @@ impl HandleEvent for UI {
         match event {
             Quit => {
                 if let Some(path) = &self.save_state_path {
-                    if let Err (e) = UIState::new(&self.layout, &self.data.lock().unwrap()).save(path) {
+                    if let Err(e) =
+                        UIState::new(&self.layout, &self.data.lock().unwrap()).save(path)
+                    {
                         log::error!("Error while saveing UI state: {}", e);
                     }
                 }
@@ -358,18 +354,18 @@ impl HandleEvent for UI {
                 self.mode = Mode::Input;
                 self.layout.unfocus();
             }
-            MoveRight => { 
+            MoveRight => {
                 self.layout.right();
-            },
+            }
             MoveLeft => {
                 self.layout.left();
-            },
+            }
             MoveUp => {
                 self.layout.up();
-            },
+            }
             MoveDown => {
                 self.layout.down();
-            },
+            }
             Save => {
                 if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
                     log::error!("Error while send signal to save todo list: {}", e);
@@ -400,8 +396,8 @@ impl HandleEvent for UI {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
     use crossterm::event::{KeyEvent, KeyModifiers};
+    use std::env;
     use test_log::test;
 
     use super::*;

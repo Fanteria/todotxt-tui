@@ -3,7 +3,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use tui::style::Modifier;
 
-use crate::error::ToDoError;
+use crate::ToDoError;
 
 /// Serialization and deserialization support for the TUI text modifier type.
 ///

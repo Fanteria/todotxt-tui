@@ -1,6 +1,6 @@
 use crate::{
-    error::ToDoError,
     todo::{ToDoCategory, ToDoData},
+    ToDoError,
 };
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};

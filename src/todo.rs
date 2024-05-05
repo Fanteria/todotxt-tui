@@ -1,12 +1,12 @@
 pub mod autocomplete;
 pub mod category_list;
 pub mod parser;
-pub mod todo_state;
 pub mod task_list;
+pub mod todo_state;
 
 pub use self::{
-    autocomplete::autocomplete, category_list::CategoryList, parser::Parser, todo_state::*,
-    task_list::TaskList,
+    autocomplete::autocomplete, category_list::CategoryList, parser::Parser, task_list::TaskList,
+    todo_state::*,
 };
 
 use crate::config::{Config, Styles, ToDoConfig};

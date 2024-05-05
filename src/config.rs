@@ -170,7 +170,6 @@ pub struct Config {
 }
 
 impl Config {
-
     pub fn new() -> Self {
         let mut config = Config::parse();
         if let Ok(load_config) = config.load_config() {
@@ -519,15 +518,13 @@ Link: $link",
     }
 
     fn get_category_select_style(&self) -> TextStyle {
-        self.category_select_style.unwrap_or_else(|| {
-            TextStyle::default().fg(Color::Green)
-        })
+        self.category_select_style
+            .unwrap_or_else(|| TextStyle::default().fg(Color::Green))
     }
 
     fn get_category_remove_style(&self) -> TextStyle {
-        self.category_remove_style.unwrap_or_else(|| {
-            TextStyle::default().fg(Color::Red)
-        })
+        self.category_remove_style
+            .unwrap_or_else(|| TextStyle::default().fg(Color::Red))
     }
 
     fn get_projects_style(&self) -> TextStyle {
@@ -631,7 +628,10 @@ mod tests {
 
         let new_conf = conf1.merge(conf2);
         assert_eq!(new_conf.todo_path, Some("path/to/todo/file".to_string()));
-        assert_eq!(new_conf.archive_path, Some("path/to/archive_path/file".to_string()));
+        assert_eq!(
+            new_conf.archive_path,
+            Some("path/to/archive_path/file".to_string())
+        );
         assert_eq!(new_conf.window_title, Some("Window title".to_string()));
     }
 }

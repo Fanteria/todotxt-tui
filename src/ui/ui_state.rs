@@ -32,8 +32,10 @@ impl UIState {
     }
 
     pub fn load(path: &Path) -> ToDoRes<Self> {
-        let file =
-            File::open(path).map_err(|err| ToDoIoError{ path: path.to_path_buf(), err })?;
+        let file = File::open(path).map_err(|err| ToDoIoError {
+            path: path.to_path_buf(),
+            err,
+        })?;
         Ok(UIState::deserialize(file))
     }
 

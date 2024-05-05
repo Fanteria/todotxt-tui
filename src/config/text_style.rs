@@ -1,7 +1,6 @@
-use crate::error::ToDoError;
-
 use super::colors::opt_color;
 use super::text_modifier::TextModifier;
+use crate::ToDoError;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
 use tui::style::{Color, Style};

@@ -9,7 +9,6 @@ use tui::style::Style;
 pub struct Line(pub Vec<LineBlock>);
 
 impl Line {
-
     pub fn add_span_styled(
         &mut self,
         parts: &str,
@@ -27,8 +26,11 @@ impl Line {
         if self.0.is_empty() {
             return None;
         }
-        let ret: Vec<(String, Style)> =
-            self.0.iter().filter_map(|block| block.fill(todo, styles)).collect();
+        let ret: Vec<(String, Style)> = self
+            .0
+            .iter()
+            .filter_map(|block| block.fill(todo, styles))
+            .collect();
         if ret.is_empty() {
             None
         } else {

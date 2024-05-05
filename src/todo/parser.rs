@@ -1,17 +1,13 @@
 mod line;
 mod line_block;
-
 mod parts;
+
+use super::{ToDo, ToDoData};
+use crate::{config::Styles, ToDoError, ToDoRes};
 use line::Line;
 use line_block::LineBlock;
 use parts::Parts;
 use std::iter::Peekable;
-
-use super::{ToDo, ToDoData};
-use crate::{
-    config::Styles,
-    error::{ToDoError, ToDoRes},
-};
 use tui::style::Style;
 
 pub struct Parser {
@@ -111,7 +107,9 @@ mod tests {
         assert_eq!(&Parser::read_block(&mut iter, ']')?, "block to parse");
         assert_eq!(&iter.collect::<String>(), " some other text");
 
-        let mut iter = "block to parse \\] with some \\\\ escapes]".chars().peekable();
+        let mut iter = "block to parse \\] with some \\\\ escapes]"
+            .chars()
+            .peekable();
         assert_eq!(
             &Parser::read_block(&mut iter, ']')?,
             "block to parse ] with some \\ escapes"
@@ -214,9 +212,11 @@ mod tests {
                 },
                 LineBlock {
                     parts: vec![Parts::Text("another text".to_string())],
-                    style: styles.get_style_from_style(Style::default()
-                        .fg(Color::Blue)
-                        .add_modifier(Modifier::BOLD)),
+                    style: styles.get_style_from_style(
+                        Style::default()
+                            .fg(Color::Blue)
+                            .add_modifier(Modifier::BOLD)
+                    ),
                 }
             ])
         );

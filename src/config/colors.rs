@@ -30,8 +30,8 @@ pub enum ColorDef {
 
 pub mod opt_color {
     use super::ColorDef;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use tui::style::Color;
-    use serde::{Serialize, Serializer, Deserialize, Deserializer};
 
     pub fn serialize<S>(value: &Option<Color>, serializer: S) -> Result<S::Ok, S::Error>
     where

@@ -35,8 +35,9 @@ impl StylesValue {
                 let mut text_style = TextStyle::default();
                 let mut process_projects = |prefix: &str, data: &[String]| {
                     data.iter().for_each(|category: &String| {
-                        if let Some(style) =
-                            styles.custom_category_style.get(&(prefix.to_string() + category))
+                        if let Some(style) = styles
+                            .custom_category_style
+                            .get(&(prefix.to_string() + category))
                         {
                             text_style = text_style.combine(style);
                         }
@@ -48,7 +49,9 @@ impl StylesValue {
 
                 text_style.get_style()
             }
-            Priority => styles.priority_style.get_style(task.priority.clone().into()),
+            Priority => styles
+                .priority_style
+                .get_style(task.priority.clone().into()),
         }
     }
 }
@@ -105,8 +108,8 @@ impl Styles {
                             {
                                 Some(style) => style.get_style(),
                                 None => Style::default(),
-                            }),
-                        );
+                            },
+                        ));
                     }
                 } else if name.starts_with("custom_category:") {
                     if let Some(custom_category) = name.get("custom_category:".len()..) {
@@ -151,10 +154,11 @@ mod tests {
         let task = Task::from_str("(A) Task name +project #hashtag").unwrap();
         println!("{:#?}", task);
         let styles = Styles::new(&Config::default());
-        assert_eq!(Style::default(), styles.get_style("")?.get_style(&task, &styles));
-        assert!(
-            styles.get_style("Unknown").is_err()
+        assert_eq!(
+            Style::default(),
+            styles.get_style("")?.get_style(&task, &styles)
         );
+        assert!(styles.get_style("Unknown").is_err());
         assert_eq!(
             Style::default(),
             styles.get_style("hashtags")?.get_style(&task, &styles)

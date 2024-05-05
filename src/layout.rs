@@ -2,12 +2,7 @@ mod container;
 mod render_trait;
 pub mod widget;
 
-use crate::{
-    error::{ToDoError, ToDoRes},
-    todo::ToDo,
-    ui::HandleEvent,
-    config::Config,
-};
+use crate::{config::Config, todo::ToDo, ui::HandleEvent, ToDoError, ToDoRes};
 use container::Container;
 use crossterm::event::KeyEvent;
 use std::{fmt::Debug, sync::Arc, sync::Mutex};

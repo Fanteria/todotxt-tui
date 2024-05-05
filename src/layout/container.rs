@@ -1,10 +1,5 @@
-use super::{
-    render_trait::Render,
-    widget::widget_type::WidgetType, 
-    Widget,
-    Layout,
-};
-use crate::error::{ToDoError, ToDoRes};
+use super::{render_trait::Render, widget::widget_type::WidgetType, Layout, Widget};
+use crate::{ToDoError, ToDoRes};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},

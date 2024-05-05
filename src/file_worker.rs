@@ -1,4 +1,4 @@
-use crate::{todo::ToDo, config::Config};
+use crate::{config::Config, todo::ToDo};
 use notify::{
     event::{AccessKind, AccessMode, EventKind},
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
