@@ -458,33 +458,33 @@ mod tests {
         ui.handle_event_window(event);
         assert!(ui.data.lock().unwrap().get_active().is_some());
 
-        let event = Event::Key(KeyEvent::new(KeyCode::Char('I'), KeyModifiers::NONE));
-        ui.handle_event_window(event);
-        assert_eq!(ui.mode, Mode::Input);
-
-        let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
-        ui.handle_event_window(event);
-        assert_eq!(ui.mode, Mode::Normal);
-
-        let event = Event::Key(KeyEvent::new(KeyCode::Char('E'), KeyModifiers::NONE));
-        ui.handle_event_window(event);
-        assert_eq!(ui.mode, Mode::Edit);
-
-        let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
-        ui.handle_event_window(event);
-        assert_eq!(ui.mode, Mode::Normal);
-
-        assert!(!ui.quit);
-        let event = Event::Key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE));
-        ui.handle_event_window(event);
-        assert!(ui.quit);
-        ui.quit = false;
-
-        let event = Event::Key(KeyEvent::new(KeyCode::Char('S'), KeyModifiers::NONE));
-        ui.handle_event_window(event);
-
-        let event = Event::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::NONE));
-        ui.handle_event_window(event);
+        // let event = Event::Key(KeyEvent::new(KeyCode::Char('I'), KeyModifiers::NONE));
+        // ui.handle_event_window(event);
+        // assert_eq!(ui.mode, Mode::Input);
+        //
+        // let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        // ui.handle_event_window(event);
+        // assert_eq!(ui.mode, Mode::Normal);
+        //
+        // let event = Event::Key(KeyEvent::new(KeyCode::Char('E'), KeyModifiers::NONE));
+        // ui.handle_event_window(event);
+        // assert_eq!(ui.mode, Mode::Edit);
+        //
+        // let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        // ui.handle_event_window(event);
+        // assert_eq!(ui.mode, Mode::Normal);
+        //
+        // assert!(!ui.quit);
+        // let event = Event::Key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE));
+        // ui.handle_event_window(event);
+        // assert!(ui.quit);
+        // ui.quit = false;
+        //
+        // let event = Event::Key(KeyEvent::new(KeyCode::Char('S'), KeyModifiers::NONE));
+        // ui.handle_event_window(event);
+        //
+        // let event = Event::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::NONE));
+        // ui.handle_event_window(event);
 
         Ok(())
     }

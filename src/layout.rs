@@ -2,7 +2,9 @@ mod container;
 mod render_trait;
 pub mod widget;
 
-use crate::{config::Config, todo::ToDo, ui::HandleEvent, ToDoError, ToDoRes};
+use crate::{
+    config::Config, layout::widget::State, todo::ToDo, ui::HandleEvent, ToDoError, ToDoRes,
+};
 use container::Container;
 use crossterm::event::KeyEvent;
 use std::{fmt::Debug, sync::Arc, sync::Mutex};
@@ -53,8 +55,7 @@ impl Layout {
         match value.unwrap().find('%') {
             Some(i) => {
                 if i + 1 < value.unwrap().len() {
-                    println!("Error: {:?}", value);
-                    Err(ToDoError::ParseUnknownValue)
+                    Err(ToDoError::ParseUnknownValue(value.unwrap().to_string()))
                 } else {
                     Ok(Constraint::Percentage(value.unwrap()[..i].parse()?))
                 }
@@ -69,7 +70,7 @@ impl Layout {
         data: Arc<Mutex<ToDo>>,
         config: &Config,
     ) -> ToDoRes<Option<Constraint>> {
-        println!("String: {}", item);
+        log::trace!("Process item: {item}");
         let s = item.to_lowercase();
         let x: Vec<&str> = s.splitn(2, ARG_SEPARATOR).map(|s| s.trim()).collect();
         let x = (x[0], if x.len() > 1 { Some(x[1]) } else { None });
@@ -119,7 +120,6 @@ impl Layout {
         };
         let template = &template[index + 1..];
         log::debug!("Layout from str: {}", template);
-        println!("{}", template);
 
         let mut string = String::new();
 
@@ -134,9 +134,9 @@ impl Layout {
         for ch in template.chars() {
             match ch {
                 START_CONTAINER => {
-                    // TODO create error
-                    println!("ERROR: {}", string);
-                    string.clear();
+                    if !string.is_empty() {
+                        return Err(ToDoError::ParseUnknowBeforeContainer(string));
+                    }
                     if layout.act().item_count() >= constraints_stack.last().unwrap().len() {
                         constraints_stack
                             .last_mut()
@@ -153,7 +153,7 @@ impl Layout {
                     constraints_stack.push(Vec::new());
                 }
                 END_CONTAINER => {
-                    println!(
+                    log::trace!(
                         "Act: {}, Constraints: {:?}",
                         layout.act,
                         constraints_stack.last()
@@ -166,6 +166,7 @@ impl Layout {
                         // We are at root. Return created layout.
                         None => {
                             Container::actualize_layout(&mut layout);
+                            layout.act_mut().actual_mut().unwrap().focus();
                             return Ok(layout);
                         }
                     };
@@ -204,42 +205,78 @@ impl Layout {
     /// # Parameters
     ///
     /// - `next`: An `Option<RcCon>` representing the new container to focus.
-    fn change_focus(&mut self, direction: Direction, f: impl Fn(&mut Container) -> bool) -> bool {
-        let old_act_container = self.act;
-        let old_act_widget = self.act().get_index();
-        let unfocus = |layout: &mut Self| {
-            if let Some(widget) =
-                layout.containers[old_act_container].get_widget_mut(old_act_widget)
-            {
-                widget.unfocus();
+    fn change_focus(
+        &mut self,
+        direction: &Direction,
+        f: &impl Fn(&mut Container) -> bool,
+        fb: &impl Fn(&mut Container) -> bool,
+    ) -> bool {
+        struct Holder {
+            c: usize,      // container
+            w: Vec<usize>, // widget
+        }
+        fn unfocus(holder: &Holder, layout: &mut Layout) {
+            match layout.containers[holder.c].get_widget_mut(holder.w[holder.c]) {
+                Some(widget) if widget.get_base().focus => widget.unfocus(),
+                _ => {}
             }
+        }
+        let old = Holder {
+            c: self.act,
+            w: self.containers.iter().map(|c| c.get_index()).collect(),
         };
-        while *self.act().get_direction() != direction {
+        while *self.act().get_direction() != *direction {
             match self.act().parent {
                 Some(index) => self.act = index,
                 None => return false,
             }
         }
         if f(self.act_mut()) {
-            unfocus(self);
+            log::trace!("'f' get item");
             Container::actualize_layout(self);
-            true
+            let ret = if let Some(widget) = self.act_mut().actual_mut() {
+                widget.focus() || self.change_focus(direction, f, fb)
+            } else {
+                true
+            };
+            if ret {
+                unfocus(&old, self);
+            } else {
+                log::trace!("Revert to cont: {}, widget: {}", old.c, old.w[old.c]);
+                self.act = old.c;
+                self.containers.iter_mut().zip(old.w.iter()).for_each(|(c, i)| {
+                    c.set_index(*i);
+                });
+                // self.act_mut().set_index(old.w[old.c]);
+                // Container::actualize_layout(self);
+            }
+            ret
         } else {
             match self.act().parent {
                 // check if there is upper container that can handle change
                 Some(index) => {
+                    log::trace!("'f' cannot get next item but have parent");
                     self.act = index;
-                    if self.change_focus(direction, f) {
-                        unfocus(self);
+                    if self.change_focus(direction, f, fb) {
+                        log::trace!("parent have widget to focus");
+                        unfocus(&old, self);
                         true
                     } else {
-                        self.act = old_act_container;
+                        log::trace!("parent does not have widget to focus");
+                        self.act = old.c;
+                        self.containers.iter_mut().zip(old.w.iter()).for_each(|(c, i)| {
+                            c.set_index(*i);
+                        });
                         false
                     }
                 }
                 None => {
                     // Do not move from starting position if you can't.
-                    self.act = old_act_container;
+                    log::trace!("'f' cannot get next item do nothing, you cannot move");
+                    self.act = old.c;
+                    self.containers.iter_mut().zip(old.w.iter()).for_each(|(c, i)| {
+                        c.set_index(*i);
+                    });
                     false
                 }
             }
@@ -251,7 +288,19 @@ impl Layout {
     /// This method moves the focus to the container or widget to the left of the currently focused
     /// element within the layout.
     pub fn left(&mut self) -> bool {
-        self.change_focus(Horizontal, Container::previous_item)
+        let ret = self.change_focus(
+            &Horizontal,
+            &Container::previous_item,
+            &Container::next_item,
+        );
+        Container::actualize_layout(self);
+        log::debug!(
+            "Moved: {ret}, act widget: {}, container: {}, position: {}",
+            self.get_active_widget(),
+            self.act,
+            self.act().get_index(),
+        );
+        ret
     }
 
     /// Move the focus to the right.
@@ -259,7 +308,19 @@ impl Layout {
     /// This method moves the focus to the container or widget to the right of the currently focused
     /// element within the layout.
     pub fn right(&mut self) -> bool {
-        self.change_focus(Horizontal, Container::next_item)
+        let ret = self.change_focus(
+            &Horizontal,
+            &Container::next_item,
+            &Container::previous_item,
+        );
+        Container::actualize_layout(self);
+        log::debug!(
+            "Moved: {ret}, act widget: {}, container: {}, position: {}",
+            self.get_active_widget(),
+            self.act,
+            self.act().get_index(),
+        );
+        ret
     }
 
     /// Move the focus upwards.
@@ -267,7 +328,15 @@ impl Layout {
     /// This method moves the focus to the container or widget above the currently focused element
     /// within the layout.
     pub fn up(&mut self) -> bool {
-        self.change_focus(Vertical, Container::previous_item)
+        let ret = self.change_focus(&Vertical, &Container::previous_item, &Container::next_item);
+        Container::actualize_layout(self);
+        log::debug!(
+            "Moved: {ret}, act widget: {}, container: {}, position: {}",
+            self.get_active_widget(),
+            self.act,
+            self.act().get_index(),
+        );
+        ret
     }
 
     /// Move the focus downwards.
@@ -275,7 +344,15 @@ impl Layout {
     /// This method moves the focus to the container or widget below the currently focused element
     /// within the layout.
     pub fn down(&mut self) -> bool {
-        self.change_focus(Vertical, Container::next_item)
+        let ret = self.change_focus(&Vertical, &Container::next_item, &Container::previous_item);
+        Container::actualize_layout(self);
+        log::debug!(
+            "Moved: {ret}, act widget: {}, container: {}, position: {}",
+            self.get_active_widget(),
+            self.act,
+            self.act().get_index(),
+        );
+        ret
     }
 
     /// Handle a key event.
@@ -313,7 +390,7 @@ impl Render for Layout {
         }
     }
 
-    fn focus(&mut self) {
+    fn focus(&mut self) -> bool {
         match self.act_mut().actual_mut() {
             Some(w) => w.focus(),
             None => panic!("Actual to focus is not a widget"),

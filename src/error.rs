@@ -10,14 +10,16 @@ pub enum ToDoError {
     WidgetDoesNotExist,
     #[error("Value cannot be parsed: {0}")]
     ParseValue(#[from] std::num::ParseIntError),
-    #[error("Value can constraint only unsigned integer and %.")]
-    ParseUnknownValue,
-    #[error("Unknown widget type.")]
-    ParseWidgetType,
+    #[error("Value can constraint only unsigned integer and % not {0}")]
+    ParseUnknownValue(String),
+    #[error("Unknown widget type: {0}")]
+    ParseWidgetType(String),
     #[error("There must be almost one container.")]
     ParseNotStart,
     #[error("All containers must be closed.")]
     ParseNotEnd,
+    #[error("Unknown text before start of the container '{0}'")]
+    ParseUnknowBeforeContainer(String),
     #[error("Direction '{0}' is invalid.")]
     ParseInvalidDirection(String),
     #[error("Style '{0}' is invalid")]
@@ -39,7 +41,7 @@ pub enum ToDoError {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("asfda ")]
+#[error("IO error file: {path}, error: {err}")]
 pub struct ToDoIoError {
     pub path: PathBuf,
     pub err: std::io::Error,

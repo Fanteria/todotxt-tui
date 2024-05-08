@@ -89,7 +89,6 @@ impl Styles {
     }
 
     pub fn get_style(&self, name: &str) -> ToDoRes<StylesValue> {
-        println!("{}", name);
         use StylesValue::*;
         Ok(match name {
             "priority" => Priority,

@@ -128,12 +128,13 @@ impl State for StateList {
         &mut self.base
     }
 
-    fn focus_event(&mut self) {
+    fn focus_event(&mut self) -> bool {
         let len = self.len();
         self.base.len = len;
         if self.base.act() >= len && len > 0 {
             self.base.last();
         }
+        true
     }
 
     fn update_chunk_event(&mut self) {

@@ -63,6 +63,17 @@ impl Container {
         self.act_index
     }
 
+    pub fn set_index(&mut self, index: usize) -> bool {
+        if self.items.len() > index {
+            self.act_index = index;
+            log::error!("Index set, new index {}", self.act_index);
+            true
+        } else {
+            log::error!("Index not set, old index {}", self.act_index);
+            false
+        }
+    }
+
     pub fn get_widget(&self, index: usize) -> Option<&Widget> {
         match &self.items[index] {
             It::Item(w) => Some(w),
@@ -81,8 +92,8 @@ impl Container {
     ///
     /// # Returns
     ///
-    /// A result containing a reference to the active `Widget` or an error if the active item
-    /// is not a widget.
+    /// A result containing a reference to the active `Widget` or a `None`
+    /// if the active item is not a widget.
     #[allow(dead_code)]
     pub fn actual(&self) -> Option<&Widget> {
         self.get_widget(self.act_index)
@@ -92,23 +103,30 @@ impl Container {
     ///
     /// # Returns
     ///
-    /// A result containing a mutable reference to the active `Widget` or an error if the active
-    /// item is not a widget.
+    /// A result containing a mutable reference to the active `Widget` or a `None`
+    /// if the active item is not a widget.
     pub fn actual_mut(&mut self) -> Option<&mut Widget> {
         self.get_widget_mut(self.act_index)
     }
 
-    // TODO Change to actual widget index
-    pub fn actualize_layout(layout: &mut Layout) {
+    pub fn find_actual(layout: &Layout) -> usize {
         if let It::Cont(mut index) = layout.act().items[layout.act().act_index] {
             while let It::Cont(cont) =
                 &layout.containers[index].items[layout.containers[index].act_index]
             {
                 index = *cont;
             }
-            layout.act = index;
+            index
+        } else {
+            layout.act
         }
-        layout.act_mut().actual_mut().unwrap().focus();
+    }
+
+    // If layouts actual item points to container whose actual points to container,
+    // actualize it and change actual layouts actual to container that really points
+    // to widget.
+    pub fn actualize_layout(layout: &mut Layout) {
+        layout.act = Self::find_actual(layout);
     }
 
     /// Attempts to select the next item within the container.
@@ -122,6 +140,7 @@ impl Container {
     /// An option containing either an updated reference to the container with the next item
     /// as the active item, or `None` if there is no next item to select within the container.
     pub fn next_item(&mut self) -> bool {
+        log::trace!("Next item {}", self.act_index);
         if self.items.len() > self.act_index + 1 {
             self.act_index += 1;
             true
@@ -142,6 +161,7 @@ impl Container {
     /// as the active item, or `None` if there is no previous item to select within the container.
     ///
     pub fn previous_item(&mut self) -> bool {
+        log::trace!("Prev item {}", self.act_index);
         if self.act_index > 0 {
             self.act_index -= 1;
             true

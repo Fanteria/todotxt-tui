@@ -21,7 +21,7 @@ pub trait Render {
     ///
     /// This method is called to give focus to the UI component. Focusing a component
     /// typically means that it can now accept user input and respond to events.
-    fn focus(&mut self);
+    fn focus(&mut self) -> bool;
 
     /// Unfocus the UI component.
     ///

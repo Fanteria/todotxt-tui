@@ -72,4 +72,8 @@ impl State for StatePreview {
     fn get_base_mut(&mut self) -> &mut WidgetBase {
         &mut self.base
     }
+
+    fn focus_event(&mut self) -> bool {
+        false
+    }
 }

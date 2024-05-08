@@ -102,8 +102,9 @@ impl State for StateCategories {
         &mut self.base
     }
 
-    fn focus_event(&mut self) {
+    fn focus_event(&mut self) -> bool {
         self.base.len = self.len();
+        true
     }
 
     fn update_chunk_event(&mut self) {

@@ -57,7 +57,6 @@ impl Parser {
                         iter.next();
                         style = Some(Parser::read_block(&mut iter, ')')?);
                     }
-                    println!("{:#?}", style);
                     line.add_span_styled(&block, style, styles)?;
                 }
                 '\\' => act.push(match iter.next() {
