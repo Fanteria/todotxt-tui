@@ -66,10 +66,8 @@ impl Container {
     pub fn set_index(&mut self, index: usize) -> bool {
         if self.items.len() > index {
             self.act_index = index;
-            log::error!("Index set, new index {}", self.act_index);
             true
         } else {
-            log::error!("Index not set, old index {}", self.act_index);
             false
         }
     }

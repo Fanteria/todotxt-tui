@@ -15,7 +15,7 @@ pub use render_trait::Render;
 use std::str::FromStr;
 use tui::{
     backend::Backend,
-    layout::{Constraint, Direction, Direction::Horizontal, Direction::Vertical, Rect},
+    layout::{Constraint, Direction, Rect},
     Frame,
 };
 
@@ -24,6 +24,56 @@ const ITEM_SEPARATOR: char = ',';
 const ARG_SEPARATOR: char = ':';
 const START_CONTAINER: char = '[';
 const END_CONTAINER: char = ']';
+
+const LEFT: Site = Site {
+    direction: Direction::Horizontal,
+    function: Container::previous_item,
+};
+const RIGHT: Site = Site {
+    direction: Direction::Horizontal,
+    function: Container::next_item,
+};
+const UP: Site = Site {
+    direction: Direction::Vertical,
+    function: Container::previous_item,
+};
+const DOWN: Site = Site {
+    direction: Direction::Vertical,
+    function: Container::next_item,
+};
+
+struct Site {
+    direction: Direction,
+    function: fn(&mut Container) -> bool,
+}
+
+struct Holder {
+    container: usize,    // container
+    widgets: Vec<usize>, // widget
+}
+impl Holder {
+    fn new(l: &Layout) -> Holder {
+        Holder {
+            container: l.act,
+            widgets: l.containers.iter().map(|c| c.get_index()).collect(),
+        }
+    }
+    fn unfocus(&self, l: &mut Layout) {
+        match l.containers[self.container].get_widget_mut(self.widgets[self.container]) {
+            Some(widget) if widget.get_base().focus => widget.unfocus(),
+            _ => {}
+        }
+    }
+    fn set_old_back(&self, l: &mut Layout) {
+        l.act = self.container;
+        l.containers
+            .iter_mut()
+            .zip(self.widgets.iter())
+            .for_each(|(c, i)| {
+                c.set_index(*i);
+            });
+    }
+}
 
 /// Represents the layout of the user interface.
 ///
@@ -206,30 +256,12 @@ impl Layout {
     ///
     /// - `next`: An `Option<RcCon>` representing the new container to focus.
     fn change_focus(&mut self, direction: &Direction, f: &impl Fn(&mut Container) -> bool) -> bool {
-        struct Holder {
-            container: usize,    // container
-            widgets: Vec<usize>, // widget
-        }
-        let old = Holder {
-            container: self.act,
-            widgets: self.containers.iter().map(|c| c.get_index()).collect(),
-        };
-        let unfocus = |layout: &mut Layout| match layout.containers[old.container]
-            .get_widget_mut(old.widgets[old.container])
-        {
-            Some(widget) if widget.get_base().focus => widget.unfocus(),
-            _ => {}
-        };
-        let set_old_back = |layout: &mut Layout| {
-            layout.act = old.container;
-            layout
-                .containers
-                .iter_mut()
-                .zip(old.widgets.iter())
-                .for_each(|(c, i)| {
-                    c.set_index(*i);
-                });
-        };
+        log::trace!(
+            "Layout::change_focus: direction {:?}, act {}",
+            &direction,
+            self.act
+        );
+        let old = Holder::new(self);
         while *self.act().get_direction() != *direction {
             match self.act().parent {
                 Some(index) => self.act = index,
@@ -239,10 +271,30 @@ impl Layout {
         if f(self.act_mut()) {
             Container::actualize_layout(self);
             if match self.act_mut().actual_mut() {
-                Some(widget) => widget.focus() || self.change_focus(direction, f),
+                Some(widget) => {
+                    if widget.focus() {
+                        true
+                    } else {
+                        if f(self.act_mut()) {
+                            Container::actualize_layout(self);
+                            match self.act_mut().actual_mut() {
+                                Some(widget) => {
+                                    if widget.focus() {
+                                        true
+                                    } else {
+                                        self.change_focus(direction, f)
+                                    }
+                                }
+                                None => true,
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                }
                 None => true,
             } {
-                unfocus(self);
+                old.unfocus(self);
                 true
             } else {
                 log::trace!(
@@ -250,7 +302,7 @@ impl Layout {
                     old.container,
                     old.widgets[old.container]
                 );
-                set_old_back(self);
+                old.set_old_back(self);
                 false
             }
         } else {
@@ -259,27 +311,25 @@ impl Layout {
                 Some(index) => {
                     self.act = index;
                     if self.change_focus(direction, f) {
-                        unfocus(self);
+                        old.unfocus(self);
                         true
                     } else {
-                        set_old_back(self);
+                        old.set_old_back(self);
                         false
                     }
                 }
                 None => {
-                    set_old_back(self);
+                    old.set_old_back(self);
                     false
                 }
             }
         }
     }
 
-    /// Move the focus to the left.
-    ///
-    /// This method moves the focus to the container or widget to the left of the currently focused
-    /// element within the layout.
-    pub fn left(&mut self) -> bool {
-        let ret = self.change_focus(&Horizontal, &Container::previous_item);
+    /// This method moves the focus to the container or widget to the `Site`
+    /// of the currently focused element within the layout.
+    fn move_focus(&mut self, site: &Site) -> bool {
+        let ret = self.change_focus(&site.direction, &site.function);
         Container::actualize_layout(self);
         log::debug!(
             "Moved: {ret}, act widget: {}, container: {}, position: {}",
@@ -288,54 +338,26 @@ impl Layout {
             self.act().get_index(),
         );
         ret
+    }
+
+    /// Move the focus to the left.
+    pub fn left(&mut self) -> bool {
+        self.move_focus(&LEFT)
     }
 
     /// Move the focus to the right.
-    ///
-    /// This method moves the focus to the container or widget to the right of the currently focused
-    /// element within the layout.
     pub fn right(&mut self) -> bool {
-        let ret = self.change_focus(&Horizontal, &Container::next_item);
-        Container::actualize_layout(self);
-        log::debug!(
-            "Moved: {ret}, act widget: {}, container: {}, position: {}",
-            self.get_active_widget(),
-            self.act,
-            self.act().get_index(),
-        );
-        ret
+        self.move_focus(&RIGHT)
     }
 
     /// Move the focus upwards.
-    ///
-    /// This method moves the focus to the container or widget above the currently focused element
-    /// within the layout.
     pub fn up(&mut self) -> bool {
-        let ret = self.change_focus(&Vertical, &Container::previous_item);
-        Container::actualize_layout(self);
-        log::debug!(
-            "Moved: {ret}, act widget: {}, container: {}, position: {}",
-            self.get_active_widget(),
-            self.act,
-            self.act().get_index(),
-        );
-        ret
+        self.move_focus(&UP)
     }
 
     /// Move the focus downwards.
-    ///
-    /// This method moves the focus to the container or widget below the currently focused element
-    /// within the layout.
     pub fn down(&mut self) -> bool {
-        let ret = self.change_focus(&Vertical, &Container::next_item);
-        Container::actualize_layout(self);
-        log::debug!(
-            "Moved: {ret}, act widget: {}, container: {}, position: {}",
-            self.get_active_widget(),
-            self.act,
-            self.act().get_index(),
-        );
-        ret
+        self.move_focus(&DOWN)
     }
 
     /// Handle a key event.
