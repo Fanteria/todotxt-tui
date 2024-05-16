@@ -269,8 +269,10 @@ mod tests {
         containers[index].set_constraints(vec![Constraint::Percentage(30)]);
 
         // Holder container
-        let mut cont = Container::default();
-        cont.parent = Some(index);
+        let mut cont = Container {
+            parent: Some(index),
+            ..Container::default()
+        };
         cont.set_direction(Horizontal);
         cont.set_constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
         // Left widget
@@ -278,8 +280,10 @@ mod tests {
         let index = Container::add_container(&mut containers, cont);
 
         // Right container
-        let mut cont = Container::default();
-        cont.parent = Some(index);
+        let mut cont = Container {
+            parent: Some(index),
+            ..Container::default()
+        };
         cont.set_direction(Vertical);
         cont.set_constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
         cont.add_widget(Widget::new(WidgetType::Done, todo.clone(), &Config::default()).unwrap());
