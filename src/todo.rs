@@ -68,7 +68,7 @@ impl ToDo {
     /// # Returns
     ///
     /// The actual index of the item in ToDo data without filtering.
-    fn get_actual_index(&self, data: ToDoData, index: usize) -> usize {
+    fn get_actual_index(&self, data: ToDoData, index: usize) -> Option<usize> {
         self.get_filtered_and_sorted(data).get_actual_index(index)
     }
 
@@ -125,7 +125,13 @@ impl ToDo {
     /// * `index` - The index of the task to be moved in the specified data.
     pub fn move_task(&mut self, data: ToDoData, index: usize) {
         self.version += 1;
-        let index = self.get_actual_index(data, index);
+        let index = match self.get_actual_index(data, index) {
+            Some(index) => index,
+            None => {
+                log::warn!("Cannot move task Layout::get_actual_index is None");
+                return;
+            }
+        };
 
         let move_task_logic = |from: &mut Vec<Task>, to: &mut Vec<_>| {
             if from.len() <= index {
@@ -221,8 +227,12 @@ impl ToDo {
     /// * `index` - The index of the task to be removed in the specified data.
     pub fn remove_task(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
-        data.get_data_mut(self).remove(index);
-        self.fix_active(index);
+        if let Some(index) = index {
+            data.get_data_mut(self).remove(index);
+            self.fix_active(index);
+        } else {
+            log::warn!("Layout::get_actual_index is None");
+        }
     }
 
     /// Swaps the positions of two tasks in the ToDo list.
@@ -235,12 +245,19 @@ impl ToDo {
     pub fn swap_tasks(&mut self, data: ToDoData, from: usize, to: usize) {
         let from = self.get_actual_index(data, from);
         let to = self.get_actual_index(data, to);
-        data.get_data_mut(self).swap(from, to);
-        if let Some((_, act_index)) = &mut self.state.active {
-            if *act_index == from {
-                *act_index = to;
-            } else if *act_index == to {
-                *act_index = from;
+        match (from, to) {
+            (Some(from), Some(to)) => {
+                data.get_data_mut(self).swap(from, to);
+                if let Some((_, act_index)) = &mut self.state.active {
+                    if *act_index == from {
+                        *act_index = to;
+                    } else if *act_index == to {
+                        *act_index = from;
+                    }
+                }
+            }
+            _ => {
+                log::warn!("Canot swap from or to is None")
             }
         }
     }
@@ -253,7 +270,11 @@ impl ToDo {
     /// * `index` - The index of the task to be set as active in the specified data.
     pub fn set_active(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
-        self.state.active = Some((data, index));
+        if let Some(index) = index {
+            self.state.active = Some((data, index));
+        } else {
+            log::warn!("Layout::get_actual_index is None");
+        }
     }
 
     /// Gets the currently active task for potential editing.
@@ -492,7 +513,9 @@ mod tests {
         assert_eq!(filtered.len(), 0);
 
         todo.state.project_filters.clear();
-        todo.state.project_filters.insert(String::from("project1"), FilterState::Select);
+        todo.state
+            .project_filters
+            .insert(String::from("project1"), FilterState::Select);
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 4);
         assert_eq!(filtered[0].subject, "task 2 +project1");
@@ -500,24 +523,32 @@ mod tests {
         assert_eq!(filtered[2].subject, "task 4 +project1 +project3");
         assert_eq!(filtered[3].subject, "task 5 +project1 +project2 +project3");
 
-        todo.state.project_filters.insert(String::from("project2"), FilterState::Select);
+        todo.state
+            .project_filters
+            .insert(String::from("project2"), FilterState::Select);
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].subject, "task 3 +project1 +project2");
         assert_eq!(filtered[1].subject, "task 5 +project1 +project2 +project3");
 
-        todo.state.project_filters.insert(String::from("project3"), FilterState::Select);
+        todo.state
+            .project_filters
+            .insert(String::from("project3"), FilterState::Select);
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
 
-        todo.state.project_filters.insert(String::from("project1"), FilterState::Select);
+        todo.state
+            .project_filters
+            .insert(String::from("project1"), FilterState::Select);
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].subject, "task 5 +project1 +project2 +project3");
 
         todo.state.project_filters.clear();
-        todo.state.context_filters.insert(String::from("context1"), FilterState::Select);
+        todo.state
+            .context_filters
+            .insert(String::from("context1"), FilterState::Select);
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 1);
         assert_eq!(
