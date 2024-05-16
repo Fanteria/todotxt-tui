@@ -1,3 +1,4 @@
+use super::FilterState;
 use crate::config::Styles;
 use tui::text::Span;
 use tui::widgets::ListItem;
@@ -6,7 +7,7 @@ use tui::widgets::ListItem;
 /// The `String` value represents name of category and the `bool` value represents
 /// whether the category is selected or not.
 pub struct CategoryList<'a> {
-    pub vec: Vec<(&'a String, bool)>,
+    pub vec: Vec<(&'a String, Option<FilterState>)>,
     pub styles: &'a Styles,
 }
 
@@ -61,13 +62,17 @@ impl<'a> From<CategoryList<'a>> for Vec<ListItem<'a>> {
         val.vec
             .iter()
             .map(|(category, active)| {
-                if *active {
-                    ListItem::new(Span::styled(
+                use FilterState::*;
+                match active {
+                    Some(Select) => ListItem::new(Span::styled(
                         (*category).clone(),
-                        val.styles.category_style.get_style(),
-                    ))
-                } else {
-                    ListItem::new((*category).clone())
+                        val.styles.category_select_style.get_style(),
+                    )),
+                    Some(Remove) => ListItem::new(Span::styled(
+                        (*category).clone(),
+                        val.styles.category_remove_style.get_style(),
+                    )),
+                    None => ListItem::new((*category).clone()),
                 }
             })
             .collect()
@@ -89,10 +94,10 @@ mod tests {
         let third2 = String::from("third2");
         let categories = CategoryList {
             vec: vec![
-                (&first, false),
-                (&second, false),
-                (&third, false),
-                (&third2, false),
+                (&first, None),
+                (&second, None),
+                (&third, None),
+                (&third2, None),
             ],
             styles: &styles,
         };
@@ -110,10 +115,10 @@ mod tests {
         let third2 = String::from("third2");
         let categories = CategoryList {
             vec: vec![
-                (&first, false),
-                (&second, false),
-                (&third, false),
-                (&third2, false),
+                (&first, None),
+                (&second, None),
+                (&third, None),
+                (&third2, None),
             ],
             styles: &styles,
         };
@@ -138,10 +143,10 @@ mod tests {
         let third2 = String::from("third2");
         let categories = CategoryList {
             vec: vec![
-                (&first, false),
-                (&second, false),
-                (&third, true),
-                (&third2, false),
+                (&first, None),
+                (&second, None),
+                (&third, Some(FilterState::Select)),
+                (&third2, None),
             ],
             styles: &styles,
         };
@@ -154,7 +159,7 @@ mod tests {
             items[2],
             ListItem::new(Span::styled(
                 third.clone(),
-                styles.category_style.get_style()
+                styles.category_select_style.get_style()
             ))
         );
         assert_eq!(items[3], ListItem::new(third2.clone()));

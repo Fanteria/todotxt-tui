@@ -58,9 +58,14 @@ mod tests {
         todo.new_task("t +project1 #hashtag1").unwrap();
 
         assert_eq!(autocomplete(&todo, "task"), None);
-        assert_eq!(autocomplete(&todo, "task +proj"), Some(String::from("task +project")));
-        assert_eq!(autocomplete(&todo, "task +project1"), Some(String::from("task +project1 ")));
-
+        assert_eq!(
+            autocomplete(&todo, "task +proj"),
+            Some(String::from("task +project"))
+        );
+        assert_eq!(
+            autocomplete(&todo, "task +project1"),
+            Some(String::from("task +project1 "))
+        );
     }
 
     #[test]

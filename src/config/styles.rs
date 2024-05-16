@@ -13,6 +13,8 @@ pub struct Styles {
     pub contexts_style: TextStyle,
     pub hashtags_style: TextStyle,
     pub category_style: TextStyle,
+    pub category_select_style: TextStyle,
+    pub category_remove_style: TextStyle,
     pub custom_category_style: HashMap<String, TextStyle>,
 }
 
@@ -33,8 +35,9 @@ impl StylesValue {
                 let mut text_style = TextStyle::default();
                 let mut process_projects = |prefix: &str, data: &[String]| {
                     data.iter().for_each(|category: &String| {
-                        if let Some(style) =
-                            styles.custom_category_style.get(&(prefix.to_string() + category))
+                        if let Some(style) = styles
+                            .custom_category_style
+                            .get(&(prefix.to_string() + category))
                         {
                             text_style = text_style.combine(style);
                         }
@@ -46,7 +49,9 @@ impl StylesValue {
 
                 text_style.get_style()
             }
-            Priority => styles.priority_style.get_style(task.priority.clone().into()),
+            Priority => styles
+                .priority_style
+                .get_style(task.priority.clone().into()),
         }
     }
 }
@@ -56,7 +61,9 @@ impl Styles {
         let category_style = config.get_category_style();
         let mut styles = Styles {
             priority_style: config.get_priority_colors(),
-            category_style,
+            category_style: config.get_category_style(),
+            category_select_style: config.get_category_select_style(),
+            category_remove_style: config.get_category_remove_style(),
             projects_style: config.get_projects_style().combine(&category_style),
             contexts_style: config.get_contexts_style().combine(&category_style),
             hashtags_style: config.get_hashtags_style().combine(&category_style),
@@ -82,7 +89,6 @@ impl Styles {
     }
 
     pub fn get_style(&self, name: &str) -> ToDoRes<StylesValue> {
-        println!("{}", name);
         use StylesValue::*;
         Ok(match name {
             "priority" => Priority,
@@ -101,8 +107,8 @@ impl Styles {
                             {
                                 Some(style) => style.get_style(),
                                 None => Style::default(),
-                            }),
-                        );
+                            },
+                        ));
                     }
                 } else if name.starts_with("custom_category:") {
                     if let Some(custom_category) = name.get("custom_category:".len()..) {
@@ -147,10 +153,11 @@ mod tests {
         let task = Task::from_str("(A) Task name +project #hashtag").unwrap();
         println!("{:#?}", task);
         let styles = Styles::new(&Config::default());
-        assert_eq!(Style::default(), styles.get_style("")?.get_style(&task, &styles));
-        assert!(
-            styles.get_style("Unknown").is_err()
+        assert_eq!(
+            Style::default(),
+            styles.get_style("")?.get_style(&task, &styles)
         );
+        assert!(styles.get_style("Unknown").is_err());
         assert_eq!(
             Style::default(),
             styles.get_style("hashtags")?.get_style(&task, &styles)

@@ -40,6 +40,10 @@ impl<'a> TaskList<'a> {
         self.vec.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.vec.is_empty()
+    }
+
     /// Retrieves the actual index of a task based on its position in the list.
     ///
     /// # Arguments
@@ -49,8 +53,8 @@ impl<'a> TaskList<'a> {
     /// # Returns
     ///
     /// The actual index of the task in the original list.
-    pub fn get_actual_index(&self, index: usize) -> usize {
-        self.vec[index].0
+    pub fn get_actual_index(&self, index: usize) -> Option<usize> {
+        Some(self.vec.get(index)?.0)
     }
 
     /// Slices the task list from `first` (inclusive) to `last` (exclusive).

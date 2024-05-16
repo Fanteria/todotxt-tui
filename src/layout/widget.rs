@@ -7,16 +7,17 @@ pub mod widget_trait;
 pub mod widget_type;
 
 use crate::{
+    config::Config,
     error::ToDoRes,
     layout::widget::widget_list::WidgetList,
     todo::{ToDo, ToDoCategory, ToDoData},
     ui::UIEvent,
-    config::Config,
 };
 use crossterm::event::KeyCode;
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
+use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 use tui::widgets::Block;
 use tui::{backend::Backend, Frame};
@@ -54,12 +55,12 @@ impl Widget {
             List => Self::List(StateList::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoData::Pending,
-                config
+                config,
             )),
             Done => Self::List(StateList::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoData::Done,
-                config
+                config,
             )),
             Project => Self::Category(StateCategories::new(
                 WidgetList::new(&widget_type, data, config),
@@ -94,5 +95,12 @@ impl Widget {
             Widget::Category(categories) => categories.category.into(),
             Widget::Preview(_) => Preview,
         }
+    }
+}
+
+impl Debug for Widget {
+    // TODO improve
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        _f.write_fmt(format_args!("{:#?}", self.widget_type()))
     }
 }

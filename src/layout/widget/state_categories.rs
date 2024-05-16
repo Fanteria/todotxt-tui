@@ -1,6 +1,6 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
-    todo::ToDoCategory,
+    todo::{FilterState, ToDoCategory},
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
@@ -48,6 +48,7 @@ impl State for StateCategories {
             return true;
         }
         match event {
+            // TODO improve doubled code
             UIEvent::Select => {
                 let name;
                 {
@@ -57,7 +58,23 @@ impl State for StateCategories {
                         .get_name(self.base.act())
                         .clone();
                 }
-                self.base.data().toggle_filter(self.category, &name);
+                self.base
+                    .data()
+                    .toggle_filter(self.category, &name, FilterState::Select);
+                self.base.len = self.len();
+            }
+            UIEvent::Remove => {
+                let name;
+                {
+                    let todo = self.base.data();
+                    name = todo
+                        .get_categories(self.category)
+                        .get_name(self.base.act())
+                        .clone();
+                }
+                self.base
+                    .data()
+                    .toggle_filter(self.category, &name, FilterState::Remove);
                 self.base.len = self.len();
             }
             _ => return false,
@@ -85,8 +102,9 @@ impl State for StateCategories {
         &mut self.base
     }
 
-    fn focus_event(&mut self) {
+    fn focus_event(&mut self) -> bool {
         self.base.len = self.len();
+        true
     }
 
     fn update_chunk_event(&mut self) {

@@ -51,7 +51,9 @@ pub trait State {
     }
 
     /// Called when the widget receives focus.
-    fn focus_event(&mut self) {}
+    fn focus_event(&mut self) -> bool {
+        true
+    }
 
     /// Called when the widget loses focus.
     fn unfocus_event(&mut self) {}
@@ -94,14 +96,21 @@ impl<S: State> Render for S {
         State::render(self, f);
     }
 
-    fn focus(&mut self) {
-        self.get_base_mut().focus = true;
-        self.focus_event();
+    fn focus(&mut self) -> bool {
+        let ret = self.focus_event();
+        log::trace!(
+            "Widget {} try to focus with result: {}",
+            self.get_base().title,
+            ret
+        );
+        self.get_base_mut().focus = ret;
+        ret
     }
 
     fn unfocus(&mut self) {
-        self.get_base_mut().focus = false;
         self.unfocus_event();
+        log::trace!("Widget {} unfocus", self.get_base().title,);
+        self.get_base_mut().focus = false;
     }
 
     fn update_chunk(&mut self, chunk: Rect) {

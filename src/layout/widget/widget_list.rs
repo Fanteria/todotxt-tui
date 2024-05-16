@@ -213,10 +213,10 @@ impl DerefMut for WidgetList {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
-    use crate::todo::ToDo;
-    use test_log::test;
     use super::*;
+    use crate::todo::ToDo;
+    use std::sync::{Arc, Mutex};
+    use test_log::test;
 
     fn testing_widget(len: usize) -> WidgetList {
         let mut todo = ToDo::default();
@@ -249,7 +249,6 @@ mod tests {
         assert_eq!(widget.index(), 1);
         assert_eq!(widget.act(), 1);
         assert_eq!(widget.first, 0);
-
     }
 
     #[test]
@@ -385,7 +384,6 @@ mod tests {
 
         widget.down();
         assert_eq!(widget.prev(), Some((1, 0)));
-
 
         n_times(50, WidgetList::down, &mut widget);
         assert_eq!(widget.next(), None);

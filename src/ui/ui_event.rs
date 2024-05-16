@@ -5,7 +5,7 @@ use event_entry::EventEntry;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, str::FromStr};
 
-use crate::error::ToDoError;
+use crate::ToDoError;
 
 /// Enum representing various UI events that can be triggered.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Debug)]
@@ -29,6 +29,7 @@ pub enum UIEvent {
     RemoveItem,
     MoveItem,
     Select, // State categories + State list
+    Remove, // State categories
     // State preview
     None, // without bind
 }
@@ -40,27 +41,27 @@ impl FromStr for UIEvent {
         use UIEvent::*;
         Ok(match s {
             "Quit" => Quit,
-			"Save" => Save,
-			"Load" => Load,
-			"MoveLeft" => MoveLeft,
-			"MoveRight" => MoveRight,
-			"MoveUp" => MoveUp,
-			"MoveDown" => MoveDown,
-			"InsertMode" => InsertMode,
-			"EditMode" => EditMode,
+            "Save" => Save,
+            "Load" => Load,
+            "MoveLeft" => MoveLeft,
+            "MoveRight" => MoveRight,
+            "MoveUp" => MoveUp,
+            "MoveDown" => MoveDown,
+            "InsertMode" => InsertMode,
+            "EditMode" => EditMode,
 
-			"ListDown" => ListDown,
-			"ListUp" => ListUp,
-			"ListFirst" => ListFirst,
-			"ListLast" => ListLast,
-			"SwapUpItem" => SwapUpItem,
-			"SwapDownItem" => SwapDownItem,
-			"RemoveItem" => RemoveItem,
-			"MoveItem" => MoveItem,
-			"Select" => Select,
-			"None" => None,
+            "ListDown" => ListDown,
+            "ListUp" => ListUp,
+            "ListFirst" => ListFirst,
+            "ListLast" => ListLast,
+            "SwapUpItem" => SwapUpItem,
+            "SwapDownItem" => SwapDownItem,
+            "RemoveItem" => RemoveItem,
+            "MoveItem" => MoveItem,
+            "Select" => Select,
+            "None" => None,
 
-            _ => todo!() // Error TODO
+            _ => todo!(), // Error TODO
         })
     }
 }
@@ -123,8 +124,8 @@ impl EventHandlerUI {
     ///
     /// A new `EventHandler` instance.
     pub fn new(events: &[(KeyCode, UIEvent)]) -> Self {
-        let mut events: Vec<_> = events.iter().map(|e| e.into()).collect();
-        events.sort();
+        let mut events: Vec<EventEntry> = events.iter().map(|e| e.into()).collect();
+        events.sort_by(|left, right| left.key.partial_cmp(&right.key).unwrap_or(Ordering::Equal));
         Self { events }
     }
 

@@ -1,9 +1,7 @@
 use super::Parts;
-
 use super::ToDo;
 use crate::config::{Styles, StylesValue};
-use crate::error::ToDoError;
-use crate::error::ToDoRes;
+use crate::{ToDoError, ToDoRes};
 use tui::style::Style;
 
 #[derive(Debug)]

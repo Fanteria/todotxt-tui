@@ -1,7 +1,8 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
+    config::Config,
     todo::{ToDo, ToDoData},
-    ui::{HandleEvent, UIEvent}, config::Config,
+    ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
 use tui::{backend::Backend, style::Style, widgets::List, Frame};
@@ -28,10 +29,13 @@ impl StateList {
     pub fn new(base: WidgetList, data_type: ToDoData, config: &Config) -> Self {
         Self {
             base,
-            style: config.get_list_active_color().combine(&match data_type {
-                ToDoData::Done => config.get_done_active_color(),
-                ToDoData::Pending => config.get_pending_active_color(),
-            }).get_style(),
+            style: config
+                .get_list_active_color()
+                .combine(&match data_type {
+                    ToDoData::Done => config.get_done_active_color(),
+                    ToDoData::Pending => config.get_pending_active_color(),
+                })
+                .get_style(),
             data_type,
         }
     }
@@ -124,12 +128,13 @@ impl State for StateList {
         &mut self.base
     }
 
-    fn focus_event(&mut self) {
+    fn focus_event(&mut self) -> bool {
         let len = self.len();
         self.base.len = len;
         if self.base.act() >= len && len > 0 {
             self.base.last();
         }
+        true
     }
 
     fn update_chunk_event(&mut self) {
