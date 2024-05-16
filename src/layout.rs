@@ -250,6 +250,18 @@ impl Layout {
         &mut self.containers[self.act]
     }
 
+    fn walk_in_container(&mut self, f: &impl Fn(&mut Container) -> bool) -> bool {
+        if f(self.act_mut()) {
+            Container::actualize_layout(self);
+            match self.act_mut().actual_mut() {
+                Some(widget) => widget.focus() || self.walk_in_container(f),
+                None => true,
+            }
+        } else {
+            false
+        }
+    }
+
     /// Change the focus within the layout.
     ///
     /// # Parameters
@@ -271,27 +283,7 @@ impl Layout {
         if f(self.act_mut()) {
             Container::actualize_layout(self);
             if match self.act_mut().actual_mut() {
-                Some(widget) => {
-                    if widget.focus() {
-                        true
-                    } else {
-                        if f(self.act_mut()) {
-                            Container::actualize_layout(self);
-                            match self.act_mut().actual_mut() {
-                                Some(widget) => {
-                                    if widget.focus() {
-                                        true
-                                    } else {
-                                        self.change_focus(direction, f)
-                                    }
-                                }
-                                None => true,
-                            }
-                        } else {
-                            false
-                        }
-                    }
-                }
+                Some(widget) => widget.focus() || self.walk_in_container(f),
                 None => true,
             } {
                 old.unfocus(self);
@@ -494,7 +486,7 @@ mod tests {
         )?;
         assert_eq!(layout.containers.len(), 2);
 
-        assert_eq!(*layout.containers[0].get_direction(), Horizontal);
+        assert_eq!(*layout.containers[0].get_direction(), Direction::Horizontal);
         assert_eq!(layout.containers[0].parent, None);
         while layout.containers[0].previous_item() {}
         assert_eq!(
@@ -510,7 +502,7 @@ mod tests {
         );
         assert!(!layout.containers[0].next_item());
 
-        assert_eq!(*layout.containers[1].get_direction(), Vertical);
+        assert_eq!(*layout.containers[1].get_direction(), Direction::Vertical);
         assert_eq!(layout.containers[1].parent, Some(0));
         while layout.containers[1].previous_item() {}
         assert_eq!(

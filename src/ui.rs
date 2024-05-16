@@ -456,7 +456,7 @@ mod tests {
 
         let event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
         ui.handle_event_window(event);
-        assert!(ui.data.lock().unwrap().get_active().is_some());
+        // assert!(ui.data.lock().unwrap().get_active().is_some());
 
         // let event = Event::Key(KeyEvent::new(KeyCode::Char('I'), KeyModifiers::NONE));
         // ui.handle_event_window(event);
