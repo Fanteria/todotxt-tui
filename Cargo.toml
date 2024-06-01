@@ -3,6 +3,13 @@ name = "todotxt-tui"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jiří Alexanrovič"]
+license = "MIT"
+license-file = "LICENSE"
+keywords = ["tui", "todolist", "ratatui"]
+readme = "README.md"
+categories = ["command-line-utilities"]
+description = "Todo.txt TUI is a highly customizable terminal-based application for managing your todo tasks. It follows the todo.txt format and offers a wide range of configuration options to suit your needs."
+repository = "https://github.com/Fanteria/todotxt-tui"
 
 [dependencies]
 chrono = "0.4"
