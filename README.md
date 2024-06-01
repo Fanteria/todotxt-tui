@@ -1,12 +1,12 @@
-# ToDo TUI
+# Todo.txt TUI
 
-ToDo TUI is a highly customizable terminal-based application for managing your todo tasks. It follows the todo.txt format and offers a wide range of configuration options to suit your needs. Please note that the application may have some bugs as it's still under development, so your feedback and bug reports are greatly appreciated.
+Todo.txt TUI is a highly customizable terminal-based application for managing your todo tasks. It follows the todo.txt format and offers a wide range of configuration options to suit your needs. Please note that the application may have some bugs as it's still under development, so your feedback and bug reports are greatly appreciated.
 
 [Preview.webm](https://github.com/Fanteria/todo-tui/assets/28980012/11ab70e3-482c-4994-ac88-198953b08e39)
 
 ## Installation
 
-Please note that this ToDo TUI application is intended for personal use and is not published on Rust's docs.rs or crates.io. Therefore, it must be installed manually.
+Please note that this Todo.txt TUI application is intended for personal use and is not published on Rust's docs.rs or crates.io. Therefore, it must be installed manually.
 
 1. Clone the repository or download the latest release.
 2. Build the application using Rust's package manager, Cargo.
@@ -23,7 +23,7 @@ cp target/release/todo-tui /usr/local/bin/
 
 ## Basic Usage
 
-ToDo TUI provides a straightforward and customizable interface for managing your tasks. The following keybindings and actions are available for basic usage, and please note that these actions can be configured according to your preferences in the configuration file:
+Todo.txt TUI provides a straightforward and customizable interface for managing your tasks. The following keybindings and actions are available for basic usage, and please note that these actions can be configured according to your preferences in the configuration file:
 
 - `j`: Move down in the list.
 - `k`: Move up in the list.
@@ -44,21 +44,21 @@ ToDo TUI provides a straightforward and customizable interface for managing your
 
 ## Configuration
 
-In ToDo TUI, you can customize various settings to tailor the application to your preferences.
-ToDo TUI uses a TOML configuration file located at `~/.config/todo-tui.toml` for customization.
+In Todo.txt TUI, you can customize various settings to tailor the application to your preferences.
+Todo.txt TUI uses a TOML configuration file located at `~/.config/todo-tui.toml` for customization.
 Here's an overview of some of the key settings:
 
 ### Color Settings
 
-In ToDo TUI, you can customize the colors and text styling for various elements. You have the flexibility to set foreground (`fg`) and background (`bg`) colors, as well as apply text modifiers for styling. Colors can be defined using color names, RGB values, or terminal index.
+In Todo.txt TUI, you can customize the colors and text styling for various elements. You have the flexibility to set foreground (`fg`) and background (`bg`) colors, as well as apply text modifiers for styling. Colors can be defined using color names, RGB values, or terminal index.
 
-You can apply text modifiers to change the style of text within ToDo TUI. Available text modifiers include:
+You can apply text modifiers to change the style of text within Todo.txt TUI. Available text modifiers include:
 
 - `Bold`: Apply bold styling to the text.
 - `Italic`: Apply italic styling to the text.
 - `Underlined`: Apply underlined styling to the text.
 
-Here's an example of how to configure custom color and text modifiers for project `todo-tui` in your ToDo TUI application's TOML configuration:
+Here's an example of how to configure custom color and text modifiers for project `todo-tui` in your Todo.txt TUI application's TOML configuration:
 
 ```toml
 [custom_category_style."+todo-tui"]
@@ -127,7 +127,7 @@ Here's an example of a custom layout configuration:
 
 This example creates a layout with a horizontal split, where the list takes up 50% of the width, and the preview occupies the remaining space. On the right side, there's a vertical split with the list of completed tasks, contexts, and projects.
 
-Feel free to adjust these settings to create a ToDo TUI interface that suits your workflow and preferences.
+Feel free to adjust these settings to create a Todo.txt TUI interface that suits your workflow and preferences.
 
 <details>
   <summary>Example config file</summary>
@@ -143,7 +143,7 @@ active_color = "Red"
 init_widget = "List"
 
 # The window title
-window_title = "ToDo tui"
+window_title = "Todo.txt tui"
 
 # The path to your todo.txt file
 todo_path = "/home/jirka/todo.txt"
@@ -346,4 +346,4 @@ fg = "LightBlue"
 
 ## Feedback and Bug Reporting
 
-As this application is still in development, your feedback is greatly appreciated. If you encounter any issues or have suggestions for improvement, please open an issue on the GitHub repository to assist me in making ToDo TUI better.
+As this application is still in development, your feedback is greatly appreciated. If you encounter any issues or have suggestions for improvement, please open an issue on the GitHub repository to assist me in making Todo.txt TUI better.
