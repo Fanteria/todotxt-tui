@@ -1,5 +1,5 @@
 [package]
-name = "todo-tui"
+name = "todotxt-tui"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jiří Alexanrovič"]

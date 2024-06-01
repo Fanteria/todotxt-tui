@@ -1,5 +1,5 @@
 use std::error::Error;
-use todo_tui::{
+use todotxt_tui::{
     config::{Config, Logger},
     ui::UI,
 };
