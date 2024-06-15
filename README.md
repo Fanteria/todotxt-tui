@@ -18,7 +18,7 @@ cargo build --release
 Copy the executable from the target directory to a directory included in your system's PATH.
 
 ```bash
-cp target/release/todo-tui /usr/local/bin/
+cp target/release/todotxt-tui /usr/local/bin/
 ```
 
 ## Basic Usage
