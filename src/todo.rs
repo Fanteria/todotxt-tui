@@ -284,7 +284,14 @@ impl ToDo {
     /// An `Option` containing a reference to the active `Task`, or `None` if no task is active.
     pub fn get_active(&self) -> Option<&Task> {
         match self.state.active {
-            Some((data, index)) => Some(&data.get_data(self)[index]),
+            Some((data, index)) => {
+                let list = data.get_data(self);
+                if index >= list.len() {
+                    list.last()
+                } else {
+                    list.get(index)
+                }
+            }
             None => None,
         }
     }
