@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Jiří Alexanrovič"]
 license = "MIT"
-license-file = "LICENSE"
 keywords = ["tui", "todolist", "ratatui"]
 readme = "README.md"
 categories = ["command-line-utilities"]

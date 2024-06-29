@@ -13,6 +13,7 @@ pub use self::styles::StylesValue;
 pub use self::text_style::TextStyle;
 pub use self::text_style::TextStyleList;
 pub use self::todo_config::ToDoConfig;
+pub use self::todo_config::SetFinalDateType;
 
 use self::colors::opt_color;
 use crate::{

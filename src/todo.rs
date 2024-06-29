@@ -9,8 +9,8 @@ pub use self::{
     todo_state::*,
 };
 
-use crate::config::{Config, Styles, ToDoConfig};
-use chrono::Utc;
+use crate::config::{Config, SetFinalDateType, Styles, ToDoConfig};
+use chrono::{NaiveDate, Utc};
 use std::{collections::btree_set::BTreeSet, str::FromStr};
 use todo_txt::Task;
 
@@ -70,6 +70,10 @@ impl ToDo {
     /// The actual index of the item in ToDo data without filtering.
     fn get_actual_index(&self, data: ToDoData, index: usize) -> Option<usize> {
         self.get_filtered_and_sorted(data).get_actual_index(index)
+    }
+
+    fn get_actual_date() -> NaiveDate {
+        Utc::now().naive_utc().date()
     }
 
     /// Adds a new task to the ToDo list.
@@ -138,6 +142,18 @@ impl ToDo {
                 return;
             }
             let mut task = from.remove(index);
+            if task.finished && self.config.delete_final_date {
+                task.finish_date = None;
+            }
+            if !task.finished {
+                match self.config.set_final_date {
+                    SetFinalDateType::Override => task.finish_date = Some(Self::get_actual_date()),
+                    SetFinalDateType::OnlyMissing if task.finish_date.is_none() => {
+                        task.finish_date = Some(Self::get_actual_date())
+                    }
+                    _ => {}
+                }
+            }
             task.finished = !task.finished;
             to.push(task)
         };
@@ -202,14 +218,11 @@ impl ToDo {
     /// A `Result` indicating success or an error if the task string cannot be parsed.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
         self.version += 1;
-        let task = task.replace(
-            "due:today ",
-            &format!("due:{}", Utc::now().naive_utc().date()),
-        );
-        let task = task.replace("due: ", &format!("due:{}", Utc::now().naive_utc().date()));
+        let task = task.replace("due:today ", &format!("due:{}", Self::get_actual_date()));
+        let task = task.replace("due: ", &format!("due:{}", Self::get_actual_date()));
         let mut task = Task::from_str(&task)?;
         if task.create_date.is_none() {
-            task.create_date = Some(Utc::now().naive_utc().date());
+            task.create_date = Some(Self::get_actual_date());
         }
         if task.finished {
             self.done.push(task);
@@ -697,5 +710,42 @@ mod tests {
         assert_eq!(todo.done[0].subject, "New done subject");
 
         Ok(())
+    }
+
+    #[test]
+    fn update_finish_date() {
+        let mut todo = example_todo();
+
+        todo.config.set_final_date = SetFinalDateType::OnlyMissing;
+        assert_eq!(todo.pending[0].finish_date, None);
+        todo.move_task(ToDoData::Pending, 0);
+        assert_eq!(
+            todo.done.last().unwrap().finish_date,
+            Some(ToDo::get_actual_date())
+        );
+
+        todo.config.set_final_date = SetFinalDateType::Never;
+        assert_eq!(todo.pending[0].finish_date, None);
+        todo.move_task(ToDoData::Pending, 0);
+        assert_eq!(todo.done.last().unwrap().finish_date, None);
+
+        todo.config.set_final_date = SetFinalDateType::Override;
+        todo.pending[0].finish_date = Some(NaiveDate::from_ymd_opt(2023, 4, 30).unwrap());
+        todo.move_task(ToDoData::Pending, 0);
+        assert_eq!(
+            todo.done.last().unwrap().finish_date,
+            Some(ToDo::get_actual_date())
+        );
+
+        todo.config.delete_final_date = true;
+        todo.done[0].finish_date = Some(NaiveDate::from_ymd_opt(2023, 4, 30).unwrap());
+        todo.move_task(ToDoData::Done, 0);
+        assert_eq!(todo.pending.last().unwrap().finish_date, None);
+
+        todo.config.delete_final_date = false;
+        let date = Some(NaiveDate::from_ymd_opt(2023, 4, 30).unwrap());
+        todo.done[0].finish_date = date;
+        todo.move_task(ToDoData::Done, 0);
+        assert_eq!(todo.pending.last().unwrap().finish_date, date);
     }
 }
