@@ -1,6 +1,4 @@
-use crate::config::Styles;
-use clap::ValueEnum;
-use serde::{Deserialize, Serialize};
+use crate::config::{Styles, TaskSort};
 use std::convert::From;
 use std::ops::Index;
 use todo_txt::Task;
@@ -9,18 +7,6 @@ use tui::text::Span;
 use tui::widgets::ListItem;
 
 type Item<'a> = (usize, &'a Task);
-
-/// Represents the possible sorting options for tasks.
-#[derive(Clone, Copy, Serialize, Deserialize, Default, ValueEnum)]
-#[cfg_attr(test, derive(PartialEq, Debug))]
-pub enum TaskSort {
-    #[default]
-    None,
-    Reverse,
-    Priority,
-    Alphanumeric,
-    AlphanumericReverse,
-}
 
 /// Represents a list of tasks, where each task is a tuple of `(usize, &'a Task)`.
 /// The `usize` value is the index of the task in the original list.

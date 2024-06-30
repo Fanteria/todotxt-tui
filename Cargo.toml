@@ -12,7 +12,7 @@ repository = "https://github.com/Fanteria/todotxt-tui"
 
 [dependencies]
 chrono = "0.4"
-clap = { version = "4.4", features = ["derive"] }
+clap = { version = "4.4", features = ["derive", "string"] }
 clap_complete = "4.4"
 crossterm = "0.27"
 enum_dispatch = "0.3"

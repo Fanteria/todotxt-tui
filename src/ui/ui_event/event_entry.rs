@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 /// Struct representing an entry that maps a `KeyCode` to a `UIEvent`.
-#[derive(Serialize, Deserialize, Clone)]
-#[cfg_attr(test, derive(Debug))]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EventEntry {
     #[serde(with = "KeyCodeDef")]
     pub key: KeyCode,

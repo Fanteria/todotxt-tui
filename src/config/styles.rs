@@ -1,20 +1,46 @@
 use std::{collections::HashMap, str::FromStr};
 
-use super::{text_style::TextStyleList, Config, TextStyle};
+use super::{text_style::TextStyleList, TextStyle};
+use clap::{arg, Parser};
+use serde::{Deserialize, Serialize};
 use todo_txt::Task;
+use tui::style::Color;
 use tui::style::Style;
 
 use crate::error::ToDoRes;
 
-#[derive(Default)]
+#[derive(Serialize, Deserialize, Parser, Debug, PartialEq, Eq, Clone)]
 pub struct Styles {
+    #[arg(long = "priority_colors", default_value_t)]
+    #[serde(default)]
     pub priority_style: TextStyleList,
+
+    #[arg(long, value_name = "TEXT_STYLE", default_value_t)]
+    #[serde(default)]
     pub projects_style: TextStyle,
+
+    #[arg(long, value_name = "TEXT_STYLE", default_value_t)]
+    #[serde(default)]
     pub contexts_style: TextStyle,
+
+    #[arg(long, value_name = "TEXT_STYLE", default_value_t)]
+    #[serde(default)]
     pub hashtags_style: TextStyle,
+
+    #[arg(long, value_name = "TEXT_STYLE", default_value_t)]
+    #[serde(default)]
     pub category_style: TextStyle,
+
+    #[arg(long, value_name = "TEXT_STYLE", default_value_t = default_category_select_style())]
+    #[serde(default = "default_category_select_style")]
     pub category_select_style: TextStyle,
+
+    #[arg(long, value_name = "TEXT_STYLE", default_value_t = default_category_remove_style())]
+    #[serde(default = "default_category_select_style")]
     pub category_remove_style: TextStyle,
+
+    #[clap(skip)]
+    #[serde(default = "default_custom_category_style")]
     pub custom_category_style: HashMap<String, TextStyle>,
 }
 
@@ -57,28 +83,28 @@ impl StylesValue {
 }
 
 impl Styles {
-    pub fn new(config: &Config) -> Self {
-        let category_style = config.get_category_style();
-        let mut styles = Styles {
-            priority_style: config.get_priority_colors(),
-            category_style: config.get_category_style(),
-            category_select_style: config.get_category_select_style(),
-            category_remove_style: config.get_category_remove_style(),
-            projects_style: config.get_projects_style().combine(&category_style),
-            contexts_style: config.get_contexts_style().combine(&category_style),
-            hashtags_style: config.get_hashtags_style().combine(&category_style),
-            custom_category_style: HashMap::new(),
-        };
-        styles.custom_category_style = config
-            .get_custom_category_style()
-            .into_iter()
-            .map(|(name, style)| {
-                let style = style.combine(&styles.get_category_base_style(&name));
-                (name, style)
-            })
-            .collect();
-        styles
-    }
+    // pub fn new(config: &Config) -> Self {
+    //     let category_style = config.get_category_style();
+    //     let mut styles = Styles {
+    //         priority_style: config.get_priority_colors(),
+    //         category_style: config.get_category_style(),
+    //         category_select_style: config.get_category_select_style(),
+    //         category_remove_style: config.get_category_remove_style(),
+    //         projects_style: config.get_projects_style().combine(&category_style),
+    //         contexts_style: config.get_contexts_style().combine(&category_style),
+    //         hashtags_style: config.get_hashtags_style().combine(&category_style),
+    //         custom_category_style: HashMap::new(),
+    //     };
+    //     styles.custom_category_style = config
+    //         .get_custom_category_style()
+    //         .into_iter()
+    //         .map(|(name, style)| {
+    //             let style = style.combine(&styles.get_category_base_style(&name));
+    //             (name, style)
+    //         })
+    //         .collect();
+    //     styles
+    // }
 
     pub fn get_style_default(&self) -> StylesValue {
         StylesValue::Const(Style::default())
@@ -141,6 +167,38 @@ impl Styles {
     }
 }
 
+impl Default for Styles {
+    fn default() -> Self {
+        Self {
+            priority_style: TextStyleList::default(),
+            projects_style: TextStyle::default(),
+            contexts_style: TextStyle::default(),
+            hashtags_style: TextStyle::default(),
+            category_style: TextStyle::default(),
+            category_select_style: default_category_select_style(),
+            category_remove_style: default_category_remove_style(),
+            custom_category_style: default_custom_category_style(),
+        }
+    }
+}
+
+fn default_category_select_style() -> TextStyle {
+    TextStyle::default().fg(Color::Green)
+}
+
+fn default_category_remove_style() -> TextStyle {
+    TextStyle::default().fg(Color::Red)
+}
+
+fn default_custom_category_style() -> HashMap<String, TextStyle> {
+    let mut custom_category_style = HashMap::new();
+    custom_category_style.insert(
+        String::from("+todo-tui"),
+        TextStyle::default().fg(Color::LightBlue),
+    );
+    custom_category_style
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -152,7 +210,7 @@ mod tests {
     fn get_style() -> ToDoRes<()> {
         let task = Task::from_str("(A) Task name +project #hashtag").unwrap();
         println!("{:#?}", task);
-        let styles = Styles::new(&Config::default());
+        let styles = Styles::default();
         assert_eq!(
             Style::default(),
             styles.get_style("")?.get_style(&task, &styles)

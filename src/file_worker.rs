@@ -1,9 +1,10 @@
 use crate::{config::Config, todo::ToDo};
+// use chrono::Duration;
 use notify::{
     event::{AccessKind, AccessMode, EventKind},
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
 };
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 use std::io::{BufRead, BufReader, BufWriter, Read, Result as ioResult, Write};
 use std::path::Path;
 use std::str::FromStr;
@@ -22,8 +23,10 @@ pub enum FileWorkerCommands {
 
 /// Manages file operations for the todo list and archive.
 pub struct FileWorker {
-    todo_path: String,
-    archive_path: Option<String>,
+    todo_path: PathBuf,
+    archive_path: Option<PathBuf>,
+    autosave_duration: Duration,
+    file_watcher: bool,
     todo: Arc<Mutex<ToDo>>,
 }
 
@@ -40,18 +43,19 @@ impl FileWorker {
     ///
     /// A `FileWorker` instance.
     pub fn new(
-        todo_path: String,
-        archive_path: Option<String>,
+        config: &Config,
         todo: Arc<Mutex<ToDo>>,
     ) -> FileWorker {
         log::info!(
             "Init file worker: file: {}, archive: {:?}",
-            todo_path,
-            archive_path
+            config.file_worker_config.todo_path.to_string_lossy(),
+            config.file_worker_config.archive_path
         );
         FileWorker {
-            todo_path,
-            archive_path,
+            todo_path: config.file_worker_config.todo_path.clone(),
+            archive_path: config.file_worker_config.archive_path.clone(),
+            autosave_duration: config.file_worker_config.autosave_duration,
+            file_watcher: config.file_worker_config.file_watcher,
             todo,
         }
     }
@@ -66,9 +70,9 @@ impl FileWorker {
     pub fn load(&self) -> ioResult<()> {
         let mut todo = ToDo::new(&Config::default()); // TODO this can be improved
         Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
-        log::info!("Load tasks from file {}", self.todo_path);
+        log::info!("Load tasks from file {}", self.todo_path.to_string_lossy());
         if let Some(path) = &self.archive_path {
-            log::info!("Load tasks from achive file {}", path);
+            log::info!("Load tasks from achive file {}", path.to_string_lossy());
             Self::load_tasks(File::open(path)?, &mut todo)?;
         }
         log::debug!("Loaded pending {}x tasks", todo.pending.len());
@@ -114,10 +118,10 @@ impl FileWorker {
         let todo = self.todo.lock().unwrap();
         log::info!(
             "Saving todo task to {}{}",
-            self.todo_path,
+            self.todo_path.to_string_lossy(),
             self.archive_path
                 .as_ref()
-                .map_or(String::from(""), |p| String::from(" and") + &p.clone()),
+                .map_or(String::from(""), |p| String::from(" and") + &p.to_string_lossy()),
         );
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.archive_path {
@@ -159,19 +163,19 @@ impl FileWorker {
     /// A `Sender` that can be used to send commands to the `FileWorker` thread.
     pub fn run(
         self,
-        autosave_duration: Duration,
-        handle_changes: bool,
+        // autosave_duration: Duration,
+        // handle_changes: bool,
     ) -> Sender<FileWorkerCommands> {
         use FileWorkerCommands::*;
         let (tx, rx) = mpsc::channel::<FileWorkerCommands>();
-        if !autosave_duration.is_zero() {
-            Self::spawn_autosave(tx.clone(), autosave_duration);
+        if !self.autosave_duration.is_zero() {
+            Self::spawn_autosave(tx.clone(), self.autosave_duration);
         }
 
-        if handle_changes {
-            Self::spawn_watcher(tx.clone(), self.todo_path.clone());
+        if self.file_watcher {
+            Self::spawn_watcher(tx.clone(), &self.todo_path.clone());
             if let Some(path) = &self.archive_path {
-                Self::spawn_watcher(tx.clone(), path.clone());
+                Self::spawn_watcher(tx.clone(), path);
             }
         }
 
@@ -239,8 +243,9 @@ impl FileWorker {
     ///
     /// * `tx` - A sender for sending `FileWorkerCommands` to the `FileWorker` thread.
     /// * `path` - The path to the file to be watched for changes.
-    fn spawn_watcher(tx: Sender<FileWorkerCommands>, path: String) {
+    fn spawn_watcher(tx: Sender<FileWorkerCommands>, path: &Path) {
         log::trace!("Start file watcher");
+        let path = path.to_path_buf();
         thread::spawn(move || {
             let (tx_handle, rx_handle) = std::sync::mpsc::channel();
             let mut watcher: RecommendedWatcher =
@@ -252,7 +257,7 @@ impl FileWorker {
                 match res {
                     Ok(event) => match event.kind {
                         EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
-                            log::trace!("File {} changed", path);
+                            log::trace!("File {} changed", path.to_string_lossy());
                             if tx.send(FileWorkerCommands::Load).is_err() {
                                 break;
                             };

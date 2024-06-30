@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use todo_txt::Task;
 
-use crate::config::ToDoConfig;
+use crate::config::{ToDoConfig, TaskSort};
 
-use super::{task_list::TaskSort, ToDo};
+use super::ToDo;
 
 /// Enum to represent the state of ToDo data (pending or done).
 #[derive(Clone, Copy, Serialize, Deserialize)]

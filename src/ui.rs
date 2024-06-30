@@ -5,12 +5,10 @@ pub use ui_event::*;
 pub use ui_state::*;
 
 use crate::{
-    config::Config,
+    config::{Config, UiConfig},
     file_worker::{FileWorker, FileWorkerCommands},
-    layout::Layout,
-    layout::Render,
-    todo::autocomplete,
-    todo::ToDo,
+    layout::{Layout, Render},
+    todo::{autocomplete, ToDo},
 };
 use crossterm::{
     self,
@@ -24,10 +22,8 @@ use crossterm::{
 use std::{
     error::Error,
     io,
-    path::PathBuf,
     sync::mpsc::Sender,
     sync::{Arc, Mutex},
-    time::Duration,
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -55,12 +51,13 @@ pub struct UI {
     mode: Mode,
     data: Arc<Mutex<ToDo>>,
     tx: Sender<FileWorkerCommands>,
-    event_handler: EventHandlerUI,
+    // event_handler: EventHandlerUI,
     quit: bool,
-    window_title: String,
-    list_refresh_rate: Duration,
+    // window_title: String,
+    // list_refresh_rate: Duration,
     active_color: Color,
-    save_state_path: Option<PathBuf>,
+    // save_state_path: Option<PathBuf>,
+    config: UiConfig,
 }
 
 impl UI {
@@ -88,19 +85,16 @@ impl UI {
             mode: Mode::Normal,
             data,
             tx,
-            event_handler: config.get_window_keybind(),
             quit: false,
-            window_title: config.get_window_title(),
-            list_refresh_rate: config.get_list_refresh_rate(),
             active_color: config.get_active_color(),
-            save_state_path: config.get_save_state_path(),
+            config: config.ui_config.clone(),
         }
     }
 
     pub fn build(config: &Config) -> Result<UI, Box<dyn Error>> {
         let mut todo = ToDo::new(config);
 
-        if let Some(path) = &config.get_save_state_path() {
+        if let Some(path) = &config.ui_config.save_state_path {
             let state = UIState::load(path)?;
             let (_active, todo_state) = (state.active, state.todo_state);
             todo.update_state(todo_state);
@@ -108,13 +102,12 @@ impl UI {
 
         let todo = Arc::new(Mutex::new(todo));
         let file_worker = FileWorker::new(
-            config.get_todo_path(),
-            config.get_archive_path(),
+            config,
             todo.clone(),
         );
 
         file_worker.load()?;
-        let tx = file_worker.run(config.get_autosave_duration(), config.get_file_watcher());
+        let tx = file_worker.run();
 
         let layout = Layout::from_str(&config.get_layout(), todo.clone(), config)?;
 
@@ -153,7 +146,7 @@ impl UI {
             execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
 
             let mut backend = CrosstermBackend::new(stdout);
-            backend.execute(SetTitle(this.window_title.clone()))?;
+            backend.execute(SetTitle(this.config.window_title.clone()))?;
 
             let mut terminal = Terminal::new(backend)?;
             terminal.hide_cursor()?;
@@ -195,7 +188,7 @@ impl UI {
         let mut version = self.data.lock().unwrap().get_version();
         let mut new_version;
         loop {
-            if event::poll(self.list_refresh_rate)? {
+            if event::poll(self.config.list_refresh_rate)? {
                 if self.process_event()? {
                     break;
                 }
@@ -334,14 +327,14 @@ impl UI {
 
 impl HandleEvent for UI {
     fn get_event(&self, key: &KeyCode) -> UIEvent {
-        self.event_handler.get_event(key)
+        self.config.window_keybinds.get_event(key)
     }
 
     fn handle_event(&mut self, event: UIEvent) -> bool {
         use UIEvent::*;
         match event {
             Quit => {
-                if let Some(path) = &self.save_state_path {
+                if let Some(path) = &self.config.save_state_path {
                     if let Err(e) =
                         UIState::new(&self.layout, &self.data.lock().unwrap()).save(path)
                     {

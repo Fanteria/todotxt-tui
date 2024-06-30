@@ -107,8 +107,7 @@ pub trait HandleEvent {
 }
 
 /// Struct for handling UI events based on key bindings.
-#[derive(Serialize, Deserialize, Default, Clone)]
-#[cfg_attr(test, derive(PartialEq, Debug))]
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, Debug)]
 pub struct EventHandlerUI {
     events: Vec<EventEntry>,
 }

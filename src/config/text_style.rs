@@ -2,15 +2,18 @@ use super::colors::opt_color;
 use super::text_modifier::TextModifier;
 use crate::ToDoError;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    str::FromStr,
+};
 use tui::style::{Color, Style};
 
 /// Represents the styling for text elements.
 ///
 /// This struct defines the style for text elements, including background color, foreground color,
 /// and text modifiers.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TextStyle {
     #[serde(default, with = "opt_color")]
     bg: Option<Color>,
@@ -129,6 +132,33 @@ impl TextStyle {
     }
 }
 
+impl Display for TextStyle {
+    // TODO try to implement better display
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut is_first = true;
+        if let Some(fg) = self.fg {
+            f.write_fmt(format_args!("{:?}", fg))?;
+            is_first = false;
+        }
+        if let Some(bg) = self.bg {
+            if is_first {
+                f.write_fmt(format_args!("{:?}", bg))?;
+            } else {
+                f.write_fmt(format_args!(" {:?}", bg))?;
+            }
+            is_first = false;
+        }
+        if let Some(modifiers) = self.modifier {
+            if is_first {
+                f.write_fmt(format_args!("{:?}", modifiers))?;
+            } else {
+                f.write_fmt(format_args!(" {:?}", modifiers))?;
+            }
+        }
+        Ok(())
+    }
+}
+
 // TODO doc comment
 impl FromStr for TextStyle {
     type Err = ToDoError;
@@ -160,8 +190,7 @@ impl FromStr for TextStyle {
 /// Represents a list of text styles for priorities.
 ///
 /// This struct maintains a list of text styles for different priority levels.
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct TextStyleList(HashMap<String, TextStyle>);
 
 impl TextStyleList {
@@ -195,6 +224,20 @@ impl Default for TextStyleList {
         items.insert(String::from("C"), TextStyle::default().fg(Color::Blue));
 
         Self(items)
+    }
+}
+
+impl Display for TextStyleList {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            &self
+                .0
+                .iter()
+                .map(|(key, style)| format!("{}: {}", key, style))
+                .collect::<Vec<_>>()
+                .join(", "),
+        )?;
+        Ok(())
     }
 }
 

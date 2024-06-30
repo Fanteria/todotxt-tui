@@ -136,7 +136,7 @@ mod tests {
 
     #[test]
     fn create_list_of_items() {
-        let styles = Styles::new(&Config::default());
+        let styles = Config::default().styles;
         let first = String::from("first");
         let second = String::from("second");
         let third = String::from("third");

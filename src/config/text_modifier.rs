@@ -8,8 +8,7 @@ use crate::ToDoError;
 /// Serialization and deserialization support for the TUI text modifier type.
 ///
 /// This enum is used to serialize and deserialize TUI `Modifier` objects.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextModifier {
     Bold,
     Italic,

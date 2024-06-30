@@ -36,8 +36,8 @@ impl ToDo {
             done: Vec::new(),
             version: 0,
             state: ToDoState::default(),
-            config: ToDoConfig::new(config),
-            styles: Styles::new(config),
+            config: config.todo_config.clone(), // TODO try to solve by some more inteligent way
+            styles: config.styles.clone(),
         }
     }
 
