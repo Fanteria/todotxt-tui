@@ -8,7 +8,7 @@ use crate::ui::{EventHandlerUI, UIEvent};
 
 #[derive(Serialize, Deserialize, Parser, Debug, PartialEq, Eq, Clone)]
 pub struct UiConfig {
-    /// Title of window with opened todo-tui {env!("CARGO_PKG_NAME")} {AAAA} TODO
+    /// Title of window with opened todotxt-tui
     #[arg(short = 'T', long, default_value_t = default_window_title(), value_name = "STRING")]
     #[serde(default = "default_window_title")]
     pub window_title: String,
@@ -17,13 +17,19 @@ pub struct UiConfig {
     #[serde(default = "default_window_keybinds")]
     pub window_keybinds: EventHandlerUI,
 
+    /// List refresh rate (in seconds).
     #[arg(short = 'L', long, default_value = default_list_refresh_rate().as_secs().to_string(), value_parser = super::parsers::parse_duration, value_name = "DURATION")]
     #[serde(default = "default_list_refresh_rate")]
     pub list_refresh_rate: Duration,
 
-    #[arg(long, value_name = "FILE", help_heading = "export")]
+    #[arg(long)]
     #[serde(default)]
-    pub save_state_path: Option<PathBuf>,
+    pub save_state_path: Option<PathBuf>, // TODO at now unused
+
+    /// Layout configuration.
+    #[arg(long, default_value_t = default_layout())]
+    #[serde(default = "default_layout")]
+    pub layout: String,
 }
 
 impl Default for UiConfig {
@@ -33,6 +39,7 @@ impl Default for UiConfig {
             window_keybinds: default_window_keybinds(),
             list_refresh_rate: default_list_refresh_rate(),
             save_state_path: None,
+            layout: default_layout(),
         }
     }
 }
@@ -57,4 +64,19 @@ fn default_window_keybinds() -> EventHandlerUI {
         (KeyCode::Char('I'), UIEvent::InsertMode),
         (KeyCode::Char('E'), UIEvent::EditMode),
     ])
+}
+
+fn default_layout() -> String {
+    String::from(concat!(
+        "[",
+        " Direction: Horizontal,",
+        " Size: 50%,",
+        " [ List: 80%, Preview: 20%, ],",
+        " [",
+        "  Direction: Vertical,",
+        "  Done: 60%,",
+        "  [ Contexts: 50%, Projects: 50%, ],",
+        " ],",
+        "]",
+    ))
 }

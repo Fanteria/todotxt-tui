@@ -1,95 +1,84 @@
+mod active_color_config;
 mod colors;
+mod file_worker_config;
 mod keycode;
+mod list_config;
 mod logger;
+mod parsers;
+mod preview_config;
 mod styles;
 mod text_modifier;
 mod text_style;
 mod todo_config;
 mod ui_config;
-mod file_worker_config;
-mod parsers;
+mod widget_base_config;
 
+pub use self::active_color_config::ActiveColorConfig;
+pub use self::file_worker_config::FileWorkerConfig;
 pub use self::keycode::KeyCodeDef;
+pub use self::list_config::ListConfig;
 pub use self::logger::Logger;
 pub use self::styles::Styles;
 pub use self::styles::StylesValue;
 pub use self::text_style::TextStyle;
 pub use self::text_style::TextStyleList;
-pub use self::todo_config::ToDoConfig;
 pub use self::todo_config::SetFinalDateType;
 pub use self::todo_config::TaskSort;
+pub use self::todo_config::ToDoConfig;
 pub use self::ui_config::UiConfig;
-pub use self::file_worker_config::FileWorkerConfig;
 
 use self::colors::opt_color;
-use crate::{
-    layout::widget::widget_type::WidgetType,
-    ui::{EventHandlerUI, UIEvent},
-};
+use crate::layout::widget::widget_type::WidgetType;
+use crate::IOError;
+use crate::ToDoIoError;
+use crate::ToDoRes;
+use clap::builder::styling::AnsiColor;
 use clap::FromArgMatches;
-use clap::Subcommand;
 use clap::{arg, CommandFactory, Parser};
 
 use clap_complete::{generate, shells::Bash};
-use crossterm::event::KeyCode;
+use preview_config::PreviewConfig;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::{
     env::var,
-    error::Error,
     fs::File,
-    io::{self, Read, Write},
+    io::{Read, Write},
     path::PathBuf,
 };
 use tui::style::Color;
-
-#[derive(Default, Subcommand, Debug, PartialEq, Eq)]
-pub enum Commands {
-    #[default]
-    Run,
-    Autocomplete {
-        path: PathBuf,
-    },
-    Config {
-        path: PathBuf,
-    },
-    DefaultConfig {
-        path: PathBuf,
-    }
-}
+use widget_base_config::WidgetBaseConfig;
 
 /// Configuration struct for the ToDo TUI application.
 #[derive(Serialize, Deserialize, Default, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None, styles = cli_help_style())]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct Config {
-
-    #[command(subcommand)]
+    /// Generate autocomplete script to given file path.
+    #[clap(group = "export")]
+    #[arg(long, help_heading = "export")]
     #[serde(skip)]
-    pub command: Option<Commands>,
+    pub export_autocomplete: Option<PathBuf>,
+
+    /// Generate full configuration file for actual session
+    /// so present configuration file and command lines
+    /// options are taken in account.
+    #[clap(group = "export")]
+    #[arg(long, help_heading = "export")]
+    #[serde(skip)]
+    pub export_config: Option<PathBuf>,
+
+    /// Generate configuration file with default values
+    /// to given file path.
+    #[clap(group = "export")]
+    #[arg(long, help_heading = "export")]
+    #[serde(skip)]
+    pub export_default_config: Option<PathBuf>,
 
     /// Path to configuration file.
     #[serde(skip)]
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(short, long)]
     config_path: Option<PathBuf>,
-
-    // /// Generate autocomplete script to given file path.
-    // #[serde(skip)]
-    // #[arg(long, value_name = "FILE", help_heading = "export")]
-    // generate_autocomplete: Option<PathBuf>,
-
-    // /// Generate full configuration file for actual session
-    // /// so present configuration file and command lines
-    // /// options are taken in account.
-    // #[serde(skip)]
-    // #[arg(long, value_name = "FILE", help_heading = "export")]
-    // export_config: Option<PathBuf>,
-
-    // /// Generate configuration file with default values
-    // /// to given file path.
-    // #[serde(skip)]
-    // #[arg(long, value_name = "FILE", help_heading = "export")]
-    // export_default_config: Option<PathBuf>,
 
     #[serde(default, with = "opt_color")]
     #[arg(long, value_name = "COLOR")]
@@ -103,17 +92,9 @@ pub struct Config {
     #[serde(flatten)]
     pub ui_config: UiConfig,
 
-    #[arg(short, long, value_name = "FLAG")]
-    wrap_preview: Option<bool>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    list_active_color: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    pending_active_color: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    done_active_color: Option<TextStyle>,
+    #[clap(flatten)]
+    #[serde(flatten)]
+    pub active_color_config: ActiveColorConfig,
 
     #[clap(flatten)]
     #[serde(flatten)]
@@ -123,27 +104,21 @@ pub struct Config {
     #[command(flatten)]
     pub logger: Logger,
 
-    #[arg(short, long, value_name = "NUMBER")]
-    list_shift: Option<usize>,
+    #[serde(flatten)]
+    #[command(flatten)]
+    pub list_config: ListConfig,
 
     #[serde(flatten)]
     #[command(flatten)]
     pub todo_config: ToDoConfig,
 
-    #[arg(short, long, value_name = "STRING")]
-    preview_format: Option<String>,
+    #[serde(flatten)]
+    #[command(flatten)]
+    pub preview_config: PreviewConfig,
 
-    #[arg(long, value_name = "STRING")]
-    layout: Option<String>,
-
-    #[clap(skip)]
-    tasks_keybind: Option<EventHandlerUI>,
-
-    #[clap(skip)]
-    category_keybind: Option<EventHandlerUI>,
-
-    #[clap(skip)]
-    list_keybind: Option<EventHandlerUI>,
+    #[clap(flatten)]
+    #[serde(flatten)]
+    pub widget_base_config: WidgetBaseConfig,
 
     #[clap(flatten)]
     #[serde(flatten)]
@@ -152,9 +127,11 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Self {
-        let matches = <Config as CommandFactory>::command().get_matches();
+        let matches = Self::command().get_matches();
         let mut config = Self::load_default().unwrap();
-        config.update_from_arg_matches(&matches).unwrap();
+        if let Err(e) = config.update_from_arg_matches(&matches) {
+            log::debug!("Parser error: {}", e.to_string())
+        }
         config
     }
 
@@ -165,11 +142,13 @@ impl Config {
     /// # Returns
     ///
     /// A `Result` containing the loaded configuration (`Ok`) or an error (`Err`) if loading fails.
-    pub fn load(path: &PathBuf) -> io::Result<Self> {
-        Ok(Self::load_from_buffer(File::open(path)?))
+    pub fn load(path: &PathBuf) -> ToDoRes<Self> {
+        Ok(Self::load_from_buffer(
+            File::open(path).map_err(|e| ToDoIoError::new(path, e))?,
+        ))
     }
 
-    pub fn load_config(&self) -> io::Result<Self> {
+    pub fn load_config(&self) -> ToDoRes<Self> {
         match &self.config_path {
             Some(path) => Config::load(path),
             None => Self::load_default(),
@@ -183,14 +162,18 @@ impl Config {
     /// # Returns
     ///
     /// A `Result` containing the default configuration file path (`Ok`) or an error (`Err`) if the path cannot be determined.
-    pub fn load_default() -> io::Result<Self> {
+    pub fn load_default() -> ToDoRes<Self> {
         const CONFIG_FOLDER: &str = "/.config/";
         const CONFIG_NAME: &str = "todo-tui.toml";
-        let path = var("XDG_CONFIG_HOME")
-            .or_else(|_| var("HOME").map(|home| format!("{home}{CONFIG_FOLDER}")))
-            .unwrap_or(String::from("~") + CONFIG_FOLDER)
-            + CONFIG_NAME;
-        Ok(Self::load_from_buffer(File::open(path)?))
+        let path = PathBuf::from(
+            var("XDG_CONFIG_HOME")
+                .or_else(|_| var("HOME").map(|home| format!("{home}{CONFIG_FOLDER}")))
+                .unwrap_or(String::from("~") + CONFIG_FOLDER)
+                + CONFIG_NAME,
+        );
+        Ok(Self::load_from_buffer(
+            File::open(&path).map_err(|e| ToDoIoError::new(&path, e))?,
+        ))
     }
 
     /// Loads a configuration from a provided reader.
@@ -220,29 +203,26 @@ impl Config {
         }
     }
 
-    pub fn generate_autocomplete(path: &Path) -> Result<(), Box<dyn Error>> {
+    pub fn generate_autocomplete(path: &Path) -> ToDoRes<()> {
         generate(
             Bash,
             &mut Self::command(),
             env!("CARGO_PKG_NAME"),
-            &mut File::create(path)?,
+            &mut File::create(path).map_err(|e| ToDoIoError::new(path, e))?,
         );
         Ok(())
     }
 
-    pub fn export_config(&self, path: &Path) -> Result<(), Box<dyn Error>> {
-        let mut output = File::create(path)?;
-        write!(output, "{}", toml::to_string_pretty(self)?)?;
+    pub fn export_config(&self, path: &Path) -> ToDoRes<()> {
+        let mut output = File::create(path).map_err(|e| ToDoIoError::new(path, e))?;
+        write!(output, "{}", toml::to_string_pretty(self)?).map_err(|e| IOError(e))?;
         Ok(())
     }
 
-    pub fn export_default_config(path: &Path) -> Result<(), Box<dyn Error>> {
-        let mut output = File::create(path)?;
-        write!(
-            output,
-            "{}",
-            toml::to_string_pretty(&Config::default())?
-        )?;
+    pub fn export_default_config(path: &Path) -> ToDoRes<()> {
+        let mut output = File::create(path).map_err(|e| ToDoIoError::new(path, e))?;
+        write!(output, "{}", toml::to_string_pretty(&Config::default())?)
+            .map_err(|e| IOError(e))?;
         Ok(())
     }
 
@@ -253,94 +233,24 @@ impl Config {
     pub fn get_init_widget(&self) -> WidgetType {
         self.init_widget.unwrap_or(WidgetType::List)
     }
+}
 
-    pub fn get_wrap_preview(&self) -> bool {
-        self.wrap_preview.unwrap_or(true)
-    }
-
-    pub fn get_list_active_color(&self) -> TextStyle {
-        self.list_active_color
-            .unwrap_or(TextStyle::default().bg(Color::LightRed))
-    }
-
-    pub fn get_pending_active_color(&self) -> TextStyle {
-        self.pending_active_color.unwrap_or_default()
-    }
-
-    pub fn get_done_active_color(&self) -> TextStyle {
-        self.done_active_color.unwrap_or_default()
-    }
-
-    pub fn get_list_shift(&self) -> usize {
-        self.list_shift.unwrap_or(4)
-    }
-
-    pub fn get_preview_format(&self) -> String {
-        self.preview_format.clone().unwrap_or(String::from(
-            "Pending: $pending Done: $done
-Subject: $subject
-Priority: $priority
-Create date: $create_date
-Link: $link",
-        ))
-    }
-
-    pub fn get_layout(&self) -> String {
-        self.layout.clone().unwrap_or(String::from(
-            "
-[
-    Direction: Horizontal,
-    Size: 50%,
-    [
-        List: 20%,
-        Preview: 80%,
-    ],
-    [ Direction: Vertical,
-      Done: 60%,
-      [ 
-        Contexts: 10%,
-        Projects: 90%,
-      ],
-    ],
-]
-",
-        ))
-    }
-
-    pub fn get_tasks_keybind(&self) -> EventHandlerUI {
-        self.tasks_keybind.clone().unwrap_or(EventHandlerUI::new(&[
-            (KeyCode::Char('U'), UIEvent::SwapUpItem),
-            (KeyCode::Char('D'), UIEvent::SwapDownItem),
-            (KeyCode::Char('x'), UIEvent::RemoveItem),
-            (KeyCode::Char('d'), UIEvent::MoveItem),
-            (KeyCode::Enter, UIEvent::Select),
-        ]))
-    }
-
-    pub fn get_category_keybind(&self) -> EventHandlerUI {
-        self.category_keybind
-            .clone()
-            .unwrap_or(EventHandlerUI::new(&[
-                (KeyCode::Enter, UIEvent::Select),
-                (KeyCode::Backspace, UIEvent::Remove),
-            ]))
-    }
-
-    pub fn get_list_keybind(&self) -> EventHandlerUI {
-        self.list_keybind.clone().unwrap_or(EventHandlerUI::new(&[
-            (KeyCode::Char('j'), UIEvent::ListDown),
-            (KeyCode::Char('k'), UIEvent::ListUp),
-            (KeyCode::Char('g'), UIEvent::ListFirst),
-            (KeyCode::Char('G'), UIEvent::ListLast),
-        ]))
-    }
+fn cli_help_style() -> clap::builder::Styles {
+    clap::builder::Styles::styled()
+        .usage(AnsiColor::Green.on_default().bold())
+        .literal(AnsiColor::Cyan.on_default().bold())
+        .header(AnsiColor::Green.on_default().bold())
+        .invalid(AnsiColor::Yellow.on_default())
+        .error(AnsiColor::Red.on_default().bold())
+        .valid(AnsiColor::Green.on_default())
+        .placeholder(AnsiColor::Cyan.on_default())
 }
 
 #[cfg(test)]
 mod tests {
+    use self::parsers::*;
     use super::*;
     use std::{io::Result, time::Duration};
-    use self::parsers::*;
 
     #[test]
     fn test_deserialization() {
@@ -354,7 +264,10 @@ mod tests {
 
         assert_eq!(deserialized.active_color, Some(Color::Green));
         assert_eq!(deserialized.init_widget, Some(WidgetType::Done));
-        assert_eq!(deserialized.ui_config.window_title, UiConfig::default().window_title);
+        assert_eq!(
+            deserialized.ui_config.window_title,
+            UiConfig::default().window_title
+        );
         // assert_eq!(deserialized.get_window_title(), "ToDo tui");
     }
 
@@ -380,7 +293,10 @@ mod tests {
         assert_eq!(c.init_widget, None);
         assert_eq!(c.get_init_widget(), WidgetType::List);
         assert_eq!(c.ui_config.window_title, String::from("Title"));
-        assert_eq!(c.file_worker_config.todo_path, PathBuf::from("path to todo file"));
+        assert_eq!(
+            c.file_worker_config.todo_path,
+            PathBuf::from("path to todo file")
+        );
         assert_eq!(c.file_worker_config.archive_path, None);
 
         Ok(())
@@ -396,23 +312,4 @@ mod tests {
         assert_eq!(parse_duration("1000"), Ok(Duration::from_secs(1000)));
         assert!(parse_duration("-1000").is_err());
     }
-
-    // #[test]
-    // fn test_merge() {
-    //     let mut conf1 = Config::default();
-    //     let mut conf2 = Config::default();
-    //     conf1.todo_path = Some("path/to/todo/file".to_string());
-    //     conf2.archive_path = Some("path/to/archive_path/file".to_string());
-    //
-    //     conf1.window_title = Some("Window title".to_string());
-    //     conf2.window_title = Some("Different title".to_string());
-    //
-    //     let new_conf = conf1.merge(conf2);
-    //     assert_eq!(new_conf.todo_path, Some("path/to/todo/file".to_string()));
-    //     assert_eq!(
-    //         new_conf.archive_path,
-    //         Some("path/to/archive_path/file".to_string())
-    //     );
-    //     assert_eq!(new_conf.window_title, Some("Window title".to_string()));
-    // }
 }

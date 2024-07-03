@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Define a custom result type for ToDo related operations.
 pub type ToDoRes<T> = Result<T, ToDoError>;
@@ -38,6 +38,10 @@ pub enum ToDoError {
     ActiveIsNotWidget,
     #[error("{0}")]
     IOoperationFailed(#[from] ToDoIoError),
+    #[error("{0}")]
+    IOFailed(#[from] IOError),
+    #[error("TOML serde error: {0}")]
+    TomlSerError(#[from] toml::ser::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -47,8 +51,27 @@ pub struct ToDoIoError {
     pub err: std::io::Error,
 }
 
+impl ToDoIoError {
+    pub fn new(path: &Path, err: std::io::Error) -> Self {
+        Self {
+            path: path.to_path_buf(),
+            err,
+        }
+    }
+}
+
 impl PartialEq for ToDoIoError {
     fn eq(&self, other: &Self) -> bool {
         self.path == other.path && self.err.kind() == other.err.kind()
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("IOError: {0}")]
+pub struct IOError(#[from] pub std::io::Error);
+
+impl PartialEq for IOError {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.kind() == other.0.kind()
     }
 }

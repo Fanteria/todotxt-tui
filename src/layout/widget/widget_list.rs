@@ -1,6 +1,6 @@
 use super::{RCToDo, WidgetBase, WidgetType};
-use crate::config::Config;
-use crate::ui::{EventHandlerUI, HandleEvent, UIEvent};
+use crate::config::{Config, ListConfig};
+use crate::ui::{HandleEvent, UIEvent};
 use crossterm::event::KeyCode;
 use std::ops::{Deref, DerefMut};
 use tui::widgets::ListState;
@@ -12,8 +12,7 @@ pub struct WidgetList {
     pub len: usize,
     first: usize,
     size: usize,
-    event_handler: EventHandlerUI,
-    list_shift: usize,
+    config: ListConfig,
 }
 
 impl WidgetList {
@@ -34,8 +33,7 @@ impl WidgetList {
             len: 0,
             first: 0,
             size: 0,
-            event_handler: config.get_list_keybind(),
-            list_shift: config.get_list_shift(),
+            config: config.list_config.clone(),
         };
         def.state.select(Some(0));
         def
@@ -84,7 +82,7 @@ impl WidgetList {
             if self.len > act + 1 {
                 self.state.select(Some(act + 1));
             }
-        } else if self.size <= act + 1 + self.list_shift {
+        } else if self.size <= act + 1 + self.config.list_shift {
             if self.first + self.size < self.len {
                 self.first += 1;
             } else if self.size > act + 1 {
@@ -98,14 +96,14 @@ impl WidgetList {
             act,
             self.size,
             self.len,
-            self.list_shift
+            self.config.list_shift
         );
     }
 
     /// Moves the selection up the list.
     pub fn up(&mut self) {
         let act = self.act();
-        if act <= self.list_shift {
+        if act <= self.config.list_shift {
             if self.first > 0 {
                 self.first -= 1;
             } else if act > 0 {
@@ -182,7 +180,7 @@ impl WidgetList {
 
 impl HandleEvent for WidgetList {
     fn get_event(&self, key: &KeyCode) -> UIEvent {
-        self.event_handler.get_event(key)
+        self.config.list_keybind.get_event(key)
     }
 
     fn handle_event(&mut self, event: UIEvent) -> bool {

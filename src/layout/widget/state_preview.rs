@@ -33,8 +33,8 @@ impl StatePreview {
     pub fn new(base: WidgetBase, config: &Config) -> ToDoRes<Self> {
         Ok(StatePreview {
             base,
-            parser: Parser::new(&config.get_preview_format(), config.styles.clone())?,
-            wrap_preview: config.get_wrap_preview(),
+            parser: Parser::new(&config.preview_config.preview_format, config.styles.clone())?,
+            wrap_preview: config.preview_config.wrap_preview,
         })
     }
 }

@@ -51,12 +51,8 @@ pub struct UI {
     mode: Mode,
     data: Arc<Mutex<ToDo>>,
     tx: Sender<FileWorkerCommands>,
-    // event_handler: EventHandlerUI,
     quit: bool,
-    // window_title: String,
-    // list_refresh_rate: Duration,
     active_color: Color,
-    // save_state_path: Option<PathBuf>,
     config: UiConfig,
 }
 
@@ -109,7 +105,7 @@ impl UI {
         file_worker.load()?;
         let tx = file_worker.run();
 
-        let layout = Layout::from_str(&config.get_layout(), todo.clone(), config)?;
+        let layout = Layout::from_str(&config.ui_config.layout, todo.clone(), config)?;
 
         Ok(UI::new(layout, todo, tx.clone(), config))
     }

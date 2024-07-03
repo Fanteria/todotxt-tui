@@ -1,15 +1,18 @@
-use crate::{config::Config, todo::ToDo};
-// use chrono::Duration;
+use crate::{
+    config::Config,
+    error::{IOError, ToDoIoError, ToDoRes},
+    todo::ToDo,
+};
 use notify::{
     event::{AccessKind, AccessMode, EventKind},
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
 };
-use std::{fs::File, path::PathBuf};
-use std::io::{BufRead, BufReader, BufWriter, Read, Result as ioResult, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc, Mutex};
+use std::{fs::File, path::PathBuf};
 use std::{thread, time::Duration};
 use todo_txt::Task;
 
@@ -42,10 +45,7 @@ impl FileWorker {
     /// # Returns
     ///
     /// A `FileWorker` instance.
-    pub fn new(
-        config: &Config,
-        todo: Arc<Mutex<ToDo>>,
-    ) -> FileWorker {
+    pub fn new(config: &Config, todo: Arc<Mutex<ToDo>>) -> FileWorker {
         log::info!(
             "Init file worker: file: {}, archive: {:?}",
             config.file_worker_config.todo_path.to_string_lossy(),
@@ -67,13 +67,25 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    pub fn load(&self) -> ioResult<()> {
+    pub fn load(&self) -> ToDoRes<()> {
         let mut todo = ToDo::new(&Config::default()); // TODO this can be improved
-        Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
+        Self::load_tasks(
+            File::open(&self.todo_path).map_err(|e| ToDoIoError {
+                path: self.todo_path.to_path_buf(),
+                err: e,
+            })?,
+            &mut todo,
+        )?;
         log::info!("Load tasks from file {}", self.todo_path.to_string_lossy());
         if let Some(path) = &self.archive_path {
             log::info!("Load tasks from achive file {}", path.to_string_lossy());
-            Self::load_tasks(File::open(path)?, &mut todo)?;
+            Self::load_tasks(
+                File::open(path).map_err(|err| ToDoIoError {
+                    path: path.to_path_buf(),
+                    err,
+                })?,
+                &mut todo,
+            )?;
         }
         log::debug!("Loaded pending {}x tasks", todo.pending.len());
         log::debug!("Loaded done {}x tasks", todo.done.len());
@@ -91,9 +103,9 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> ioResult<()> {
+    fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> ToDoRes<()> {
         for line in BufReader::new(reader).lines() {
-            let line = line?;
+            let line = line.map_err(|e| IOError(e))?;
             let line = line.trim();
             if line.is_empty() {
                 continue;
@@ -113,19 +125,25 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn save(&self) -> ioResult<()> {
-        let mut f = File::create(&self.todo_path)?;
+    fn save(&self) -> ToDoRes<()> {
+        let mut f = File::create(&self.todo_path).map_err(|err| ToDoIoError {
+            path: self.todo_path.to_path_buf(),
+            err,
+        })?;
         let todo = self.todo.lock().unwrap();
         log::info!(
             "Saving todo task to {}{}",
             self.todo_path.to_string_lossy(),
             self.archive_path
                 .as_ref()
-                .map_or(String::from(""), |p| String::from(" and") + &p.to_string_lossy()),
+                .map_or(String::from(""), |p| String::from(" and")
+                    + &p.to_string_lossy()),
         );
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.archive_path {
-            Some(s) => Self::save_tasks(&mut File::create(s)?, &todo.done),
+            Some(s) => Self::save_tasks(&mut File::create(s).map_err(|err| ToDoIoError {
+                path: s.to_path_buf(), err
+            })?, &todo.done),
             None => Self::save_tasks(&mut f, &todo.done),
         }
     }
@@ -140,10 +158,10 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> ioResult<()> {
+    fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> ToDoRes<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
-            writer.write_all((task.to_string() + "\n").as_bytes())?;
+            writer.write_all((task.to_string() + "\n").as_bytes()).map_err(|e| IOError(e))?;
         }
         Ok(())
     }
@@ -212,7 +230,7 @@ impl FileWorker {
                     }
                     Exit => break,
                 } {
-                    log::error!("File Worker: {}", e.kind());
+                    log::error!("File Worker: {}", e);
                 }
             }
         });
@@ -285,7 +303,7 @@ mod tests {
         "#;
 
     #[test]
-    fn test_load_tasks() -> ioResult<()> {
+    fn test_load_tasks() -> ToDoRes<()> {
         let mut todo = ToDo::default();
         FileWorker::load_tasks(TESTING_STRING.as_bytes(), &mut todo)?;
         assert_eq!(todo.pending.len(), 4);
@@ -321,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_tasks() -> ioResult<()> {
+    fn test_write_tasks() -> ToDoRes<()> {
         let mut todo = ToDo::default();
         FileWorker::load_tasks(TESTING_STRING.as_bytes(), &mut todo)?;
         let get_expected = |line: fn(&String) -> bool| {
@@ -334,7 +352,7 @@ mod tests {
                 .join("\n")
                 + "\n"
         };
-        let pretty_assert = |tasks, expected: &str, msg: &str| -> ioResult<()> {
+        let pretty_assert = |tasks, expected: &str, msg: &str| -> ToDoRes<()> {
             let mut buf: Vec<u8> = Vec::new();
             FileWorker::save_tasks(&mut buf, tasks)?;
             assert_eq!(

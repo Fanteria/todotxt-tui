@@ -42,10 +42,12 @@ pub struct ToDoConfig {
     #[serde(default = "default_use_done")]
     pub use_done: bool,
 
+    /// Sorting option for pending tasks.
     #[arg(long, value_name = "TASK_SORT", default_value_t)]
     #[serde(default)]
     pub pending_sort: TaskSort,
 
+    /// Sorting option for completed tasks.
     #[arg(long, value_name = "TASK_SORT", default_value_t)]
     #[serde(default)]
     pub done_sort: TaskSort,

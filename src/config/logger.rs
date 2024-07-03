@@ -10,27 +10,30 @@ use std::{error::Error, path::PathBuf};
 
 #[derive(Serialize, Deserialize, Parser, Debug, PartialEq, Eq, Clone)]
 pub struct Logger {
-    #[arg(long = "log_file", default_value = default_file().into_os_string(), value_name = "FILE")]
+    /// Path to the log file.
+    #[arg(long, default_value = default_file().into_os_string(), value_name = "FILE")]
     #[serde(default = "default_file")]
-    file: PathBuf,
+    log_file: PathBuf,
 
-    #[arg(long = "log_format", default_value_t = default_format())]
+    /// Log format (uses placeholders)
+    #[arg(long, default_value_t = default_format())]
     #[serde(default = "default_format")]
-    format: String,
+    log_format: String,
 
-    #[arg(long = "log_level", default_value_t = default_level(), value_name = "LOG_LEVEL")]
+    /// Log level.
+    #[arg(long, default_value_t = default_level(), value_name = "LOG_LEVEL")]
     #[serde(default = "default_level")]
-    level: LevelFilter,
+    log_level: LevelFilter,
 }
 
 impl Logger {
     pub fn init(&self) -> Result<(), Box<dyn Error>> {
         let logfile = FileAppender::builder()
-            .encoder(Box::new(PatternEncoder::new(&self.format)))
-            .build(&self.file)?;
+            .encoder(Box::new(PatternEncoder::new(&self.log_format)))
+            .build(&self.log_file)?;
         let logging_config = LogConfig::builder()
             .appender(Appender::builder().build("logfile", Box::new(logfile)))
-            .build(Root::builder().appender("logfile").build(self.level))?;
+            .build(Root::builder().appender("logfile").build(self.log_level))?;
         log4rs::init_config(logging_config)?;
         Ok(())
     }
@@ -39,9 +42,9 @@ impl Logger {
 impl Default for Logger {
     fn default() -> Self {
         Self {
-            file: default_file(),
-            format: default_format(),
-            level: default_level(),
+            log_file: default_file(),
+            log_format: default_format(),
+            log_level: default_level(),
         }
     }
 }

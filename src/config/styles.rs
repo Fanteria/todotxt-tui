@@ -11,34 +11,43 @@ use crate::error::ToDoRes;
 
 #[derive(Serialize, Deserialize, Parser, Debug, PartialEq, Eq, Clone)]
 pub struct Styles {
+
+    /// Priority-specific colors.
     #[arg(long = "priority_colors", default_value_t)]
     #[serde(default)]
     pub priority_style: TextStyleList,
 
+    /// Style for projects in lists.
     #[arg(long, value_name = "TEXT_STYLE", default_value_t)]
     #[serde(default)]
     pub projects_style: TextStyle,
 
+    /// Style for contexts in lists.
     #[arg(long, value_name = "TEXT_STYLE", default_value_t)]
     #[serde(default)]
     pub contexts_style: TextStyle,
 
+    /// Style for hashtags in lists.
     #[arg(long, value_name = "TEXT_STYLE", default_value_t)]
     #[serde(default)]
     pub hashtags_style: TextStyle,
 
+    /// Style for categories in lists.
     #[arg(long, value_name = "TEXT_STYLE", default_value_t)]
     #[serde(default)]
     pub category_style: TextStyle,
 
+    /// Style for categories to filter.
     #[arg(long, value_name = "TEXT_STYLE", default_value_t = default_category_select_style())]
     #[serde(default = "default_category_select_style")]
     pub category_select_style: TextStyle,
 
+    /// Style for categories filtered out.
     #[arg(long, value_name = "TEXT_STYLE", default_value_t = default_category_remove_style())]
     #[serde(default = "default_category_select_style")]
     pub category_remove_style: TextStyle,
 
+    /// Custom style by name for categories.
     #[clap(skip)]
     #[serde(default = "default_custom_category_style")]
     pub custom_category_style: HashMap<String, TextStyle>,

@@ -26,11 +26,11 @@ impl WidgetBase {
     /// A new `WidgetBase` instance.
     pub fn new(widget_type: &WidgetType, data: RCToDo, config: &Config) -> Self {
         let event_handler = match widget_type {
-            WidgetType::List => config.get_tasks_keybind(),
-            WidgetType::Done => config.get_tasks_keybind(),
-            WidgetType::Project => config.get_category_keybind(),
-            WidgetType::Context => config.get_category_keybind(),
-            WidgetType::Hashtag => config.get_category_keybind(),
+            WidgetType::List => config.widget_base_config.tasks_keybind.clone(),
+            WidgetType::Done => config.widget_base_config.tasks_keybind.clone(),
+            WidgetType::Project => config.widget_base_config.category_keybind.clone(),
+            WidgetType::Context => config.widget_base_config.category_keybind.clone(),
+            WidgetType::Hashtag => config.widget_base_config.category_keybind.clone(),
             WidgetType::Preview => EventHandlerUI::default(),
         };
         Self {
