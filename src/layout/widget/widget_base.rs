@@ -35,7 +35,7 @@ impl WidgetBase {
         };
         Self {
             title: widget_type.to_string(),
-            active_color: config.get_active_color(),
+            active_color: *config.styles.active_color,
             focus: false,
             chunk: Rect::default(),
             data,

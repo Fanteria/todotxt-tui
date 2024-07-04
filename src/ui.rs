@@ -82,7 +82,7 @@ impl UI {
             data,
             tx,
             quit: false,
-            active_color: config.get_active_color(),
+            active_color: *config.styles.active_color,
             config: config.ui_config.clone(),
         }
     }

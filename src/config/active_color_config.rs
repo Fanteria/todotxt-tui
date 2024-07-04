@@ -2,7 +2,7 @@ use super::TextStyle;
 
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use tui::style::Color;
+use super::colors::Color;
 
 
 #[derive(Serialize, Deserialize, Parser, Debug, PartialEq, Eq, Clone)]
@@ -34,5 +34,5 @@ impl Default for ActiveColorConfig {
 }
 
 fn default_list_active_color() -> TextStyle {
-    TextStyle::default().bg(Color::LightRed)
+    TextStyle::default().bg(Color::lightred())
 }

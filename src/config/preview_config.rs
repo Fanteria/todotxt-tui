@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct PreviewConfig {
 
     /// Preview format (uses placeholders).
-    #[arg(short, long, default_value_t = default_preview_foramt())]
+    #[arg(short, long, default_value_t = default_preview_foramt(), hide_default_value = true)]
     #[serde(default = "default_preview_foramt")]
     pub preview_format: String,
 

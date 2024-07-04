@@ -42,6 +42,8 @@ pub enum ToDoError {
     IOFailed(#[from] IOError),
     #[error("TOML serde error: {0}")]
     TomlSerError(#[from] toml::ser::Error),
+    #[error("String '{0}' is not valid color.")]
+    ColorSerializationFailed(String),
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -27,7 +27,7 @@ pub struct UiConfig {
     pub save_state_path: Option<PathBuf>, // TODO at now unused
 
     /// Layout configuration.
-    #[arg(long, default_value_t = default_layout())]
+    #[arg(long, default_value_t = default_layout(), hide_default_value = true)]
     #[serde(default = "default_layout")]
     pub layout: String,
 }
@@ -69,14 +69,19 @@ fn default_window_keybinds() -> EventHandlerUI {
 fn default_layout() -> String {
     String::from(concat!(
         "[",
-        " Direction: Horizontal,",
-        " Size: 50%,",
-        " [ List: 80%, Preview: 20%, ],",
-        " [",
-        "  Direction: Vertical,",
-        "  Done: 60%,",
-        "  [ Contexts: 50%, Projects: 50%, ],",
-        " ],",
+        "  Direction: Horizontal,",
+        "  Size: 50%,",
+        "  [",
+        "    List: 80%, Preview: 20%,",
+        "  ],",
+        "  [",
+        "    Direction: Vertical,",
+        "    Done: 60%,",
+        "    [", 
+        "      Contexts: 50%,",
+        "      Projects: 50%,",
+        "    ],",
+        "  ],",
         "]",
     ))
 }

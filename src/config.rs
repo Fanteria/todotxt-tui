@@ -27,7 +27,6 @@ pub use self::todo_config::TaskSort;
 pub use self::todo_config::ToDoConfig;
 pub use self::ui_config::UiConfig;
 
-use self::colors::opt_color;
 use crate::layout::widget::widget_type::WidgetType;
 use crate::IOError;
 use crate::ToDoIoError;
@@ -46,7 +45,6 @@ use std::{
     io::{Read, Write},
     path::PathBuf,
 };
-use tui::style::Color;
 use widget_base_config::WidgetBaseConfig;
 
 /// Configuration struct for the ToDo TUI application.
@@ -79,10 +77,6 @@ pub struct Config {
     #[serde(skip)]
     #[arg(short, long)]
     config_path: Option<PathBuf>,
-
-    #[serde(default, with = "opt_color")]
-    #[arg(long, value_name = "COLOR")]
-    active_color: Option<Color>,
 
     /// Widget that will be active after start of the application.
     #[arg(short, long, value_name = "WIDGET_TYPE")]
@@ -226,10 +220,6 @@ impl Config {
         Ok(())
     }
 
-    pub fn get_active_color(&self) -> Color {
-        self.active_color.unwrap_or(Color::Red)
-    }
-
     pub fn get_init_widget(&self) -> WidgetType {
         self.init_widget.unwrap_or(WidgetType::List)
     }
@@ -249,8 +239,10 @@ fn cli_help_style() -> clap::builder::Styles {
 #[cfg(test)]
 mod tests {
     use self::parsers::*;
-    use super::*;
     use std::{io::Result, time::Duration};
+    use super::*;
+    use tui::style::Color;
+    use test_log::test;
 
     #[test]
     fn test_deserialization() {
@@ -262,13 +254,12 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(deserialized.active_color, Some(Color::Green));
+        assert_eq!(*deserialized.styles.active_color, Color::Green);
         assert_eq!(deserialized.init_widget, Some(WidgetType::Done));
         assert_eq!(
             deserialized.ui_config.window_title,
             UiConfig::default().window_title
         );
-        // assert_eq!(deserialized.get_window_title(), "ToDo tui");
     }
 
     #[test]
@@ -289,7 +280,7 @@ mod tests {
         "#;
 
         let c = Config::load_from_buffer(s.as_bytes());
-        assert_eq!(c.active_color, Some(Color::Blue));
+        assert_eq!(*c.styles.active_color, Color::Blue);
         assert_eq!(c.init_widget, None);
         assert_eq!(c.get_init_widget(), WidgetType::List);
         assert_eq!(c.ui_config.window_title, String::from("Title"));

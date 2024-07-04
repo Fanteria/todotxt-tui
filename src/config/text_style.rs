@@ -1,4 +1,3 @@
-use super::colors::opt_color;
 use super::text_modifier::TextModifier;
 use crate::ToDoError;
 use serde::{Deserialize, Serialize};
@@ -7,7 +6,8 @@ use std::{
     fmt::Display,
     str::FromStr,
 };
-use tui::style::{Color, Style};
+use tui::style::Style;
+use super::colors::Color;
 
 /// Represents the styling for text elements.
 ///
@@ -15,9 +15,9 @@ use tui::style::{Color, Style};
 /// and text modifiers.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TextStyle {
-    #[serde(default, with = "opt_color")]
+    // #[serde(default, with = "opt_color")]
     bg: Option<Color>,
-    #[serde(default, with = "opt_color")]
+    // #[serde(default, with = "opt_color")]
     fg: Option<Color>,
     modifier: Option<TextModifier>,
 }
@@ -120,10 +120,10 @@ impl TextStyle {
     pub fn get_style(&self) -> Style {
         let mut style = Style::default();
         if let Some(c) = self.bg {
-            style = style.bg(c);
+            style = style.bg(*c);
         }
         if let Some(c) = self.fg {
-            style = style.fg(c);
+            style = style.fg(*c);
         }
         if let Some(s) = self.modifier {
             style = style.add_modifier(s.into());
@@ -137,14 +137,14 @@ impl Display for TextStyle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut is_first = true;
         if let Some(fg) = self.fg {
-            f.write_fmt(format_args!("{:?}", fg))?;
+            f.write_fmt(format_args!("{}", fg.to_string()))?;
             is_first = false;
         }
         if let Some(bg) = self.bg {
             if is_first {
-                f.write_fmt(format_args!("{:?}", bg))?;
+                f.write_fmt(format_args!("{}", bg.to_string()))?;
             } else {
-                f.write_fmt(format_args!(" {:?}", bg))?;
+                f.write_fmt(format_args!(" {}", bg.to_string()))?;
             }
             is_first = false;
         }
@@ -219,9 +219,9 @@ impl Default for TextStyleList {
     fn default() -> Self {
         let mut items = HashMap::new();
 
-        items.insert(String::from("A"), TextStyle::default().fg(Color::Red));
-        items.insert(String::from("B"), TextStyle::default().fg(Color::Yellow));
-        items.insert(String::from("C"), TextStyle::default().fg(Color::Blue));
+        items.insert(String::from("A"), TextStyle::default().fg(Color::red()));
+        items.insert(String::from("B"), TextStyle::default().fg(Color::yellow()));
+        items.insert(String::from("C"), TextStyle::default().fg(Color::blue()));
 
         Self(items)
     }
@@ -268,6 +268,7 @@ impl FromStr for TextStyleList {
 #[cfg(test)]
 mod tests {
     use crate::error::ToDoRes;
+    use tui::style::Color as tuiColor;
 
     use super::*;
 
@@ -279,11 +280,11 @@ mod tests {
         assert_eq!(style.modifier, None);
         assert!(!style.is_some());
         let style = style
-            .bg(Color::Red)
-            .fg(Color::Green)
+            .bg(Color::red())
+            .fg(Color::green())
             .modifier(TextModifier::Bold);
-        assert_eq!(style.bg, Some(Color::Red));
-        assert_eq!(style.fg, Some(Color::Green));
+        assert_eq!(style.bg, Some(Color::red()));
+        assert_eq!(style.fg, Some(Color::green()));
         assert_eq!(style.modifier, Some(TextModifier::Bold));
         assert!(style.is_some());
 
@@ -293,21 +294,21 @@ mod tests {
     #[test]
     fn combine_styles() {
         let style = TextStyle::default()
-            .bg(Color::Red)
+            .bg(Color::red())
             .modifier(TextModifier::Bold)
             .combine(
                 &TextStyle::default()
-                    .fg(Color::Green)
+                    .fg(Color::green())
                     .modifier(TextModifier::Italic),
             );
-        assert_eq!(style.bg, Some(Color::Red));
-        assert_eq!(style.fg, Some(Color::Green));
+        assert_eq!(style.bg, Some(Color::red()));
+        assert_eq!(style.fg, Some(Color::green()));
         assert_eq!(style.modifier, Some(TextModifier::Italic));
 
         let style = TextStyle::default()
-            .bg(Color::Red)
-            .combine(&TextStyle::default().bg(Color::Yellow));
-        assert_eq!(style.bg, Some(Color::Yellow));
+            .bg(Color::red())
+            .combine(&TextStyle::default().bg(Color::yellow()));
+        assert_eq!(style.bg, Some(Color::yellow()));
         assert_eq!(style.fg, None);
         assert_eq!(style.modifier, None);
     }
@@ -315,7 +316,7 @@ mod tests {
     #[test]
     fn text_style_list() {
         let style = TextStyleList::default().get_style(0);
-        assert_eq!(style.fg, Some(Color::Red));
+        assert_eq!(style.fg, Some(tuiColor::Red));
         assert_eq!(style.bg, None);
         assert!(style.add_modifier.is_empty());
     }
@@ -324,15 +325,15 @@ mod tests {
     fn from_str() -> ToDoRes<()> {
         assert_eq!(
             TextStyle::from_str("red")?,
-            TextStyle::default().fg(Color::Red)
+            TextStyle::default().fg(Color::red())
         );
         assert_eq!(
             TextStyle::from_str("^red").unwrap(),
-            TextStyle::default().bg(Color::Red)
+            TextStyle::default().bg(Color::red())
         );
         assert_eq!(
             TextStyle::from_str("green ^blue").unwrap(),
-            TextStyle::default().fg(Color::Green).bg(Color::Blue)
+            TextStyle::default().fg(Color::green()).bg(Color::blue())
         );
         assert_eq!(
             TextStyle::from_str("bold").unwrap(),
@@ -349,9 +350,9 @@ mod tests {
         assert_eq!(
             TextStyle::from_str("red bold ^blue italic").unwrap(),
             TextStyle::default()
-                .fg(Color::Red)
+                .fg(Color::red())
                 .modifier(TextModifier::Bold)
-                .bg(Color::Blue)
+                .bg(Color::blue())
                 .modifier(TextModifier::Italic)
         );
         Ok(())
@@ -380,7 +381,7 @@ mod tests {
     #[test]
     fn text_style_list_from_str() -> ToDoRes<()> {
         let mut expected = HashMap::<String, TextStyle>::new();
-        expected.insert("A".to_string(), TextStyle::default().fg(Color::Red));
+        expected.insert("A".to_string(), TextStyle::default().fg(Color::red()));
         // TODO must be equal
         // assert_eq!(TextStyleList::from_str("A:green")?, TextStyleList(expected));
 

@@ -1,16 +1,21 @@
 use std::{collections::HashMap, str::FromStr};
 
+use super::colors::Color;
 use super::{text_style::TextStyleList, TextStyle};
 use clap::{arg, Parser};
 use serde::{Deserialize, Serialize};
 use todo_txt::Task;
-use tui::style::Color;
+use tui::style::Color as tuiColor;
 use tui::style::Style;
 
 use crate::error::ToDoRes;
 
 #[derive(Serialize, Deserialize, Parser, Debug, PartialEq, Eq, Clone)]
 pub struct Styles {
+
+    #[arg(long, default_value_t = default_active_color())]
+    #[serde(default = "default_active_color")]
+    pub active_color: Color,
 
     /// Priority-specific colors.
     #[arg(long = "priority_colors", default_value_t)]
@@ -179,6 +184,7 @@ impl Styles {
 impl Default for Styles {
     fn default() -> Self {
         Self {
+            active_color: default_active_color(),
             priority_style: TextStyleList::default(),
             projects_style: TextStyle::default(),
             contexts_style: TextStyle::default(),
@@ -191,19 +197,23 @@ impl Default for Styles {
     }
 }
 
+fn default_active_color() -> Color {
+    Color(tuiColor::Red)
+}
+
 fn default_category_select_style() -> TextStyle {
-    TextStyle::default().fg(Color::Green)
+    TextStyle::default().fg(Color::green())
 }
 
 fn default_category_remove_style() -> TextStyle {
-    TextStyle::default().fg(Color::Red)
+    TextStyle::default().fg(Color::red())
 }
 
 fn default_custom_category_style() -> HashMap<String, TextStyle> {
     let mut custom_category_style = HashMap::new();
     custom_category_style.insert(
         String::from("+todo-tui"),
-        TextStyle::default().fg(Color::LightBlue),
+        TextStyle::default().fg(Color::lightblue()),
     );
     custom_category_style
 }
