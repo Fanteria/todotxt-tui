@@ -48,9 +48,8 @@ use std::{
 use widget_base_config::WidgetBaseConfig;
 
 /// Configuration struct for the ToDo TUI application.
-#[derive(Serialize, Deserialize, Default, Parser)]
+#[derive(Serialize, Deserialize, Default, Parser, PartialEq, Debug)]
 #[command(author, version, about, long_about = None, styles = cli_help_style())]
-#[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct Config {
     /// Generate autocomplete script to given file path.
     #[clap(group = "export")]
