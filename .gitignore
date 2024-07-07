@@ -25,3 +25,4 @@ log.log
 lcov.info
 .cargo/
 .todo-tui.log
+.debug-config.lua
