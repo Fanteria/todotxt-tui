@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::{env::VarError, path::{Path, PathBuf}};
 
 /// Define a custom result type for ToDo related operations.
 pub type ToDoRes<T> = Result<T, ToDoError>;
@@ -40,10 +40,20 @@ pub enum ToDoError {
     IOoperationFailed(#[from] ToDoIoError),
     #[error("{0}")]
     IOFailed(#[from] IOError),
-    #[error("TOML serde error: {0}")]
+    #[error("TOML serialization error: {0}")]
     TomlSerError(#[from] toml::ser::Error),
+    #[error("TOML deserialization error: {}", .0.to_string())]
+    TomlDesError(#[from] toml::de::Error),
     #[error("String '{0}' is not valid color.")]
     ColorSerializationFailed(String),
+    #[error("Var error: {0}")]
+    VarError(#[from] VarError),
+    #[error("Cannot load configuration: {}", .0.to_string())]
+    ConfigLoadError(#[from] TwelfError),
+    #[error("Cannot parse event entry: {0}")]
+    CannotParseEventEntry(String),
+    #[error("Cannot parse UI event: {0}")]
+    CannotParseUIEvent(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -75,5 +85,15 @@ pub struct IOError(#[from] pub std::io::Error);
 impl PartialEq for IOError {
     fn eq(&self, other: &Self) -> bool {
         self.0.kind() == other.0.kind()
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("{0}")]
+pub struct TwelfError(#[from] pub twelf::Error);
+
+impl PartialEq for TwelfError {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_string() == other.0.to_string()
     }
 }

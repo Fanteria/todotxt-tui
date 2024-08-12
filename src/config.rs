@@ -14,6 +14,7 @@ mod ui_config;
 mod widget_base_config;
 
 pub use self::active_color_config::ActiveColorConfig;
+pub use self::colors::Color;
 pub use self::file_worker_config::FileWorkerConfig;
 pub use self::keycode::KeyCodeDef;
 pub use self::list_config::ListConfig;
@@ -27,17 +28,20 @@ pub use self::todo_config::TaskSort;
 pub use self::todo_config::ToDoConfig;
 pub use self::ui_config::UiConfig;
 
-use crate::layout::widget::widget_type::WidgetType;
 use crate::IOError;
 use crate::ToDoIoError;
 use crate::ToDoRes;
 use clap::builder::styling::AnsiColor;
-use clap::FromArgMatches;
-use clap::{arg, CommandFactory, Parser};
+use clap::{CommandFactory, Parser};
 
 use clap_complete::{generate, shells::Bash};
 use preview_config::PreviewConfig;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use twelf::config;
+use twelf::Layer;
+// use serde::{Deserialize, Serialize};
+use std::env;
+use std::ffi::OsString;
 use std::path::Path;
 use std::{
     env::var,
@@ -47,39 +51,35 @@ use std::{
 };
 use widget_base_config::WidgetBaseConfig;
 
+pub struct Cli {}
+
 /// Configuration struct for the ToDo TUI application.
-#[derive(Serialize, Deserialize, Default, Parser, PartialEq, Debug)]
+#[config]
+#[derive(Serialize, Default, Parser, PartialEq, Eq, Debug)]
 #[command(author, version, about, long_about = None, styles = cli_help_style())]
 pub struct Config {
     /// Generate autocomplete script to given file path.
-    #[clap(group = "export")]
-    #[arg(long, help_heading = "export")]
+    #[clap(long, group = "export", help_heading = "export")]
     #[serde(skip)]
     pub export_autocomplete: Option<PathBuf>,
 
     /// Generate full configuration file for actual session
     /// so present configuration file and command lines
     /// options are taken in account.
-    #[clap(group = "export")]
-    #[arg(long, help_heading = "export")]
+    #[clap(long, group = "export", help_heading = "export")]
     #[serde(skip)]
     pub export_config: Option<PathBuf>,
 
     /// Generate configuration file with default values
     /// to given file path.
-    #[clap(group = "export")]
-    #[arg(long, help_heading = "export")]
+    #[clap(long, group = "export", help_heading = "export")]
     #[serde(skip)]
     pub export_default_config: Option<PathBuf>,
 
     /// Path to configuration file.
     #[serde(skip)]
-    #[arg(short, long)]
+    #[clap(short, long)]
     config_path: Option<PathBuf>,
-
-    /// Widget that will be active after start of the application.
-    #[arg(short, long, value_name = "WIDGET_TYPE")]
-    init_widget: Option<WidgetType>,
 
     #[clap(flatten)]
     #[serde(flatten)]
@@ -94,19 +94,19 @@ pub struct Config {
     pub file_worker_config: FileWorkerConfig,
 
     #[serde(flatten)]
-    #[command(flatten)]
+    #[clap(flatten)]
     pub logger: Logger,
 
     #[serde(flatten)]
-    #[command(flatten)]
+    #[clap(flatten)]
     pub list_config: ListConfig,
 
     #[serde(flatten)]
-    #[command(flatten)]
+    #[clap(flatten)]
     pub todo_config: ToDoConfig,
 
     #[serde(flatten)]
-    #[command(flatten)]
+    #[clap(flatten)]
     pub preview_config: PreviewConfig,
 
     #[clap(flatten)]
@@ -119,13 +119,31 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Self {
-        let matches = Self::command().get_matches();
-        let mut config = Self::load_default().unwrap();
-        if let Err(e) = config.update_from_arg_matches(&matches) {
-            log::debug!("Parser error: {}", e.to_string())
-        }
-        config
+    pub fn new() -> ToDoRes<Self> {
+        Self::from_args(env::args())
+    }
+
+    pub fn from_args<I, T>(itr: I) -> ToDoRes<Self>
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<OsString> + Clone,
+    {
+        let matches = Self::command().get_matches_from(itr);
+        let path = match matches.get_one::<PathBuf>("config_path") {
+            Some(config_path) => config_path.to_owned(),
+            None => Self::default_path(),
+        };
+        println!("Path: {path:?}");
+
+        let t = Layer::Toml(path);
+        // let e = Layer::Env(Some(env!("CARGO_PKG_NAME").replace("-", "_").to_uppercase()));
+        // TODO how this is works?
+        let e = Layer::Env(None);
+        let c = Layer::Clap(matches);
+        let config = Config::with_layers(&[t, e, c]).map_err(|e| crate::error::TwelfError(e))?;
+        println!("{config:#?}");
+
+        Ok(config)
     }
 
     /// Loads the default configuration settings.
@@ -136,16 +154,20 @@ impl Config {
     ///
     /// A `Result` containing the loaded configuration (`Ok`) or an error (`Err`) if loading fails.
     pub fn load(path: &PathBuf) -> ToDoRes<Self> {
+        log::info!("Loading config from: {path:?}");
         Ok(Self::load_from_buffer(
             File::open(path).map_err(|e| ToDoIoError::new(path, e))?,
-        ))
+        )?)
     }
 
-    pub fn load_config(&self) -> ToDoRes<Self> {
-        match &self.config_path {
-            Some(path) => Config::load(path),
-            None => Self::load_default(),
+    fn default_path() -> PathBuf {
+        const CONFIG_FOLDER: &str = "/.config/";
+        const CONFIG_NAME: &str = "todotxt-tui.toml";
+        match var("XDG_CONFIG_HOME") {
+            Ok(config_path) => PathBuf::from(config_path),
+            Err(_) => PathBuf::from(var("HOME").unwrap_or(String::from("~"))).join(CONFIG_FOLDER),
         }
+        .join(CONFIG_NAME)
     }
 
     /// Returns the default configuration file path based on environment variables.
@@ -156,17 +178,7 @@ impl Config {
     ///
     /// A `Result` containing the default configuration file path (`Ok`) or an error (`Err`) if the path cannot be determined.
     pub fn load_default() -> ToDoRes<Self> {
-        const CONFIG_FOLDER: &str = "/.config/";
-        const CONFIG_NAME: &str = "todo-tui.toml";
-        let path = PathBuf::from(
-            var("XDG_CONFIG_HOME")
-                .or_else(|_| var("HOME").map(|home| format!("{home}{CONFIG_FOLDER}")))
-                .unwrap_or(String::from("~") + CONFIG_FOLDER)
-                + CONFIG_NAME,
-        );
-        Ok(Self::load_from_buffer(
-            File::open(&path).map_err(|e| ToDoIoError::new(&path, e))?,
-        ))
+        Self::load(&Self::default_path())
     }
 
     /// Loads a configuration from a provided reader.
@@ -178,22 +190,13 @@ impl Config {
     /// # Returns
     ///
     /// The loaded configuration.
-    pub fn load_from_buffer<R>(mut reader: R) -> Self
+    pub fn load_from_buffer<R>(mut reader: R) -> ToDoRes<Self>
     where
         R: Read,
     {
         let mut buf = String::default();
-        if let Err(e) = reader.read_to_string(&mut buf) {
-            log::error!("Cannot load config: {}", e);
-            return Self::default();
-        }
-        match toml::from_str(buf.as_str()) {
-            Ok(c) => c,
-            Err(e) => {
-                log::error!("Cannot parse config: {}", e);
-                Self::default()
-            }
-        }
+        reader.read_to_string(&mut buf).map_err(|e| IOError(e))?;
+        Ok(toml::from_str(buf.as_str())?)
     }
 
     pub fn generate_autocomplete(path: &Path) -> ToDoRes<()> {
@@ -219,9 +222,9 @@ impl Config {
         Ok(())
     }
 
-    pub fn get_init_widget(&self) -> WidgetType {
-        self.init_widget.unwrap_or(WidgetType::List)
-    }
+    // pub fn get_init_widget(&self) -> WidgetType {
+    //     self.init_widget.unwrap_or(WidgetType::List)
+    // }
 }
 
 fn cli_help_style() -> clap::builder::Styles {
@@ -238,10 +241,11 @@ fn cli_help_style() -> clap::builder::Styles {
 #[cfg(test)]
 mod tests {
     use self::parsers::*;
-    use std::{io::Result, time::Duration};
     use super::*;
-    use tui::style::Color;
+    use crate::layout::widget::widget_type::WidgetType;
+    use std::time::Duration;
     use test_log::test;
+    use tui::style::Color;
 
     #[test]
     fn test_deserialization() {
@@ -254,7 +258,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(*deserialized.styles.active_color, Color::Green);
-        assert_eq!(deserialized.init_widget, Some(WidgetType::Done));
+        assert_eq!(deserialized.ui_config.init_widget, WidgetType::Done);
         assert_eq!(
             deserialized.ui_config.window_title,
             UiConfig::default().window_title
@@ -271,17 +275,17 @@ mod tests {
     }
 
     #[test]
-    fn test_load() -> Result<()> {
+    fn test_load() -> ToDoRes<()> {
         let s = r#"
         active_color = "Blue"
         window_title = "Title"
         todo_path = "path to todo file"
         "#;
 
-        let c = Config::load_from_buffer(s.as_bytes());
+        let default = Config::default();
+        let c = Config::load_from_buffer(s.as_bytes())?;
         assert_eq!(*c.styles.active_color, Color::Blue);
-        assert_eq!(c.init_widget, None);
-        assert_eq!(c.get_init_widget(), WidgetType::List);
+        assert_eq!(c.ui_config.init_widget, default.ui_config.init_widget);
         assert_eq!(c.ui_config.window_title, String::from("Title"));
         assert_eq!(
             c.file_worker_config.todo_path,

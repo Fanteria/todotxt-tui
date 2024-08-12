@@ -3,9 +3,9 @@ mod event_entry;
 use crossterm::event::KeyCode;
 use event_entry::EventEntry;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, str::FromStr};
+use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
-use crate::ToDoError;
+use crate::{ToDoError, ToDoRes};
 
 /// Enum representing various UI events that can be triggered.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Debug)]
@@ -39,29 +39,34 @@ impl FromStr for UIEvent {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use UIEvent::*;
-        Ok(match s {
-            "Quit" => Quit,
-            "Save" => Save,
-            "Load" => Load,
-            "MoveLeft" => MoveLeft,
-            "MoveRight" => MoveRight,
-            "MoveUp" => MoveUp,
-            "MoveDown" => MoveDown,
-            "InsertMode" => InsertMode,
-            "EditMode" => EditMode,
+        Ok(match s.to_lowercase().as_str() {
+            "quit" => Quit,
+            "save" => Save,
+            "load" => Load,
+            "moveleft" => MoveLeft,
+            "moveright" => MoveRight,
+            "moveup" => MoveUp,
+            "movedown" => MoveDown,
+            "insertmode" => InsertMode,
+            "editmode" => EditMode,
 
-            "ListDown" => ListDown,
-            "ListUp" => ListUp,
-            "ListFirst" => ListFirst,
-            "ListLast" => ListLast,
-            "SwapUpItem" => SwapUpItem,
-            "SwapDownItem" => SwapDownItem,
-            "RemoveItem" => RemoveItem,
-            "MoveItem" => MoveItem,
-            "Select" => Select,
-            "None" => None,
+            "listdown" => ListDown,
+            "listup" => ListUp,
+            "listfirst" => ListFirst,
+            "listlast" => ListLast,
+            "swapupitem" => SwapUpItem,
+            "swapdownitem" => SwapDownItem,
+            "removeitem" => RemoveItem,
+            "moveitem" => MoveItem,
+            "select" => Select,
+            "remove" => Remove,
+            "none" => None,
 
-            _ => todo!(), // Error TODO
+            _ => {
+                return Err(ToDoError::CannotParseUIEvent(format!(
+                    "Unknown keyword {s}"
+                )))
+            }
         })
     }
 }
@@ -162,5 +167,102 @@ impl EventHandlerUI {
         } else {
             Ordering::Equal
         }
+    }
+}
+
+impl FromStr for EventHandlerUI {
+    type Err = crate::ToDoError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim();
+        println!("---------------------------------------");
+
+        let data = s
+            .strip_prefix('[')
+            .map(|s| s.strip_suffix(']'))
+            .flatten()
+            .ok_or_else(|| ToDoError::CannotParseUIEvent("Value must be in []".to_string()))?
+            .trim();
+
+        Ok(EventHandlerUI {
+            events: if data.is_empty() {
+                Vec::new()
+            } else {
+                data.split(",")
+                    .map(|s| {
+                        println!("{s}");
+                        EventEntry::from_str(s.trim())
+                    })
+                    .collect::<ToDoRes<_>>()?
+            },
+        })
+    }
+}
+
+impl Display for EventHandlerUI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{}]",
+            self.events
+                .iter()
+                .map(|event| format!("{}", event))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn event_handler_ui_from_str() -> ToDoRes<()> {
+        assert_eq!(
+            EventHandlerUI::from_str("[]")?,
+            EventHandlerUI { events: vec![] }
+        );
+
+        // assert_eq!(
+        //     EventHandlerUI::from_str("[f:none,capslock:moveitem]")?,
+        //     EventHandlerUI {
+        //         events: vec![
+        //             EventEntry {
+        //                 key: KeyCode::Char('f'),
+        //                 event: UIEvent::None,
+        //             },
+        //             EventEntry {
+        //                 key: KeyCode::CapsLock,
+        //                 event: UIEvent::MoveItem,
+        //             }
+        //         ]
+        //     }
+        // );
+
+        Ok(())
+    }
+
+    #[test]
+    fn event_handler_ui_display() {
+        assert_eq!(format!("{}", EventHandlerUI { events: vec![] }), "[]");
+        assert_eq!(
+            format!(
+                "{}",
+                EventHandlerUI {
+                    events: vec![
+                        EventEntry {
+                            key: KeyCode::Char('f'),
+                            event: UIEvent::None,
+                        },
+                        EventEntry {
+                            key: KeyCode::CapsLock,
+                            event: UIEvent::MoveItem,
+                        }
+                    ]
+                }
+            ),
+            "[f:None, CapsLock:MoveItem]"
+        );
     }
 }

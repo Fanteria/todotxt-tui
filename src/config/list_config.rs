@@ -12,7 +12,8 @@ pub struct ListConfig {
     pub list_shift: usize,
 
     /// List keybindings.
-    #[clap(skip)]
+    // #[clap(skip)]
+    #[arg(long, default_value_t = default_list_keybind())]
     #[serde(default = "default_list_keybind")]
     pub list_keybind: EventHandlerUI,
 }

@@ -2,9 +2,7 @@ use super::text_modifier::TextModifier;
 use crate::ToDoError;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
-    fmt::Display,
-    str::FromStr,
+    collections::{BTreeMap, HashMap}, error::Error, fmt::{Debug, Display, Formatter}, str::FromStr
 };
 use tui::style::Style;
 use super::colors::Color;
@@ -142,9 +140,9 @@ impl Display for TextStyle {
         }
         if let Some(bg) = self.bg {
             if is_first {
-                f.write_fmt(format_args!("{}", bg.to_string()))?;
+                f.write_fmt(format_args!("^{}", bg.to_string()))?;
             } else {
-                f.write_fmt(format_args!(" {}", bg.to_string()))?;
+                f.write_fmt(format_args!(" ^{}", bg.to_string()))?;
             }
             is_first = false;
         }
@@ -190,7 +188,7 @@ impl FromStr for TextStyle {
 /// Represents a list of text styles for priorities.
 ///
 /// This struct maintains a list of text styles for different priority levels.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct TextStyleList(HashMap<String, TextStyle>);
 
 impl TextStyleList {
@@ -212,6 +210,13 @@ impl TextStyleList {
 
     pub fn get_style_from_str(&self, s: &str) -> Option<TextStyle> {
         self.0.get(s).copied()
+    }
+}
+
+// Debug must be implemented as ordered because of tests.
+impl Debug for TextStyleList {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0.iter().collect::<BTreeMap<_, _>>())
     }
 }
 

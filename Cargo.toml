@@ -26,7 +26,10 @@ toml = "0.7"
 tui = { package = "ratatui", version = "0.22.0", features = ["all-widgets", "crossterm"]}
 tui-input = { version = "0.8", features = ["crossterm"], default-features = false }
 thiserror = "1.0"
+twelf = { version = "0.15", default-features = false, features = ["toml", "env", "clap"] }
 
 [dev-dependencies]
 test-log = "0.2.13"
 env_logger = "0.10.0"
+pretty_assertions = "1.4.0"
+

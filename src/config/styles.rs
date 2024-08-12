@@ -49,7 +49,7 @@ pub struct Styles {
 
     /// Style for categories filtered out.
     #[arg(long, value_name = "TEXT_STYLE", default_value_t = default_category_remove_style())]
-    #[serde(default = "default_category_select_style")]
+    #[serde(default = "default_category_remove_style")]
     pub category_remove_style: TextStyle,
 
     /// Custom style by name for categories.

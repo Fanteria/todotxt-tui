@@ -9,6 +9,7 @@ use crate::{
     file_worker::{FileWorker, FileWorkerCommands},
     layout::{Layout, Render},
     todo::{autocomplete, ToDo},
+    ToDoRes,
 };
 use crossterm::{
     self,
@@ -20,7 +21,6 @@ use crossterm::{
     ExecutableCommand,
 };
 use std::{
-    error::Error,
     io,
     sync::mpsc::Sender,
     sync::{Arc, Mutex},
@@ -87,7 +87,7 @@ impl UI {
         }
     }
 
-    pub fn build(config: &Config) -> Result<UI, Box<dyn Error>> {
+    pub fn build(config: &Config) -> ToDoRes<UI> {
         let mut todo = ToDo::new(config);
 
         if let Some(path) = &config.ui_config.save_state_path {
@@ -97,10 +97,7 @@ impl UI {
         }
 
         let todo = Arc::new(Mutex::new(todo));
-        let file_worker = FileWorker::new(
-            config,
-            todo.clone(),
-        );
+        let file_worker = FileWorker::new(config, todo.clone());
 
         file_worker.load()?;
         let tx = file_worker.run();
@@ -387,11 +384,14 @@ impl HandleEvent for UI {
 mod tests {
     use crossterm::event::{KeyEvent, KeyModifiers};
     use std::env;
+    use std::error::Error;
     use test_log::test;
+
+    use crate::ToDoRes;
 
     use super::*;
 
-    fn default_ui() -> Result<UI, Box<dyn Error>> {
+    fn default_ui() -> ToDoRes<UI> {
         let config = Config::load_from_buffer(
             format!(
                 r#"
@@ -428,7 +428,7 @@ mod tests {
                 env::var("TODO_TUI_TEST_DIR")?
             )
             .as_bytes(),
-        );
+        )?;
         UI::build(&config)
     }
 

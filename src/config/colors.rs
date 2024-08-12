@@ -1,5 +1,6 @@
 use std::{
-    fmt::Display, ops::{Deref, DerefMut}, str::FromStr
+    ops::{Deref, DerefMut},
+    str::FromStr,
 };
 
 use serde::de;

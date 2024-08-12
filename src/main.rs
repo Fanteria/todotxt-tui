@@ -3,7 +3,7 @@ use todotxt_tui::{config::Config, ui::UI};
 
 fn main() {
     let run = || -> Result<(), Box<dyn Error>> {
-        let config = Config::new();
+        let config = Config::new()?;
         if let Some(path) = &config.export_autocomplete {
             Config::generate_autocomplete(path)?;
         } else if let Some(path) = &config.export_default_config {
@@ -11,6 +11,7 @@ fn main() {
         } else if let Some(path) = &config.export_config {
             config.export_config(path)?;
         } else {
+            // TODO move logging to initialization and add log about loaded config file
             config.logger.init()?;
             log::trace!("===== START LOGGING =====");
             let mut ui = UI::build(&config)?;

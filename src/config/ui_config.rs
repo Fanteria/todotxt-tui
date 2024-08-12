@@ -4,10 +4,15 @@ use std::{path::PathBuf, time::Duration};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 
-use crate::ui::{EventHandlerUI, UIEvent};
+use crate::{layout::widget::widget_type::WidgetType, ui::{EventHandlerUI, UIEvent}};
 
 #[derive(Serialize, Deserialize, Parser, Debug, PartialEq, Eq, Clone)]
 pub struct UiConfig {
+    /// Widget that will be active after start of the application.
+    #[arg(long, default_value_t = default_init_widget(), value_name = "WIDGET_TYPE")]
+    #[serde(default = "default_init_widget")]
+    pub init_widget: WidgetType,
+
     /// Title of window with opened todotxt-tui
     #[arg(short = 'T', long, default_value_t = default_window_title(), value_name = "STRING")]
     #[serde(default = "default_window_title")]
@@ -35,6 +40,7 @@ pub struct UiConfig {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
+            init_widget: default_init_widget(),
             window_title: default_window_title(),
             window_keybinds: default_window_keybinds(),
             list_refresh_rate: default_list_refresh_rate(),
@@ -42,6 +48,10 @@ impl Default for UiConfig {
             layout: default_layout(),
         }
     }
+}
+
+fn default_init_widget() -> WidgetType {
+    WidgetType::List
 }
 
 fn default_window_title() -> String {

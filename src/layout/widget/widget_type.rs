@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 /// An enumeration representing different types of widgets used in the application.
 /// Widgets are I components with specific functionalities, such as task lists, project lists, and previews.
-#[derive(Default, PartialEq, Debug, Copy, Clone, Serialize, Deserialize, ValueEnum)]
+#[derive(Default, PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize, ValueEnum)]
 pub enum WidgetType {
     #[default]
     List,
@@ -22,15 +22,7 @@ pub enum WidgetType {
 
 impl fmt::Display for WidgetType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use WidgetType::*;
-        match self {
-            List => write!(f, "List"),
-            Done => write!(f, "Done"),
-            Project => write!(f, "Projects"),
-            Context => write!(f, "Contexts"),
-            Hashtag => write!(f, "Hashtags"),
-            Preview => write!(f, "Preview"),
-        }
+        write!(f, "{}", format!("{self:?}").to_lowercase())
     }
 }
 

@@ -22,7 +22,7 @@ pub struct FileWorkerConfig {
     pub autosave_duration: Duration,
 
     /// Enable file watcher for auto-reloading.
-    #[arg(short, long, value_name = "FLAG")]
+    #[arg(short, long, default_value_t = default_file_watcher())]
     #[serde(default = "default_file_watcher")]
     pub file_watcher: bool,
 }

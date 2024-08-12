@@ -1,0 +1,52 @@
+active_color = "Blue"
+init_widget = "Project"
+window_title = "Window title"
+layout = "Short invalid layout"
+todo_path = "invalid/path/to/todo.txt"
+archive_path = "invalid/path/to/archive.txt"
+file_watcher = false
+list_shift = 0
+use_done = true
+pending_sort = "Priority"
+done_sort = "Reverse"
+delete_final_date = false
+set_final_date = "Never"
+preview_format = "unimportant preview"
+wrap_preview = false
+
+[[window_keybinds.events]]
+event = "EditMode"
+key.Char = "e"
+
+[list_refresh_rate]
+secs = 10
+nanos = 0
+
+[list_active_color]
+bg = "Green"
+
+[autosave_duration]
+secs = 100
+nanos = 0
+
+[[list_keybind.events]]
+event = "ListLast"
+key.Char = "g"
+
+[[tasks_keybind.events]]
+event = "Select"
+key.Char = "s"
+
+[[category_keybind.events]]
+event = "Remove"
+key.Char = "r"
+
+[category_select_style]
+fg = "Red"
+
+[category_remove_style]
+fg = "Green"
+
+[custom_category_style."+project"]
+fg = "Green"
+
