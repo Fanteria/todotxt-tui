@@ -2,7 +2,7 @@ use super::UIEvent;
 use crate::{config::KeyCodeDef, ToDoError};
 use crossterm::event::KeyCode;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, error::Error, fmt::Display, str::FromStr};
+use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
 /// Struct representing an entry that maps a `KeyCode` to a `UIEvent`.
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -12,6 +12,8 @@ mod text_style;
 mod todo_config;
 mod ui_config;
 mod widget_base_config;
+mod conf;
+mod configs;
 
 pub use self::active_color_config::ActiveColorConfig;
 pub use self::colors::Color;
@@ -27,6 +29,12 @@ pub use self::todo_config::SetFinalDateType;
 pub use self::todo_config::TaskSort;
 pub use self::todo_config::ToDoConfig;
 pub use self::ui_config::UiConfig;
+
+pub use self::conf::Conf;
+pub use self::conf::ConfMerge;
+pub use self::conf::ConfigDefaults;
+
+use configs::*;
 
 use crate::IOError;
 use crate::ToDoIoError;
@@ -50,8 +58,6 @@ use std::{
     path::PathBuf,
 };
 use widget_base_config::WidgetBaseConfig;
-
-pub struct Cli {}
 
 /// Configuration struct for the ToDo TUI application.
 #[config]

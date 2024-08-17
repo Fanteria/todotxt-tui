@@ -64,9 +64,9 @@ pub struct ToDoIoError {
 }
 
 impl ToDoIoError {
-    pub fn new(path: &Path, err: std::io::Error) -> Self {
+    pub fn new(path: impl AsRef<Path>, err: std::io::Error) -> Self {
         Self {
-            path: path.to_path_buf(),
+            path: path.as_ref().to_path_buf(),
             err,
         }
     }

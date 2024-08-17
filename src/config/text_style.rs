@@ -2,7 +2,7 @@ use super::text_modifier::TextModifier;
 use crate::ToDoError;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap}, error::Error, fmt::{Debug, Display, Formatter}, str::FromStr
+    collections::{BTreeMap, HashMap}, fmt::{Debug, Display, Formatter}, str::FromStr
 };
 use tui::style::Style;
 use super::colors::Color;

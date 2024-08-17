@@ -1,13 +1,10 @@
+use crate::ToDoError;
+use serde::{de, Deserialize, Serialize};
 use std::{
     ops::{Deref, DerefMut},
     str::FromStr,
 };
-
-use serde::de;
-use serde::{Deserialize, Serialize};
 use tui::style::Color as tuiColor;
-
-use crate::ToDoError;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Color(pub tuiColor);
