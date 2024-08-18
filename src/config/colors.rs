@@ -1,8 +1,7 @@
 use crate::ToDoError;
 use serde::{de, Deserialize, Serialize};
 use std::{
-    ops::{Deref, DerefMut},
-    str::FromStr,
+    fmt::Display, ops::{Deref, DerefMut}, str::FromStr
 };
 use tui::style::Color as tuiColor;
 
@@ -74,12 +73,12 @@ impl DerefMut for Color {
     }
 }
 
-impl ToString for Color {
-    fn to_string(&self) -> String {
+impl Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.0 {
-            tuiColor::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
-            tuiColor::Indexed(i) => format!("{i}"),
-            _ => format!("{:?}", self.0),
+            tuiColor::Rgb(r, g, b) => write!(f, "#{r:02x}{g:02x}{b:02x}"),
+            tuiColor::Indexed(i) => write!(f, "{i}"),
+            _ => write!(f, "{:?}", self.0),
         }
     }
 }

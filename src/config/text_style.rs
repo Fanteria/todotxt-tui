@@ -137,14 +137,14 @@ impl Display for TextStyle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut is_first = true;
         if let Some(fg) = self.fg {
-            f.write_fmt(format_args!("{}", fg.to_string()))?;
+            f.write_fmt(format_args!("{}", fg))?;
             is_first = false;
         }
         if let Some(bg) = self.bg {
             if is_first {
-                f.write_fmt(format_args!("^{}", bg.to_string()))?;
+                f.write_fmt(format_args!("^{}", bg))?;
             } else {
-                f.write_fmt(format_args!(" ^{}", bg.to_string()))?;
+                f.write_fmt(format_args!(" ^{}", bg))?;
             }
             is_first = false;
         }
