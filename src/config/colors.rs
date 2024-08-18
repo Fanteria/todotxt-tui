@@ -1,7 +1,9 @@
 use crate::ToDoError;
 use serde::{de, Deserialize, Serialize};
 use std::{
-    fmt::Display, ops::{Deref, DerefMut}, str::FromStr
+    fmt::Display,
+    ops::{Deref, DerefMut},
+    str::FromStr,
 };
 use tui::style::Color as tuiColor;
 
