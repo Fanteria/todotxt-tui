@@ -7,7 +7,7 @@ use log4rs::{
 };
 use std::{env, error::Error, path::PathBuf, process::exit};
 use todotxt_tui::{
-    config::{ConfMerge, Config, Conf},
+    config::{Conf, ConfMerge, Config},
     ui::UI,
 };
 
