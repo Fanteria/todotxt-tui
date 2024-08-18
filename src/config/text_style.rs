@@ -1,5 +1,5 @@
 use super::colors::Color;
-use super::text_modifier::TextModifier;
+use super::TextModifier;
 use crate::ToDoError;
 use serde::{Deserialize, Serialize};
 use std::{

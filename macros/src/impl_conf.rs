@@ -44,7 +44,7 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
                 let last = path.segments.last().expect("TODO");
                 match last.ident.to_string().as_str() {
                     "Duration" => quote! {
-                        #[arg(value_parser = super::parsers::parse_duration)]
+                        #[arg(value_parser = self::parsers::parse_duration)]
                         #[arg(value_name = "DURATION")]
                         #mandatory
                     },

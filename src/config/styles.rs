@@ -1,4 +1,4 @@
-use super::configs::Styles;
+use super::Styles;
 use super::TextStyle;
 use crate::ToDoError;
 use crate::ToDoRes;
