@@ -39,7 +39,7 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
         fields_merge.push(quote! {
             #field_name: #ty_conf::merge(source.#field_name, additional.#field_name),
         });
-        fields_from_trait.push(quote!{
+        fields_from_trait.push(quote! {
             #field_name: value.#field_name.into(),
         })
     }

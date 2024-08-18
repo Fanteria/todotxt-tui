@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use todo_txt::Task;
 
-use crate::config::{ToDoConfig, TaskSort};
+use crate::config::{TaskSort, ToDoConfig};
 
 use super::ToDo;
 

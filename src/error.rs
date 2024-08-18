@@ -1,4 +1,7 @@
-use std::{env::VarError, path::{Path, PathBuf}};
+use std::{
+    env::VarError,
+    path::{Path, PathBuf},
+};
 
 /// Define a custom result type for ToDo related operations.
 pub type ToDoRes<T> = Result<T, ToDoError>;

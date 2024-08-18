@@ -1,6 +1,6 @@
+use crate::impl_conf_functions;
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use crate::impl_conf_functions;
 
 use super::CONF_OPTION;
 
@@ -8,8 +8,6 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
     let name_conf = format_ident!("{}{CONF_OPTION}", ast.ident);
     let name = &ast.ident;
     let help_heading = name.to_string().replace("Config", "");
-
-            // #[clap(long, group = "export", help_heading = "Export")]
     let fields = match &ast.data {
         syn::Data::Struct(data) => match &data.fields {
             syn::Fields::Named(named) => &named.named,
@@ -24,11 +22,19 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
         let field_name = &field.ident;
         let ty = &field.ty;
         let attrs = &field.attrs;
+        let env_variable = format!(
+            "TODOTXT_TUI_{}",
+            field_name
+                .as_ref()
+                .expect("TODO")
+                .to_string()
+                .to_uppercase()
+        );
 
         let mandatory = quote! {
             #[arg(long)]
             #[serde()]
-            #[clap(help_heading = #help_heading)]
+            #[clap(env = #env_variable, help_heading = #help_heading)]
             #(#attrs)*
             pub #field_name: Option<#ty>,
         };
@@ -81,7 +87,7 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
         fields_merge.push(quote! {
             #field_name: additional.#field_name.unwrap_or(source.#field_name),
         });
-        fields_from_trait.push(quote!{
+        fields_from_trait.push(quote! {
             #field_name: Some(value.#field_name),
         })
     }

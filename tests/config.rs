@@ -1,6 +1,5 @@
 mod common;
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -24,7 +23,7 @@ use todotxt_tui::ToDoRes;
 #[test]
 fn empty_config() -> ToDoRes<()> {
     let empty_config = common::get_test_file("empty_config.toml");
-    let default = Config::from_file(&empty_config)?;
+    let default = Config::from_file(empty_config)?;
     assert_eq!(default, Config::default());
 
     Ok(())
@@ -33,7 +32,7 @@ fn empty_config() -> ToDoRes<()> {
 #[test]
 fn changed_config() -> ToDoRes<()> {
     let testing_config = common::get_test_file("testing_config.toml");
-    let config = Config::from_file(&testing_config)?;
+    let config = Config::from_file(testing_config)?;
     let mut expected = Config::default();
     expected.styles.active_color = Color::blue();
     expected.ui_config.init_widget = WidgetType::Project;
@@ -161,7 +160,10 @@ fn custom_clap_arguments() -> ToDoRes<()> {
     expected.styles.category_select_style = TextStyle::default().fg(Color::blue());
     expected.styles.category_remove_style = TextStyle::default().fg(Color::yellow());
     let mut custom_styles = CustomCategoryStyle::default();
-    custom_styles.insert(String::from("+project"), TextStyle::default().fg(Color::green()));
+    custom_styles.insert(
+        String::from("+project"),
+        TextStyle::default().fg(Color::green()),
+    );
     expected.styles.custom_category_style = custom_styles;
 
     assert_eq!(config, expected);

@@ -178,17 +178,26 @@ mod tests {
     #[test]
     fn from_str() -> ToDoRes<()> {
         assert_eq!(
-            EventEntry{ key: KeyCode::Char('a'), event: UIEvent::ListUp },
+            EventEntry {
+                key: KeyCode::Char('a'),
+                event: UIEvent::ListUp
+            },
             EventEntry::from_str("a:ListUp")?
         );
 
         assert_eq!(
-            EventEntry{ key: KeyCode::Insert, event: UIEvent::Select },
+            EventEntry {
+                key: KeyCode::Insert,
+                event: UIEvent::Select
+            },
             EventEntry::from_str("iNSert:select")?
         );
 
         assert_eq!(
-            EventEntry{ key: KeyCode::F(6), event: UIEvent::Remove },
+            EventEntry {
+                key: KeyCode::F(6),
+                event: UIEvent::Remove
+            },
             EventEntry::from_str("F6:rEmOvE")?
         );
 

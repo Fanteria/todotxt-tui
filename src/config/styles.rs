@@ -8,32 +8,6 @@ use std::{collections::HashMap, str::FromStr};
 use todo_txt::Task;
 use tui::style::Style;
 
-// #[derive(Serialize, Deserialize, Parser, Debug, PartialEq, Eq, Clone)]
-// #[derive(Conf, Clone)]
-// pub struct Styles {
-//     /// Color of active window.
-//     pub active_color: Color,
-//     /// Priority-specific colors.
-//     pub priority_style: TextStyleList, // TODO incompatible option config
-//     /// Style for projects in lists.
-//     pub projects_style: TextStyle,
-//     /// Style for contexts in lists.
-//     pub contexts_style: TextStyle,
-//     /// Style for hashtags in lists.
-//     pub hashtags_style: TextStyle,
-//     /// Style for categories in lists.
-//     pub category_style: TextStyle,
-//     /// Style for categories to filter.
-//     pub category_select_style: TextStyle,
-//     /// Style for categories filtered out.
-//     pub category_remove_style: TextStyle,
-//     // /// Custom style by name for categories.
-//     // TODO
-//     // #[clap(skip)]
-//     // #[serde(default = "default_custom_category_style")]
-//     // pub custom_category_style: HashMap<String, TextStyle>,
-// }
-
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub enum StylesValue {

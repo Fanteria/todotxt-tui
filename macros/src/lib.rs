@@ -1,8 +1,8 @@
 extern crate proc_macro;
 
 mod impl_conf;
-mod impl_conf_merge;
 mod impl_conf_functions;
+mod impl_conf_merge;
 
 use proc_macro::TokenStream;
 
@@ -14,10 +14,8 @@ pub fn conf_derive(input: TokenStream) -> TokenStream {
     impl_conf::impl_conf(&ast)
 }
 
-
 #[proc_macro_derive(ConfMerge, attributes(command))]
 pub fn conf_merge_derive(input: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).expect("TODO some meaningfull");
     impl_conf_merge::impl_conf_merge(&ast)
 }
-

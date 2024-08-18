@@ -1,3 +1,4 @@
+use clap::builder::Styles;
 use std::{
     env,
     ffi::OsString,
@@ -5,7 +6,6 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
 };
-use clap::builder::Styles;
 
 use crate::{ToDoIoError, ToDoRes};
 
@@ -25,6 +25,13 @@ pub trait Conf: Sized + Default {
         Iter: IntoIterator<Item = T>,
         T: Into<OsString> + Clone,
         R: Read;
+
+    fn env_prefix() -> String {
+        format!(
+            "{}_",
+            env!("CARGO_PKG_NAME").to_uppercase().replace('-', "_")
+        )
+    }
 }
 
 pub trait ConfMerge: Sized + ConfigDefaults + Conf {
@@ -40,8 +47,6 @@ pub trait ConfMerge: Sized + ConfigDefaults + Conf {
 
 pub trait ConfigDefaults {
     fn config_path() -> PathBuf;
-
-    fn env_prefix() -> String;
 
     fn help_colors() -> Styles {
         Styles::plain()

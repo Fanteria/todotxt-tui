@@ -1,4 +1,3 @@
-use std::{env, error::Error, path::PathBuf, process::exit};
 use log::LevelFilter;
 use log4rs::{
     append::file::FileAppender,
@@ -6,7 +5,11 @@ use log4rs::{
     encode::pattern::PatternEncoder,
     Config as LogConfig,
 };
-use todotxt_tui::{config::{ConfMerge, Config, ConfigDefaults}, ui::UI};
+use std::{env, error::Error, path::PathBuf, process::exit};
+use todotxt_tui::{
+    config::{ConfMerge, Config, Conf},
+    ui::UI,
+};
 
 fn log_init() -> Result<(), Box<dyn Error>> {
     let config_folder = Config::config_folder();
@@ -33,10 +36,10 @@ fn main() {
         log_init()?;
         log::trace!("===== START LOGGING =====");
         let config = Config::new()?;
-            // TODO move logging to initialization and add log about loaded config file
-            let mut ui = UI::build(&config)?;
-            log::trace!("===== STARTING UI =====");
-            ui.run()?;
+        // TODO move logging to initialization and add log about loaded config file
+        let mut ui = UI::build(&config)?;
+        log::trace!("===== STARTING UI =====");
+        ui.run()?;
         // }
         Ok(())
     };

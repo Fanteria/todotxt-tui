@@ -23,7 +23,7 @@ pub struct FileWorkerConfig {
     /// finished files will be stored in your todo.txt.
     pub archive_path: Option<PathBuf>,
 
-    #[arg(short = 'd')]
+    #[arg(short = 'd', env=concat!(env!("CARGO_PKG_NAME"), "_", "AUTOSAVE_DURATION"))]
     /// Autosave duration (in seconds).
     pub autosave_duration: Duration,
 
@@ -275,7 +275,6 @@ pub struct Styles {
 }
 
 impl Styles {
-
     pub fn get_style_default(&self) -> StylesValue {
         StylesValue::Const(Style::default())
     }
@@ -385,13 +384,6 @@ impl Config {
 impl ConfigDefaults for Config {
     fn config_path() -> PathBuf {
         Self::config_folder().join("todotxt-tui.toml")
-    }
-
-    fn env_prefix() -> String {
-        format!(
-            "{}_",
-            env!("CARGO_PKG_NAME").to_uppercase().replace('-', "_")
-        )
     }
 
     fn help_colors() -> clap::builder::Styles {

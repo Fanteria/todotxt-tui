@@ -141,9 +141,13 @@ impl FileWorker {
         );
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.archive_path {
-            Some(s) => Self::save_tasks(&mut File::create(s).map_err(|err| ToDoIoError {
-                path: s.to_path_buf(), err
-            })?, &todo.done),
+            Some(s) => Self::save_tasks(
+                &mut File::create(s).map_err(|err| ToDoIoError {
+                    path: s.to_path_buf(),
+                    err,
+                })?,
+                &todo.done,
+            ),
             None => Self::save_tasks(&mut f, &todo.done),
         }
     }
@@ -161,7 +165,9 @@ impl FileWorker {
     fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> ToDoRes<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
-            writer.write_all((task.to_string() + "\n").as_bytes()).map_err(IOError)?;
+            writer
+                .write_all((task.to_string() + "\n").as_bytes())
+                .map_err(IOError)?;
         }
         Ok(())
     }

@@ -29,7 +29,9 @@ impl StateList {
     pub fn new(base: WidgetList, data_type: ToDoData, config: &Config) -> Self {
         Self {
             base,
-            style: config.active_color_config.list_active_color
+            style: config
+                .active_color_config
+                .list_active_color
                 .combine(&match data_type {
                     ToDoData::Done => config.active_color_config.done_active_color,
                     ToDoData::Pending => config.active_color_config.pending_active_color,

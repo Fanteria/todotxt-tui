@@ -1,10 +1,5 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{
-    config::Config,
-    error::ToDoRes,
-    todo::Parser,
-    ui::UIEvent,
-};
+use crate::{config::Config, error::ToDoRes, todo::Parser, ui::UIEvent};
 use tui::{
     backend::Backend,
     text::{Line, Span},
