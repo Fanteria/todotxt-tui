@@ -41,6 +41,8 @@ pub trait ConfMerge: Sized + ConfigDefaults + Conf {
 pub trait ConfigDefaults {
     fn config_path() -> PathBuf;
 
+    fn env_prefix() -> String;
+
     fn help_colors() -> Styles {
         Styles::plain()
     }

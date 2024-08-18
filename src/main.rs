@@ -1,26 +1,47 @@
-use std::error::Error;
-use todotxt_tui::{config::Config, ui::UI};
+use std::{env, error::Error, path::PathBuf, process::exit};
+use log::LevelFilter;
+use log4rs::{
+    append::file::FileAppender,
+    config::{Appender, Root},
+    encode::pattern::PatternEncoder,
+    Config as LogConfig,
+};
+use todotxt_tui::{config::{ConfMerge, Config, ConfigDefaults}, ui::UI};
+
+fn log_init() -> Result<(), Box<dyn Error>> {
+    let config_folder = Config::config_folder();
+    let log_file = match env::var(format!("{}LOGCONFIG", Config::env_prefix())) {
+        Ok(log_file) => PathBuf::from(log_file),
+        Err(_) => config_folder.join("log4rs.yaml"),
+    };
+    if log_file.exists() {
+        log4rs::init_file(log_file, Default::default())?;
+    } else {
+        let logfile = FileAppender::builder()
+            .encoder(Box::new(PatternEncoder::new("{d} [{h({l})}] {M}: {m}{n}")))
+            .build(config_folder.join("log.log"))?;
+        let log_cofnig = LogConfig::builder()
+            .appender(Appender::builder().build("logfile", Box::new(logfile)))
+            .build(Root::builder().appender("logfile").build(LevelFilter::Info))?;
+        log4rs::init_config(log_cofnig)?;
+    }
+    Ok(())
+}
 
 fn main() {
     let run = || -> Result<(), Box<dyn Error>> {
+        log_init()?;
+        log::trace!("===== START LOGGING =====");
         let config = Config::new()?;
-        if let Some(path) = &config.export_autocomplete {
-            Config::generate_autocomplete(path)?;
-        } else if let Some(path) = &config.export_default_config {
-            Config::export_default_config(path)?;
-        } else if let Some(path) = &config.export_config {
-            config.export_config(path)?;
-        } else {
             // TODO move logging to initialization and add log about loaded config file
-            config.logger.init()?;
-            log::trace!("===== START LOGGING =====");
             let mut ui = UI::build(&config)?;
-            log::trace!("===== STARING UI =====");
+            log::trace!("===== STARTING UI =====");
             ui.run()?;
-        }
+        // }
         Ok(())
     };
     if let Err(e) = run() {
         eprintln!("{}", e);
+        exit(1);
     }
 }

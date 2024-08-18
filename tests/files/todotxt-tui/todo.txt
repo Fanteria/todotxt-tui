@@ -1,0 +1,20 @@
+2023-10-03 save file after some edit +todo-tui
+2023-10-04 Add find mode to lists +todo-tui
+2023-10-09 Create mergable keybind options +todo-tui
+2023-10-10 Add on change, start, end, ... macro +todo-tui
+2023-04-24 Andělská Hora @family @irl
+2023-10-16 Enable mouse??? +todo-tui
+2023-10-24 Context and project cannot scroll +todo-tui
+2023-08-11 přeložit Bram wiki +wiki
+2023-08-28 BSON czech wiki +wiki
+2023-08-28 Proto buffers czech wiki +wiki
+2023-09-25 Přeložit buildbot wiki +wiki link:https://www.google.com/search?client=firefox-b-d&q=buildbot
+2023-11-14 Remember state of filters and indexes to load session after start +todo-tui
+2023-10-06 Udělat vlastní webovku @long @web
+2023-11-24 Create bot for AoC @web @long
+2023-12-18 Solve nvim debugging binary some more inteligent way +nvim
+(A) 2024-03-06 Přidat barvičky do SMakefile @work
+2023-08-11 po státnicích vyzkoušet LFS @long
+2024-04-11 Maximální počet úkolů z archivu +todo-tui
+2024-06-02 Try to reimplement watson @long
+(B) 2024-07-31 Anitka jmenovka na schránku. @family

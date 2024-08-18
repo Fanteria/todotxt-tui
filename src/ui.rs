@@ -387,12 +387,13 @@ mod tests {
     use std::error::Error;
     use test_log::test;
 
+    use crate::config::Conf;
     use crate::ToDoRes;
 
     use super::*;
 
     fn default_ui() -> ToDoRes<UI> {
-        let config = Config::load_from_buffer(
+        let config = Config::from_reader(
             format!(
                 r#"
             todo_path = "{}todo.txt"

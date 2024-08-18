@@ -54,6 +54,8 @@ pub enum ToDoError {
     CannotParseEventEntry(String),
     #[error("Cannot parse UI event: {0}")]
     CannotParseUIEvent(String),
+    #[error("Cannot parse custom category style: {0}")]
+    CustomCategoryStyleParseFailed(&'static str),
 }
 
 #[derive(Debug, thiserror::Error)]

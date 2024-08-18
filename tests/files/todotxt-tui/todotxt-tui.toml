@@ -1,12 +1,11 @@
 active_color = "Red"
 init_widget = "List"
 window_title = "ToDo tui"
-todo_path = "/some/random/path"
+# todo_path = "/some/random/path"
+todo_path = "./tests/files/todotxt-tui/todo.txt"
 # archive_path = "/home/jirka/Documents/todo/archive.txt"
 # save_state_path = "/home/jirka/aux.toml"
 wrap_preview = true
-log_file = "log.log"
-log_level = "TRACE"
 file_watcher = true
 list_shift = 4
 pending_sort = "Priority"

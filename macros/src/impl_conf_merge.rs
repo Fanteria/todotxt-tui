@@ -49,33 +49,34 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
     let impl_conf_trait = impl_conf_functions::impl_conf_trait(name, &name_conf);
     quote! {
         #[derive(serde::Serialize, serde::Deserialize, clap::Parser, Debug, PartialEq, Eq, Clone)]
-        // #[command(styles = #name::help_colors())]
+        #[command(styles = #name::help_colors())]
         #(#attrs)*
         struct #name_conf {
+
+            #(#fields_vec)*
+
             /// Generate autocomplete script to given file path.
             #[serde(skip)]
-            #[clap(long, group = "export", help_heading = "export")]
+            #[clap(long, group = "export", help_heading = "Export")]
             pub export_autocomplete: Option<std::path::PathBuf>,
 
             /// Generate full configuration file for actual session
             /// so present configuration file and command lines
             /// options are taken in account.
             #[serde(skip)]
-            #[clap(long, group = "export", help_heading = "export")]
+            #[clap(long, group = "export", help_heading = "Export")]
             pub export_config: Option<std::path::PathBuf>,
 
             /// Generate configuration file with default values
             /// to given file path.
             #[serde(skip)]
-            #[clap(long, group = "export", help_heading = "export")]
+            #[clap(long, group = "export", help_heading = "Export")]
             pub export_default_config: Option<std::path::PathBuf>,
 
             /// Path to configuration file.
             #[serde(skip)]
             #[clap(short, long)]
             config_path: Option<std::path::PathBuf>,
-
-            #(#fields_vec)*
         }
 
         impl #name_conf {

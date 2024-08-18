@@ -6,10 +6,13 @@ use std::time::Duration;
 
 use crossterm::event::KeyCode;
 use todotxt_tui::config::Color;
+use todotxt_tui::config::Conf;
+use todotxt_tui::config::ConfMerge;
 use todotxt_tui::config::Config;
 
 use pretty_assertions::assert_eq;
 use test_log::test;
+use todotxt_tui::config::CustomCategoryStyle;
 use todotxt_tui::config::SetFinalDateType;
 use todotxt_tui::config::TaskSort;
 use todotxt_tui::config::TextStyle;
@@ -21,7 +24,7 @@ use todotxt_tui::ToDoRes;
 #[test]
 fn empty_config() -> ToDoRes<()> {
     let empty_config = common::get_test_file("empty_config.toml");
-    let default = Config::load(&empty_config)?;
+    let default = Config::from_file(&empty_config)?;
     assert_eq!(default, Config::default());
 
     Ok(())
@@ -30,7 +33,7 @@ fn empty_config() -> ToDoRes<()> {
 #[test]
 fn changed_config() -> ToDoRes<()> {
     let testing_config = common::get_test_file("testing_config.toml");
-    let config = Config::load(&testing_config)?;
+    let config = Config::from_file(&testing_config)?;
     let mut expected = Config::default();
     expected.styles.active_color = Color::blue();
     expected.ui_config.init_widget = WidgetType::Project;
@@ -60,7 +63,7 @@ fn changed_config() -> ToDoRes<()> {
         EventHandlerUI::new(&[(KeyCode::Char('r'), UIEvent::Remove)]);
     expected.styles.category_select_style = TextStyle::default().fg(Color::red());
     expected.styles.category_remove_style = TextStyle::default().fg(Color::green());
-    expected.styles.custom_category_style = HashMap::new();
+    expected.styles.custom_category_style = CustomCategoryStyle::default();
     expected.styles.custom_category_style.insert(
         String::from("+project"),
         TextStyle::default().fg(Color::green()),

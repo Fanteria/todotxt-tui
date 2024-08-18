@@ -1,3 +1,6 @@
+use super::{
+    conf::ConfigDefaults, styles::CustomCategoryStyle, Color, StylesValue, TextStyle, TextStyleList,
+};
 use crate::{
     layout::widget::widget_type::WidgetType,
     ui::{EventHandlerUI, UIEvent},
@@ -5,16 +8,14 @@ use crate::{
 };
 use clap::{builder::styling::AnsiColor, FromArgMatches, ValueEnum};
 use crossterm::event::KeyCode;
-use log::LevelFilter;
 use macros::{Conf, ConfMerge};
 use serde::{Deserialize, Serialize};
-use std::{env::var, fmt::Display, path::PathBuf, time::Duration};
+use std::{env::var, fmt::Display, path::PathBuf, str::FromStr, time::Duration};
 use tui::style::Color as tuiColor;
+use tui::style::Style;
 
-use super::{conf::Conf, conf::ConfMerge, conf::ConfigDefaults, Color, TextStyle, TextStyleList};
-
-#[derive(Conf)]
-pub struct FileWorker {
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct FileWorkerConfig {
     /// The path to your todo.txt file.
     pub todo_path: PathBuf,
 
@@ -30,7 +31,7 @@ pub struct FileWorker {
     pub file_watcher: bool,
 }
 
-impl Default for FileWorker {
+impl Default for FileWorkerConfig {
     fn default() -> Self {
         Self {
             todo_path: PathBuf::from(var("HOME").unwrap_or(String::from("~")) + "/todo.txt"),
@@ -41,8 +42,8 @@ impl Default for FileWorker {
     }
 }
 
-#[derive(Conf)]
-pub struct ActiveColor {
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct ActiveColorConfig {
     /// Color for the active list item.
     pub list_active_color: TextStyle,
 
@@ -53,7 +54,7 @@ pub struct ActiveColor {
     pub done_active_color: TextStyle,
 }
 
-impl Default for ActiveColor {
+impl Default for ActiveColorConfig {
     fn default() -> Self {
         Self {
             list_active_color: TextStyle::default().bg(Color::lightred()),
@@ -63,8 +64,8 @@ impl Default for ActiveColor {
     }
 }
 
-#[derive(Conf)]
-pub struct List {
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct ListConfig {
     /// Indentation level for lists.
     pub list_shift: usize,
 
@@ -72,7 +73,7 @@ pub struct List {
     pub list_keybind: EventHandlerUI,
 }
 
-impl Default for List {
+impl Default for ListConfig {
     fn default() -> Self {
         Self {
             list_shift: 4,
@@ -86,8 +87,8 @@ impl Default for List {
     }
 }
 
-#[derive(Conf)]
-pub struct Preview {
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct PreviewConfig {
     /// Preview format (uses placeholders).
     #[arg(hide_default_value = true)]
     pub preview_format: String,
@@ -96,7 +97,7 @@ pub struct Preview {
     pub wrap_preview: bool,
 }
 
-impl Default for Preview {
+impl Default for PreviewConfig {
     fn default() -> Self {
         Self {
             preview_format: String::from(
@@ -140,8 +141,8 @@ pub enum TaskSort {
     AlphanumericReverse,
 }
 
-#[derive(Conf)]
-pub struct ToDo {
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct ToDoConfig {
     /// Add projects, contexts and tags of done tasks
     /// to list of projects, contexts and tags
     pub use_done: bool,
@@ -155,7 +156,7 @@ pub struct ToDo {
     pub set_final_date: SetFinalDateType,
 }
 
-impl Default for ToDo {
+impl Default for ToDoConfig {
     fn default() -> Self {
         Self {
             use_done: false,
@@ -167,8 +168,8 @@ impl Default for ToDo {
     }
 }
 
-#[derive(Conf)]
-pub struct Ui {
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct UiConfig {
     /// Widget that will be active after start of the application.
     pub init_widget: WidgetType,
     /// Title of window with opened todotxt-tui
@@ -186,7 +187,7 @@ pub struct Ui {
     pub layout: String,
 }
 
-impl Default for Ui {
+impl Default for UiConfig {
     fn default() -> Self {
         Self {
             init_widget: WidgetType::List,
@@ -225,15 +226,15 @@ impl Default for Ui {
     }
 }
 
-#[derive(Conf)]
-pub struct WidgetBase {
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct WidgetBaseConfig {
     /// Task keybindings.
     pub tasks_keybind: EventHandlerUI,
     /// Category keybindings.
     pub category_keybind: EventHandlerUI,
 }
 
-impl Default for WidgetBase {
+impl Default for WidgetBaseConfig {
     fn default() -> Self {
         Self {
             tasks_keybind: EventHandlerUI::new(&[
@@ -251,27 +252,7 @@ impl Default for WidgetBase {
     }
 }
 
-#[derive(Conf)]
-pub struct Logger {
-    /// Path to the log file.
-    log_file: PathBuf,
-    /// Log format (uses placeholders)
-    log_format: String,
-    /// Log level.
-    log_level: LevelFilter,
-}
-
-impl Default for Logger {
-    fn default() -> Self {
-        Self {
-            log_file: PathBuf::from("log.log"),
-            log_format: String::from("{d} [{h({l})}] {M}: {m}{n}"),
-            log_level: LevelFilter::Info,
-        }
-    }
-}
-
-#[derive(Conf)]
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct Styles {
     /// Color of active window.
     pub active_color: Color,
@@ -289,20 +270,80 @@ pub struct Styles {
     pub category_select_style: TextStyle,
     /// Style for categories filtered out.
     pub category_remove_style: TextStyle,
-    // /// Custom style by name for categories.
-    // TODO
-    // #[clap(skip)]
-    // #[serde(default = "default_custom_category_style")]
-    // pub custom_category_style: HashMap<String, TextStyle>,
+    /// Custom style by name for categories.
+    pub custom_category_style: CustomCategoryStyle,
+}
+
+impl Styles {
+
+    pub fn get_style_default(&self) -> StylesValue {
+        StylesValue::Const(Style::default())
+    }
+
+    pub fn get_style_from_style(&self, style: Style) -> StylesValue {
+        StylesValue::Const(style)
+    }
+
+    pub fn get_style(&self, name: &str) -> ToDoRes<StylesValue> {
+        use StylesValue::*;
+        Ok(match name {
+            "priority" => Priority,
+            "custom_category" => CustomCategory,
+            "projects" => Const(self.projects_style.get_style()),
+            "contexts" => Const(self.contexts_style.get_style()),
+            "hashtags" => Const(self.hashtags_style.get_style()),
+            "category" => Const(self.category_style.get_style()),
+            _ => {
+                if name.starts_with("priority:") {
+                    if let Some(priority) = name.get("priority:".len()..) {
+                        return Ok(Const(
+                            match self
+                                .priority_style
+                                .get_style_from_str(&priority.to_uppercase())
+                            {
+                                Some(style) => style.get_style(),
+                                None => Style::default(),
+                            },
+                        ));
+                    }
+                } else if name.starts_with("custom_category:") {
+                    if let Some(custom_category) = name.get("custom_category:".len()..) {
+                        if let Some(custom_category) =
+                            self.custom_category_style.get(custom_category)
+                        {
+                            return Ok(Const(custom_category.get_style()));
+                        }
+                    }
+                }
+                Const(TextStyle::from_str(name)?.get_style()) // TODO do not ignore error
+            }
+        })
+    }
+
+    pub fn get_category_style(&self, category: &str) -> TextStyle {
+        match self.custom_category_style.get(category) {
+            Some(style) => *style,
+            None => self.get_category_base_style(category),
+        }
+    }
+
+    fn get_category_base_style(&self, category: &str) -> TextStyle {
+        match category.chars().next().unwrap() {
+            '+' => self.projects_style,
+            '@' => self.contexts_style,
+            '#' => self.hashtags_style,
+            _ => self.category_style,
+        }
+    }
 }
 
 impl Default for Styles {
     fn default() -> Self {
-        // let mut custom_category_style = HashMap::new();
-        // custom_category_style.insert(
-        //     String::from("+todo-tui"),
-        //     TextStyle::default().fg(Color::lightblue()),
-        // );
+        let mut custom_category_style = CustomCategoryStyle::default();
+        custom_category_style.insert(
+            String::from("+todo-tui"),
+            TextStyle::default().fg(Color::lightblue()),
+        );
         Self {
             active_color: Color(tuiColor::Red),
             priority_style: TextStyleList::default(),
@@ -312,37 +353,45 @@ impl Default for Styles {
             category_style: TextStyle::default(),
             category_select_style: TextStyle::default().fg(Color::green()),
             category_remove_style: TextStyle::default().fg(Color::red()),
-            // custom_category_style: default_custom_category_style(),
+            custom_category_style,
         }
     }
 }
 
-#[derive(ConfMerge, Default)]
+#[derive(ConfMerge, Default, Debug, PartialEq, Eq)]
 #[command(author, version, about, long_about = None)]
-pub struct Configuration {
-    pub ui_config: Ui,
-    pub active_color_config: ActiveColor,
-    pub file_worker_config: FileWorker,
-    pub logger: Logger,
-    pub list_config: List,
-    pub todo_config: ToDo,
-    pub preview_config: Preview,
-    pub widget_base_config: WidgetBase,
+pub struct Config {
+    pub ui_config: UiConfig,
+    pub todo_config: ToDoConfig,
+    pub file_worker_config: FileWorkerConfig,
+    pub widget_base_config: WidgetBaseConfig,
+    pub list_config: ListConfig,
+    pub preview_config: PreviewConfig,
+    pub active_color_config: ActiveColorConfig,
     pub styles: Styles,
 }
 
-impl Configuration {
-}
-
-impl ConfigDefaults for Configuration {
-    fn config_path() -> PathBuf {
+impl Config {
+    pub fn config_folder() -> PathBuf {
         const CONFIG_FOLDER: &str = "/.config/";
-        const CONFIG_NAME: &str = "todotxt-tui.toml";
         match var("XDG_CONFIG_HOME") {
             Ok(config_path) => PathBuf::from(config_path),
             Err(_) => PathBuf::from(var("HOME").unwrap_or(String::from("~"))).join(CONFIG_FOLDER),
         }
-        .join(CONFIG_NAME)
+        .join(env!("CARGO_PKG_NAME"))
+    }
+}
+
+impl ConfigDefaults for Config {
+    fn config_path() -> PathBuf {
+        Self::config_folder().join("todotxt-tui.toml")
+    }
+
+    fn env_prefix() -> String {
+        format!(
+            "{}_",
+            env!("CARGO_PKG_NAME").to_uppercase().replace("-", "_")
+        )
     }
 
     fn help_colors() -> clap::builder::Styles {
