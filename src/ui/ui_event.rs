@@ -179,8 +179,7 @@ impl FromStr for EventHandlerUI {
 
         let data = s
             .strip_prefix('[')
-            .map(|s| s.strip_suffix(']'))
-            .flatten()
+            .and_then(|s| s.strip_suffix(']'))
             .ok_or_else(|| ToDoError::CannotParseUIEvent("Value must be in []".to_string()))?
             .trim();
 
@@ -188,7 +187,7 @@ impl FromStr for EventHandlerUI {
             events: if data.is_empty() {
                 Vec::new()
             } else {
-                data.split(",")
+                data.split(',')
                     .map(|s| {
                         println!("{s}");
                         EventEntry::from_str(s.trim())

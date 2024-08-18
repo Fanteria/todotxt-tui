@@ -105,7 +105,7 @@ impl FileWorker {
     /// An `ioResult` indicating success or an error if file operations fail.
     fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> ToDoRes<()> {
         for line in BufReader::new(reader).lines() {
-            let line = line.map_err(|e| IOError(e))?;
+            let line = line.map_err(IOError)?;
             let line = line.trim();
             if line.is_empty() {
                 continue;
@@ -161,7 +161,7 @@ impl FileWorker {
     fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> ToDoRes<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
-            writer.write_all((task.to_string() + "\n").as_bytes()).map_err(|e| IOError(e))?;
+            writer.write_all((task.to_string() + "\n").as_bytes()).map_err(IOError)?;
         }
         Ok(())
     }

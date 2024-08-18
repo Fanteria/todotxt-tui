@@ -137,7 +137,7 @@ impl<'de> Deserialize<'de> for Color {
         D: serde::Deserializer<'de>,
     {
         let s: String = Deserialize::deserialize(deserializer)?;
-        Self::from_str(&s).map_err(|err| de::Error::custom(err))
+        Self::from_str(&s).map_err(de::Error::custom)
     }
 }
 

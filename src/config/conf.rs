@@ -11,9 +11,9 @@ use crate::{ToDoIoError, ToDoRes};
 
 pub trait Conf: Sized + Default {
     fn from_file(path: impl AsRef<Path>) -> ToDoRes<Self> {
-        Ok(Self::from_reader(
+        Self::from_reader(
             File::open(path.as_ref()).map_err(|e| ToDoIoError::new(path.as_ref(), e))?,
-        )?)
+        )
     }
 
     fn from_reader<R>(reader: R) -> ToDoRes<Self>

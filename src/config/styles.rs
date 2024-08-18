@@ -102,9 +102,7 @@ impl FromStr for CustomCategoryStyle {
             Ok((key.to_string(), TextStyle::from_str(value)?))
         }
         Ok(CustomCategoryStyle(
-            s.split(',')
-                .map(|item| parse(item))
-                .collect::<ToDoRes<HashMap<String, TextStyle>>>()?,
+            s.split(',').map(parse).collect::<ToDoRes<_>>()?,
         ))
     }
 }

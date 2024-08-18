@@ -45,7 +45,7 @@ impl FromStr for EventEntry {
     type Err = crate::ToDoError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<_> = s.split(":").collect();
+        let parts: Vec<_> = s.split(':').collect();
         if parts.len() != 2 {
             return Err(ToDoError::CannotParseEventEntry(
                 "Too many separators :".to_string(),
@@ -110,9 +110,9 @@ impl FromStr for EventEntry {
                 ),
                 event,
             },
-            _ if key.starts_with("f") && key.len() > 1 => EventEntry {
+            _ if key.starts_with('f') && key.len() > 1 => EventEntry {
                 key: KeyCode::F(
-                    (&key[1..])
+                    (key[1..])
                         .parse()
                         .map_err(|e| ToDoError::CannotParseEventEntry(format!("{}", e)))?,
                 ),

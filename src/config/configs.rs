@@ -390,7 +390,7 @@ impl ConfigDefaults for Config {
     fn env_prefix() -> String {
         format!(
             "{}_",
-            env!("CARGO_PKG_NAME").to_uppercase().replace("-", "_")
+            env!("CARGO_PKG_NAME").to_uppercase().replace('-', "_")
         )
     }
 
