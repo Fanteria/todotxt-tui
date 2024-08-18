@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn help_can_be_generated() -> ToDoRes<()> {
-        Config::new()?;
+        Config::from_args(Vec::<&str>::new())?;
         Ok(())
     }
 

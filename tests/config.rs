@@ -104,6 +104,7 @@ fn custom_clap_arguments() -> ToDoRes<()> {
         "--archive-path",
         "archive.txt",
         "--file-watcher",
+        "true",
         "--list-shift",
         "10",
         "--pending-sort",
@@ -111,11 +112,13 @@ fn custom_clap_arguments() -> ToDoRes<()> {
         "--done-sort",
         "priority",
         "--delete-final-date",
+        "true",
         "--set-final-date",
         "override",
         "--preview-format",
         "extra important preview",
         "--wrap-preview",
+        "true",
         "--list-refresh-rate",
         "15",
         "--list-active-color",
@@ -129,6 +132,7 @@ fn custom_clap_arguments() -> ToDoRes<()> {
     ])?;
     let mut expected = Config::default();
     expected.styles.active_color = Color::green();
+    expected.ui_config.init_widget = WidgetType::Project;
     expected.ui_config.window_title = String::from("New window title");
     expected.ui_config.layout = String::from("Shorter layout");
     expected.file_worker_config.todo_path = PathBuf::from("todo.txt");
@@ -156,8 +160,9 @@ fn custom_clap_arguments() -> ToDoRes<()> {
         EventHandlerUI::new(&[(KeyCode::Char('r'), UIEvent::Remove)]);
     expected.styles.category_select_style = TextStyle::default().fg(Color::blue());
     expected.styles.category_remove_style = TextStyle::default().fg(Color::yellow());
-    let mut custom_styles = HashMap::new();
-    custom_styles.insert("+project", TextStyle::default().fg(Color::green()));
+    let mut custom_styles = CustomCategoryStyle::default();
+    custom_styles.insert(String::from("+project"), TextStyle::default().fg(Color::green()));
+    expected.styles.custom_category_style = custom_styles;
 
     assert_eq!(config, expected);
 
