@@ -356,10 +356,9 @@ pub struct Config {
 
 impl Config {
     pub fn config_folder() -> PathBuf {
-        const CONFIG_FOLDER: &str = "/.config/";
         match var("XDG_CONFIG_HOME") {
             Ok(config_path) => PathBuf::from(config_path),
-            Err(_) => PathBuf::from(var("HOME").unwrap_or(String::from("~"))).join(CONFIG_FOLDER),
+            Err(_) => PathBuf::from(var("HOME").unwrap_or(String::from("~"))).join(".config"),
         }
         .join(env!("CARGO_PKG_NAME"))
     }
