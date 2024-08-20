@@ -56,3 +56,18 @@ pub fn impl_conf_trait(name: &Ident, name_conf: &Ident) -> TokenStream {
         }
     }
 }
+
+pub fn find_ident(path: &syn::TypePath) -> Option<&syn::Ident> {
+    let last = path.path.segments.last()?;
+    if last.ident == "Option" {
+        match &last.arguments {
+            syn::PathArguments::AngleBracketed(angle) => match angle.args.last()? {
+                syn::GenericArgument::Type(syn::Type::Path(p)) => find_ident(p),
+                _ => None,
+            },
+            _ => None,
+        }
+    } else {
+        Some(&last.ident)
+    }
+}

@@ -29,18 +29,16 @@ use tui::style::Style;
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct FileWorkerConfig {
-    /// The path to your todo.txt file.
+    /// The path to your `todo.txt` file, which stores your task list.
     pub todo_path: PathBuf,
-
-    /// The path to your archive.txt file. If is not provided,
-    /// finished files will be stored in your todo.txt.
+    /// The path to your `archive.txt` file, where completed tasks are stored.
+    /// If not provided, completed tasks will be archived within your `todo.txt` file.
     pub archive_path: Option<PathBuf>,
-
-    #[arg(short = 'd', env=concat!(env!("CARGO_PKG_NAME"), "_", "AUTOSAVE_DURATION"))]
-    /// Autosave duration (in seconds).
+    /// The duration (in seconds) between automatic saves of the `todo.txt` file.
+    #[arg(short = 'd')]
     pub autosave_duration: Duration,
-
-    /// Enable file watcher for auto-reloading.
+    /// Enable or disable the file watcher, which automatically reloads the `todo.txt` file
+    /// when changes are detected.
     pub file_watcher: bool,
 }
 
@@ -55,15 +53,14 @@ impl Default for FileWorkerConfig {
     }
 }
 
+// TODO create function that return active color based on data_type and items can be private;
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct ActiveColorConfig {
-    /// Color for the active list item.
+    /// The text style used to highlight the active item in a list.
     pub list_active_color: TextStyle,
-
-    /// Color for active pending task.
+    /// The text style used to highlight an active task that is in the pending list.
     pub pending_active_color: TextStyle,
-
-    /// Color for active completed task.
+    /// The text style used to highlight an active task that is in the completed list.
     pub done_active_color: TextStyle,
 }
 
@@ -79,10 +76,10 @@ impl Default for ActiveColorConfig {
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct ListConfig {
-    /// Indentation level for lists.
+    /// The number of lines displayed above and below the currently active
+    /// item in a list when the list is moving.
     pub list_shift: usize,
-
-    /// List keybindings.
+    /// Keybindings configured for interacting with lists.
     pub list_keybind: EventHandlerUI,
 }
 
@@ -238,24 +235,30 @@ impl Default for WidgetBaseConfig {
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct Styles {
-    /// Color of active window.
+    /// Defines the color used to highlight the active window.
     pub active_color: Color,
-    /// Priority-specific colors.
-    pub priority_style: TextStyleList, // TODO incompatible option config
-    /// Style for projects in lists.
-    pub projects_style: TextStyle,
-    /// Style for contexts in lists.
-    pub contexts_style: TextStyle,
-    /// Style for hashtags in lists.
-    pub hashtags_style: TextStyle,
-    /// Style for categories in lists.
-    pub category_style: TextStyle,
-    /// Style for categories to filter.
+    /// A list of text styles applied to tasks based on their priority levels.
+    pub priority_style: TextStyleList,
+    /// Specifies the text style used for displaying projects within task lists.
+    projects_style: TextStyle,
+    /// Specifies the text style used for displaying contexts (e.g., @home, @work)
+    /// within task lists.
+    contexts_style: TextStyle,
+    /// Specifies the text style used for displaying hashtags within task lists.
+    /// Note: This style is overridden by custom styles defined for specific categories.
+    hashtags_style: TextStyle,
+    /// Defines the default text style for displaying projects, contexts,
+    /// and hashtags within task lists.
+    /// Note: This style is overridden by specific styles for individual categories.
+    category_style: TextStyle,
+    /// Specifies the text style applied to categories when they are selected for filtering.
     pub category_select_style: TextStyle,
-    /// Style for categories filtered out.
+    /// Specifies the text style applied to categories that are filtered out from the view.
     pub category_remove_style: TextStyle,
-    /// Custom style by name for categories.
-    pub custom_category_style: CustomCategoryStyle,
+    /// Allows custom text styles to be applied to specific categories by name.
+    /// Note: Custom styles defined here will override all other category-specific styles,
+    /// including `category_style`, `category_select_style`, and `category_remove_style`.
+    pub custom_category_style: CustomCategoryStyle, // TODO can be private but is used in tests
 }
 
 impl Styles {
@@ -312,9 +315,9 @@ impl Styles {
 
     fn get_category_base_style(&self, category: &str) -> TextStyle {
         match category.chars().next().unwrap() {
-            '+' => self.projects_style,
-            '@' => self.contexts_style,
-            '#' => self.hashtags_style,
+            '+' => self.category_style.combine(&self.projects_style),
+            '@' => self.category_style.combine(&self.contexts_style),
+            '#' => self.category_style.combine(&self.hashtags_style),
             _ => self.category_style,
         }
     }

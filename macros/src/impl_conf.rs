@@ -40,49 +40,67 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
         };
 
         fields_vec.push(match ty {
-            syn::Type::Path(syn::TypePath { qself: _, path }) => {
-                let last = path.segments.last().expect("TODO");
-                match last.ident.to_string().as_str() {
-                    "Duration" => quote! {
-                        #[arg(value_parser = self::parsers::parse_duration)]
-                        #[arg(value_name = "DURATION")]
-                        #mandatory
-                    },
-                    "TextStyle" => quote! {
-                        #[arg(value_name = "TEXT_STYLE")]
-                        #mandatory
-                    },
-                    "TaskSort" => quote! {
-                        #[arg(value_name = "TASK_SORT")]
-                        #mandatory
-                    },
-                    "WidgetType" => quote! {
-                        #[arg(value_name = "WIDGET_TYPE")]
-                        #mandatory
-                    },
-                    "Color" => quote! {
-                        #[arg(value_name = "COLOR")]
-                        #mandatory
-                    },
-                    "PathBuf" => quote! {
-                        #[arg(value_name = "PATH")]
-                        #mandatory
-                    },
-                    "LevelFilter" => quote! {
-                        #[arg(value_name = "LOG_LEVEL")]
-                        #mandatory
-                    },
-                    // "Option" => quote! {
-                    //     #[arg(long)]
-                    //     #[serde()]
-                    //     pub #field_name: #ty,
-                    // },
-                    _ => quote! {
-                        #mandatory
-                    },
-                }
-            }
-            _ => panic!("TODO"),
+            syn::Type::Path(path) => match impl_conf_functions::find_ident(path)
+                .expect("TODO")
+                .to_string()
+                .as_str()
+            {
+                "Duration" => quote! {
+                    #[arg(value_parser = self::parsers::parse_duration)]
+                    #[arg(value_name = "DURATION")]
+                    #mandatory
+                },
+                "usize" => quote! {
+                    #[arg(value_name = "+NUM")]
+                    #mandatory
+                },
+                "bool" => quote! {
+                    #[arg(value_name = "BOOL")]
+                    #mandatory
+                },
+                "TextStyleList" => quote! {
+                    #[arg(value_name = "TEXT_STYLE_LIST")]
+                    #mandatory
+                },
+                "TextStyle" => quote! {
+                    #[arg(value_name = "TEXT_STYLE")]
+                    #mandatory
+                },
+                "TaskSort" => quote! {
+                    #[arg(value_name = "TASK_SORT")]
+                    #mandatory
+                },
+                "WidgetType" => quote! {
+                    #[arg(value_name = "WIDGET_TYPE")]
+                    #mandatory
+                },
+                "Color" => quote! {
+                    #[arg(value_name = "COLOR")]
+                    #mandatory
+                },
+                "PathBuf" => quote! {
+                    #[arg(value_name = "PATH")]
+                    #mandatory
+                },
+                "LevelFilter" => quote! {
+                    #[arg(value_name = "LOG_LEVEL")]
+                    #mandatory
+                },
+                "String" => quote! {
+                    #[arg(value_name = "STRING")]
+                    #mandatory
+                },
+                "EventHandlerUI" => quote! {
+                    #[arg(value_name = "KEYBINDS")]
+                    #mandatory
+                },
+                _ => quote! {
+                    #mandatory
+                },
+            },
+            _ => quote! {
+                #mandatory
+            },
         });
         fields_merge.push(quote! {
             #field_name: additional.#field_name.unwrap_or(source.#field_name),

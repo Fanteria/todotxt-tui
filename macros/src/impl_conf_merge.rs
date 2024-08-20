@@ -58,6 +58,7 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
             /// Generate autocomplete script to given file path.
             #[serde(skip)]
             #[clap(long, group = "export", help_heading = "Export")]
+            #[arg(value_name = "PATH")]
             pub export_autocomplete: Option<std::path::PathBuf>,
 
             /// Generate full configuration file for actual session
@@ -65,17 +66,20 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
             /// options are taken in account.
             #[serde(skip)]
             #[clap(long, group = "export", help_heading = "Export")]
+            #[arg(value_name = "PATH")]
             pub export_config: Option<std::path::PathBuf>,
 
             /// Generate configuration file with default values
             /// to given file path.
             #[serde(skip)]
             #[clap(long, group = "export", help_heading = "Export")]
+            #[arg(value_name = "PATH")]
             pub export_default_config: Option<std::path::PathBuf>,
 
             /// Path to configuration file.
             #[serde(skip)]
             #[clap(short, long)]
+            #[arg(value_name = "PATH")]
             config_path: Option<std::path::PathBuf>,
         }
 
