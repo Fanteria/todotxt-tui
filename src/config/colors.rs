@@ -95,6 +95,11 @@ impl FromStr for Color {
     type Err = ToDoError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parse_hex = |hex: &str| -> Result<u8, Self::Err> {
+            u8::from_str_radix(hex, 16)
+                .map_err(|_e| ToDoError::ColorSerializationFailed(s.to_string()))
+        };
+
         if let Ok(index) = s.parse::<u8>() {
             return Ok(Self(tuiColor::Indexed(index)));
         }
@@ -117,7 +122,11 @@ impl FromStr for Color {
             "lightmagenta" => LightMagenta,
             "lightcyan" => LightCyan,
             "white" => White,
-            _ if lower.starts_with('#') => Rgb(255, 0, 0), // TODO
+            _ if lower.starts_with('#') && lower.len() == 7 => Rgb(
+                parse_hex(&lower[1..3])?,
+                parse_hex(&lower[3..5])?,
+                parse_hex(&lower[5..7])?,
+            ),
             _ => return Err(ToDoError::ColorSerializationFailed(s.to_string())),
         }))
     }
@@ -142,4 +151,23 @@ impl<'de> Deserialize<'de> for Color {
     }
 }
 
-// TODO write tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ToDoRes;
+
+    #[test]
+    fn from_str() -> ToDoRes<()> {
+        assert_eq!(Color(tuiColor::Red), Color::from_str("red")?);
+        assert_eq!(Color(tuiColor::Yellow), Color::from_str("YeLlOW")?);
+        assert_eq!(Color(tuiColor::Rgb(3, 4, 5)), Color::from_str("#030405")?);
+        Ok(())
+    }
+
+    #[test]
+    fn to_string() {
+        assert_eq!(Color(tuiColor::Green).to_string(), "Green");
+        assert_eq!(Color(tuiColor::Black).to_string(), "Black");
+        assert_eq!(Color(tuiColor::Rgb(6, 7, 8)).to_string(), "#060708");
+    }
+}

@@ -36,11 +36,9 @@ fn main() {
         log_init()?;
         log::trace!("===== START LOGGING =====");
         let config = Config::new()?;
-        // TODO move logging to initialization and add log about loaded config file
         let mut ui = UI::build(&config)?;
         log::trace!("===== STARTING UI =====");
         ui.run()?;
-        // }
         Ok(())
     };
     if let Err(e) = run() {

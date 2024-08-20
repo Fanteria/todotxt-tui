@@ -99,8 +99,7 @@ impl Widget {
 }
 
 impl Debug for Widget {
-    // TODO improve
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        _f.write_fmt(format_args!("{:#?}", self.widget_type()))
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#?}", self.widget_type())
     }
 }

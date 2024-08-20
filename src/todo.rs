@@ -188,16 +188,18 @@ impl ToDo {
             .collect()
     }
 
-    /// TODO UPDATE DOC NOW IS SORTED
-    /// Gets a filtered list of tasks based on active filters.
+    /// Retrieves a filtered and sorted list of tasks based on active filters and sorting criteria.
+    ///
+    /// This function filters tasks according to the specified `ToDoData` and then sorts them based
+    /// on the current sorting configuration.
     ///
     /// # Arguments
     ///
-    /// * `data` - The type of ToDo data to filter.
+    /// * `data` - The `ToDoData` containing the filtering criteria.
     ///
     /// # Returns
     ///
-    /// A `TaskList` containing the filtered tasks.
+    /// A `TaskList` containing the filtered and sorted tasks.
     pub fn get_filtered_and_sorted(&self, data: ToDoData) -> TaskList {
         let mut task_list = TaskList {
             vec: self.get_filtered_tasks(data),

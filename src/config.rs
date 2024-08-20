@@ -17,6 +17,7 @@ pub use self::{
 
 use crate::{
     layout::widget::widget_type::WidgetType,
+    todo::ToDoData,
     ui::{EventHandlerUI, UIEvent},
     ToDoRes,
 };
@@ -54,18 +55,26 @@ impl Default for FileWorkerConfig {
     }
 }
 
-// TODO create function that return active color based on data_type and items can be private;
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct ActiveColorConfig {
     /// The text style used to highlight the active item in a list.
     #[arg(short = 'A')]
-    pub list_active_color: TextStyle,
+    list_active_color: TextStyle,
     /// The text style used to highlight an active task that is in the pending list.
     #[arg(short = 'P')]
-    pub pending_active_color: TextStyle,
+    pending_active_color: TextStyle,
     /// The text style used to highlight an active task that is in the completed list.
     #[arg(short = 'D')]
-    pub done_active_color: TextStyle,
+    done_active_color: TextStyle,
+}
+
+impl ActiveColorConfig {
+    pub fn get_active_style(&self, data_type: &ToDoData) -> TextStyle {
+        self.list_active_color.combine(&match data_type {
+            ToDoData::Done => self.done_active_color,
+            ToDoData::Pending => self.pending_active_color,
+        })
+    }
 }
 
 impl Default for ActiveColorConfig {
@@ -105,7 +114,7 @@ impl Default for ListConfig {
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct PreviewConfig {
-    /// The format string used to generate the preview, supporting placeholders 
+    /// The format string used to generate the preview, supporting placeholders
     /// for dynamic content.
     #[arg(short = 'p')]
     pub preview_format: String,
@@ -273,7 +282,7 @@ pub struct Styles {
     /// Allows custom text styles to be applied to specific categories by name.
     /// Note: Custom styles defined here will override all other category-specific styles,
     /// including `category_style`, `category_select_style`, and `category_remove_style`.
-    pub custom_category_style: CustomCategoryStyle, // TODO can be private but is used in tests
+    custom_category_style: CustomCategoryStyle,
 }
 
 impl Styles {
@@ -316,7 +325,7 @@ impl Styles {
                         }
                     }
                 }
-                Const(TextStyle::from_str(name)?.get_style()) // TODO do not ignore error
+                Const(TextStyle::from_str(name)?.get_style())
             }
         })
     }
@@ -404,9 +413,19 @@ mod tests {
     use self::parsers::*;
     use super::*;
     use crate::{layout::widget::widget_type::WidgetType, ToDoRes};
+    use pretty_assertions::assert_eq;
     use std::{path::PathBuf, time::Duration};
     use test_log::test;
-    use tui::style::Color;
+
+    pub fn get_test_dir() -> String {
+        var("TODO_TUI_TEST_DIR").unwrap()
+    }
+
+    pub fn get_test_file(name: &str) -> PathBuf {
+        let path = PathBuf::from(get_test_dir()).join(name);
+        log::trace!("Get test file {path:?}");
+        path
+    }
 
     #[test]
     fn test_deserialization() {
@@ -419,7 +438,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(*deserialized.styles.active_color, Color::Green);
+        assert_eq!(*deserialized.styles.active_color, tuiColor::Green);
         assert_eq!(deserialized.ui_config.init_widget, WidgetType::Done);
         assert_eq!(
             deserialized.ui_config.window_title,
@@ -437,7 +456,7 @@ mod tests {
 
         let default = Config::default();
         let c = Config::from_reader(s.as_bytes())?;
-        assert_eq!(*c.styles.active_color, Color::Blue);
+        assert_eq!(*c.styles.active_color, tuiColor::Blue);
         assert_eq!(c.ui_config.init_widget, default.ui_config.init_widget);
         assert_eq!(c.ui_config.window_title, String::from("Title"));
         assert_eq!(
@@ -459,5 +478,157 @@ mod tests {
     fn test_parse_duration() {
         assert_eq!(parse_duration("1000"), Ok(Duration::from_secs(1000)));
         assert!(parse_duration("-1000").is_err());
+    }
+
+    #[test]
+    fn empty_config() -> ToDoRes<()> {
+        let empty_config = get_test_file("empty_config.toml");
+        let default = Config::from_file(empty_config)?;
+        assert_eq!(default, Config::default());
+
+        Ok(())
+    }
+
+    #[test]
+    fn changed_config() -> ToDoRes<()> {
+        let testing_config = get_test_file("testing_config.toml");
+        let config = Config::from_file(testing_config)?;
+        let mut expected = Config::default();
+        expected.styles.active_color = Color::blue();
+        expected.ui_config.init_widget = WidgetType::Project;
+        expected.ui_config.window_title = String::from("Window title");
+        expected.ui_config.layout = String::from("Short invalid layout");
+        expected.file_worker_config.todo_path = PathBuf::from("invalid/path/to/todo.txt");
+        expected.file_worker_config.archive_path =
+            Some(PathBuf::from("invalid/path/to/archive.txt"));
+        expected.file_worker_config.file_watcher = false;
+        expected.list_config.list_shift = 0;
+        expected.todo_config.use_done = true;
+        expected.todo_config.pending_sort = TaskSort::Priority;
+        expected.todo_config.done_sort = TaskSort::Reverse;
+        expected.todo_config.delete_final_date = false;
+        expected.todo_config.set_final_date = SetFinalDateType::Never;
+        expected.preview_config.preview_format = String::from("unimportant preview");
+        expected.preview_config.wrap_preview = false;
+        expected.ui_config.window_keybinds =
+            EventHandlerUI::new(&[(KeyCode::Char('e'), UIEvent::EditMode)]);
+        expected.ui_config.list_refresh_rate = Duration::from_secs(10);
+        expected.active_color_config.list_active_color = TextStyle::default().bg(Color::green());
+        expected.file_worker_config.autosave_duration = Duration::from_secs(100);
+        expected.list_config.list_keybind =
+            EventHandlerUI::new(&[(KeyCode::Char('g'), UIEvent::ListLast)]);
+        expected.widget_base_config.tasks_keybind =
+            EventHandlerUI::new(&[(KeyCode::Char('s'), UIEvent::Select)]);
+        expected.widget_base_config.category_keybind =
+            EventHandlerUI::new(&[(KeyCode::Char('r'), UIEvent::Remove)]);
+        expected.styles.category_select_style = TextStyle::default().fg(Color::red());
+        expected.styles.category_remove_style = TextStyle::default().fg(Color::green());
+        expected.styles.custom_category_style = CustomCategoryStyle::default();
+        expected.styles.custom_category_style.insert(
+            String::from("+project"),
+            TextStyle::default().fg(Color::green()),
+        );
+
+        assert_eq!(config, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn default_values_clap() -> ToDoRes<()> {
+        let empty_config = get_test_file("empty_config.toml");
+        let default = Config::from_args(vec![
+            "NAME",
+            "--config-path",
+            empty_config.to_str().unwrap(),
+        ])?;
+        assert_eq!(default, Config::default());
+        Ok(())
+    }
+
+    #[test]
+    fn custom_clap_arguments() -> ToDoRes<()> {
+        let testing_config = get_test_file("testing_config.toml");
+        let config = Config::from_args(vec![
+            "NAME",
+            "--config-path",
+            testing_config.to_str().unwrap(),
+            "--active-color",
+            "Green",
+            "--window-title",
+            "New window title",
+            "--layout",
+            "Shorter layout",
+            "--todo-path",
+            "todo.txt",
+            "--archive-path",
+            "archive.txt",
+            "--file-watcher",
+            "true",
+            "--list-shift",
+            "10",
+            "--pending-sort",
+            "reverse",
+            "--done-sort",
+            "priority",
+            "--delete-final-date",
+            "true",
+            "--set-final-date",
+            "override",
+            "--preview-format",
+            "extra important preview",
+            "--wrap-preview",
+            "true",
+            "--list-refresh-rate",
+            "15",
+            "--list-active-color",
+            "yellow ^blue",
+            "--autosave-duration",
+            "150",
+            "--category-select-style",
+            "blue",
+            "--category-remove-style",
+            "yellow",
+        ])?;
+        let mut expected = Config::default();
+        expected.styles.active_color = Color::green();
+        expected.ui_config.init_widget = WidgetType::Project;
+        expected.ui_config.window_title = String::from("New window title");
+        expected.ui_config.layout = String::from("Shorter layout");
+        expected.file_worker_config.todo_path = PathBuf::from("todo.txt");
+        expected.file_worker_config.archive_path = Some(PathBuf::from("archive.txt"));
+        expected.file_worker_config.file_watcher = true;
+        expected.list_config.list_shift = 10;
+        expected.todo_config.use_done = true;
+        expected.todo_config.pending_sort = TaskSort::Reverse;
+        expected.todo_config.done_sort = TaskSort::Priority;
+        expected.todo_config.delete_final_date = true;
+        expected.todo_config.set_final_date = SetFinalDateType::Override;
+        expected.preview_config.preview_format = String::from("extra important preview");
+        expected.preview_config.wrap_preview = true;
+        expected.ui_config.window_keybinds =
+            EventHandlerUI::new(&[(KeyCode::Char('e'), UIEvent::EditMode)]);
+        expected.ui_config.list_refresh_rate = Duration::from_secs(15);
+        expected.active_color_config.list_active_color =
+            TextStyle::default().bg(Color::blue()).fg(Color::yellow());
+        expected.file_worker_config.autosave_duration = Duration::from_secs(150);
+        expected.list_config.list_keybind =
+            EventHandlerUI::new(&[(KeyCode::Char('g'), UIEvent::ListLast)]);
+        expected.widget_base_config.tasks_keybind =
+            EventHandlerUI::new(&[(KeyCode::Char('s'), UIEvent::Select)]);
+        expected.widget_base_config.category_keybind =
+            EventHandlerUI::new(&[(KeyCode::Char('r'), UIEvent::Remove)]);
+        expected.styles.category_select_style = TextStyle::default().fg(Color::blue());
+        expected.styles.category_remove_style = TextStyle::default().fg(Color::yellow());
+        let mut custom_styles = CustomCategoryStyle::default();
+        custom_styles.insert(
+            String::from("+project"),
+            TextStyle::default().fg(Color::green()),
+        );
+        expected.styles.custom_category_style = custom_styles;
+
+        assert_eq!(config, expected);
+
+        Ok(())
     }
 }

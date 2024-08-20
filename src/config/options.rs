@@ -54,7 +54,6 @@ pub enum TextModifier {
     Underlined,
 }
 
-// TODO coverage
 impl FromStr for TextModifier {
     type Err = ToDoError;
 
@@ -81,7 +80,18 @@ impl From<TextModifier> for Modifier {
 
 #[cfg(test)]
 mod tests {
+    use crate::ToDoRes;
+
     use super::*;
+
+    #[test]
+    fn fom_str_text_modifier() -> ToDoRes<()> {
+        assert_eq!(TextModifier::from_str("bold")?, TextModifier::Bold);
+        assert_eq!(TextModifier::from_str("iTALic")?, TextModifier::Italic);
+        assert!(TextModifier::from_str("Some random data").is_err());
+
+        Ok(())
+    }
 
     #[test]
     fn to_text_modifier() {

@@ -27,6 +27,8 @@ pub enum ToDoError {
     ParseInvalidDirection(String),
     #[error("Style '{0}' is invalid")]
     ParseTextStyle(String),
+    #[error("Style list '{0}' does not contain at least one item")]
+    ParseTextStyleList(String),
     #[error("Modifier '{0}' is invalid.")]
     ParseTextModifier(String),
     #[error("Block '{0}' have escape on the end.")]

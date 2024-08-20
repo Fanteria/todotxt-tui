@@ -99,7 +99,15 @@ impl TextStyle {
         new
     }
 
-    // TODO doc comment
+    /// Merges styles from another `Style` instance into the current instance.
+    ///
+    /// This function updates the current style by adding or overwriting
+    /// the background color (`bg`), foreground color (`fg`), and text modifier
+    /// (e.g., bold, italic) with values from the `additional` style if they are present.
+    ///
+    /// # Arguments
+    ///
+    /// - `additional`: The additional text style to combine with the current text style.
     pub fn add_style(&mut self, additional: &Self) {
         if let Some(bg) = additional.bg {
             self.bg = Some(bg);
@@ -264,7 +272,7 @@ impl FromStr for TextStyleList {
                         }
                     }
                 }
-                None => todo!(), // error TODO
+                None => return Err(ToDoError::ParseTextStyle(s.to_string())),
             }
         }
 
@@ -389,8 +397,7 @@ mod tests {
     fn text_style_list_from_str() -> ToDoRes<()> {
         let mut expected = HashMap::<String, TextStyle>::new();
         expected.insert("A".to_string(), TextStyle::default().fg(Color::red()));
-        // TODO must be equal
-        // assert_eq!(TextStyleList::from_str("A:green")?, TextStyleList(expected));
+        assert_eq!(TextStyleList::from_str("A:green")?, TextStyleList(expected));
 
         Ok(())
     }

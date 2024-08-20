@@ -31,11 +31,7 @@ impl StateList {
             base,
             style: config
                 .active_color_config
-                .list_active_color
-                .combine(&match data_type {
-                    ToDoData::Done => config.active_color_config.done_active_color,
-                    ToDoData::Pending => config.active_color_config.pending_active_color,
-                })
+                .get_active_style(&data_type)
                 .get_style(),
             data_type,
         }

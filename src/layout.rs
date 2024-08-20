@@ -97,21 +97,16 @@ impl Layout {
     ///
     /// Returns a `ToDoRes` containing the converted `Constraint` or an error if parsing fails.
     fn value_from_string(value: Option<&str>) -> ToDoRes<Constraint> {
-        if value.is_none() {
-            return Ok(Constraint::Percentage(50));
-        }
-
-        // TODO unwrap
-        match value.unwrap().find('%') {
-            Some(i) => {
-                if i + 1 < value.unwrap().len() {
-                    Err(ToDoError::ParseUnknownValue(value.unwrap().to_string()))
-                } else {
-                    Ok(Constraint::Percentage(value.unwrap()[..i].parse()?))
+        Ok(match value {
+            Some(value) => match value.find('%') {
+                Some(i) if i + 1 < value.len() => {
+                    return Err(ToDoError::ParseUnknownValue(value.to_string()))
                 }
-            }
-            None => Ok(Constraint::Length(value.unwrap().parse()?)),
-        }
+                Some(i) => Constraint::Percentage(value[..i].parse()?),
+                None => Constraint::Length(value.parse()?),
+            },
+            None => Constraint::Percentage(50),
+        })
     }
 
     fn process_item(
