@@ -39,6 +39,7 @@ pub struct FileWorkerConfig {
     pub autosave_duration: Duration,
     /// Enable or disable the file watcher, which automatically reloads the `todo.txt` file
     /// when changes are detected.
+    #[arg(short = 'f')]
     pub file_watcher: bool,
 }
 
@@ -57,10 +58,13 @@ impl Default for FileWorkerConfig {
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct ActiveColorConfig {
     /// The text style used to highlight the active item in a list.
+    #[arg(short = 'A')]
     pub list_active_color: TextStyle,
     /// The text style used to highlight an active task that is in the pending list.
+    #[arg(short = 'P')]
     pub pending_active_color: TextStyle,
     /// The text style used to highlight an active task that is in the completed list.
+    #[arg(short = 'D')]
     pub done_active_color: TextStyle,
 }
 
@@ -78,8 +82,10 @@ impl Default for ActiveColorConfig {
 pub struct ListConfig {
     /// The number of lines displayed above and below the currently active
     /// item in a list when the list is moving.
+    #[arg(short = 's')]
     pub list_shift: usize,
     /// Keybindings configured for interacting with lists.
+    #[arg(short = 'L')]
     pub list_keybind: EventHandlerUI,
 }
 
@@ -99,11 +105,13 @@ impl Default for ListConfig {
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct PreviewConfig {
-    /// Preview format (uses placeholders).
-    #[arg(hide_default_value = true)]
+    /// The format string used to generate the preview, supporting placeholders 
+    /// for dynamic content.
+    #[arg(short = 'p')]
     pub preview_format: String,
-
-    /// Wrap long lines in the preview.
+    /// Determines whether long lines in the preview should be wrapped to fit
+    /// within the available width.
+    #[arg(short = 'w')]
     pub wrap_preview: bool,
 }
 
@@ -124,16 +132,17 @@ Link: $link",
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct ToDoConfig {
-    /// Add projects, contexts and tags of done tasks
-    /// to list of projects, contexts and tags
+    /// Determines whether projects, contexts, and tags from completed tasks
+    /// should be included in the lists of available projects, contexts, and tags.
     pub use_done: bool,
-    /// Sorting option for pending tasks.
+    /// Sorting option to apply to pending tasks.
     pub pending_sort: TaskSort,
-    /// Sorting option for completed tasks.
+    /// Sorting option to apply to completed tasks.
     pub done_sort: TaskSort,
-
+    /// Specifies whether to delete the final date (if it exists) when a task is moved from completed back to pending.
     pub delete_final_date: bool,
-
+    /// Configures how the final date is handled when a task is marked as completed.
+    /// Options include overriding the date, only adding it if missing, or never setting it.
     pub set_final_date: SetFinalDateType,
 }
 
@@ -151,21 +160,25 @@ impl Default for ToDoConfig {
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct UiConfig {
-    /// Widget that will be active after start of the application.
+    /// The widget that will be active when the application starts.
+    #[arg(short = 'i')]
     pub init_widget: WidgetType,
-    /// Title of window with opened todotxt-tui
-    #[arg(short = 'T')]
+    /// The title of the window when `todotxt-tui` is opened.
+    #[arg(short = 't')]
     pub window_title: String,
-    /// Window keybindings.
+    /// Keybindings configured for interacting with the application window.
+    #[arg(short = 'W')]
     pub window_keybinds: EventHandlerUI,
-    /// List refresh rate (in seconds).
-    #[arg(short = 'L')]
+    /// The refresh rate for the list display, in seconds.
+    #[arg(short = 'R')]
     pub list_refresh_rate: Duration,
-
+    /// Path to save the application's state (currently unused).
+    #[arg(short = 'S')]
     pub save_state_path: Option<PathBuf>, // TODO at now unused
-    /// Layout configuration.
-    #[arg(hide_default_value = true)]
-    pub layout: String,
+    /// The layout configuration for the user interface.
+    /// This can be customized using a layout string.
+    #[arg(short = 'l')]
+    pub layout: String, // TODO describe layout language
 }
 
 impl Default for UiConfig {
@@ -209,9 +222,11 @@ impl Default for UiConfig {
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct WidgetBaseConfig {
-    /// Task keybindings.
+    /// Keybindings configured for interacting with tasks.
+    #[arg(short = 'T')]
     pub tasks_keybind: EventHandlerUI,
-    /// Category keybindings.
+    /// Keybindings configured for interacting with categories.
+    #[arg(short = 'C')]
     pub category_keybind: EventHandlerUI,
 }
 
