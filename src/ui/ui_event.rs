@@ -5,7 +5,7 @@ use event_entry::EventEntry;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
-use crate::{ToDoError, ToDoRes};
+use crate::{Result, ToDoError};
 
 /// Enum representing various UI events that can be triggered.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Debug)]
@@ -37,7 +37,7 @@ pub enum UIEvent {
 impl FromStr for UIEvent {
     type Err = ToDoError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         use UIEvent::*;
         Ok(match s.to_lowercase().as_str() {
             "quit" => Quit,
@@ -173,7 +173,7 @@ impl EventHandlerUI {
 impl FromStr for EventHandlerUI {
     type Err = crate::ToDoError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let s = s.trim();
         println!("---------------------------------------");
 
@@ -192,7 +192,7 @@ impl FromStr for EventHandlerUI {
                         println!("{s}");
                         EventEntry::from_str(s.trim())
                     })
-                    .collect::<ToDoRes<_>>()?
+                    .collect::<Result<_>>()?
             },
         })
     }
@@ -217,27 +217,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn event_handler_ui_from_str() -> ToDoRes<()> {
+    fn event_handler_ui_from_str() -> Result<()> {
         assert_eq!(
             EventHandlerUI::from_str("[]")?,
             EventHandlerUI { events: vec![] }
         );
 
-        // assert_eq!(
-        //     EventHandlerUI::from_str("[f:none,capslock:moveitem]")?,
-        //     EventHandlerUI {
-        //         events: vec![
-        //             EventEntry {
-        //                 key: KeyCode::Char('f'),
-        //                 event: UIEvent::None,
-        //             },
-        //             EventEntry {
-        //                 key: KeyCode::CapsLock,
-        //                 event: UIEvent::MoveItem,
-        //             }
-        //         ]
-        //     }
-        // );
+        assert_eq!(
+            EventHandlerUI::from_str("[f:none,capslock:moveitem]")?,
+            EventHandlerUI {
+                events: vec![
+                    EventEntry {
+                        key: KeyCode::Char('f'),
+                        event: UIEvent::None,
+                    },
+                    EventEntry {
+                        key: KeyCode::CapsLock,
+                        event: UIEvent::MoveItem,
+                    }
+                ]
+            }
+        );
 
         Ok(())
     }

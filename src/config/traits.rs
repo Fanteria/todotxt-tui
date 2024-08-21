@@ -7,20 +7,20 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{ToDoIoError, ToDoRes};
+use crate::{Result, ToDoIoError};
 
 pub trait Conf: Sized + Default {
-    fn from_file(path: impl AsRef<Path>) -> ToDoRes<Self> {
+    fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         Self::from_reader(
             File::open(path.as_ref()).map_err(|e| ToDoIoError::new(path.as_ref(), e))?,
         )
     }
 
-    fn from_reader<R>(reader: R) -> ToDoRes<Self>
+    fn from_reader<R>(reader: R) -> Result<Self>
     where
         R: Read;
 
-    fn parse<Iter, T, R>(iter: Iter, reader: R) -> ToDoRes<Self>
+    fn parse<Iter, T, R>(iter: Iter, reader: R) -> Result<Self>
     where
         Iter: IntoIterator<Item = T>,
         T: Into<OsString> + Clone,
@@ -35,11 +35,11 @@ pub trait Conf: Sized + Default {
 }
 
 pub trait ConfMerge: Sized + ConfigDefaults + Conf {
-    fn new() -> ToDoRes<Self> {
+    fn new() -> Result<Self> {
         Self::from_args(env::args())
     }
 
-    fn from_args<Iter, T>(iter: Iter) -> ToDoRes<Self>
+    fn from_args<Iter, T>(iter: Iter) -> Result<Self>
     where
         Iter: IntoIterator<Item = T>,
         T: Into<OsString> + Clone;

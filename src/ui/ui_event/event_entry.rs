@@ -135,7 +135,7 @@ impl Display for EventEntry {
 
 #[cfg(test)]
 mod tests {
-    use crate::ToDoRes;
+    use crate::Result;
 
     use super::*;
 
@@ -176,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn from_str() -> ToDoRes<()> {
+    fn from_str() -> Result<()> {
         assert_eq!(
             EventEntry {
                 key: KeyCode::Char('a'),

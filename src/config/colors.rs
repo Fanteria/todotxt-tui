@@ -154,10 +154,10 @@ impl<'de> Deserialize<'de> for Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ToDoRes;
+    use crate::Result;
 
     #[test]
-    fn from_str() -> ToDoRes<()> {
+    fn from_str() -> Result<()> {
         assert_eq!(Color(tuiColor::Red), Color::from_str("red")?);
         assert_eq!(Color(tuiColor::Yellow), Color::from_str("YeLlOW")?);
         assert_eq!(Color(tuiColor::Rgb(3, 4, 5)), Color::from_str("#030405")?);

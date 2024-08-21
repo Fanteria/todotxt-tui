@@ -1,20 +1,17 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
+    config::{ActiveColorConfig, TextStyle},
     todo::{FilterState, ToDoCategory},
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
-use tui::{
-    backend::Backend,
-    style::{Color, Style},
-    widgets::List,
-    Frame,
-};
+use tui::{backend::Backend, widgets::List, Frame};
 
 /// Represents the state for a widget that displays categories.
 pub struct StateCategories {
     base: WidgetList,
     pub category: ToDoCategory,
+    style: TextStyle,
 }
 
 impl StateCategories {
@@ -28,8 +25,13 @@ impl StateCategories {
     /// # Returns
     ///
     /// A new `StateCategories` instance.
-    pub fn new(base: WidgetList, category: ToDoCategory) -> Self {
-        Self { base, category }
+    pub fn new(base: WidgetList, category: ToDoCategory, active_color: &ActiveColorConfig) -> Self {
+        log::error!("{:?}", active_color.get_active_config_style(&category));
+        Self {
+            base,
+            category,
+            style: active_color.get_active_config_style(&category),
+        }
     }
 
     /// Returns the number of items in the category associated with this widget.
@@ -47,38 +49,21 @@ impl State for StateCategories {
         if self.base.handle_event(event) {
             return true;
         }
-        match event {
-            // TODO improve doubled code
-            UIEvent::Select => {
-                let name;
-                {
-                    let todo = self.base.data();
-                    name = todo
-                        .get_categories(self.category)
-                        .get_name(self.base.act())
-                        .clone();
-                }
-                self.base
-                    .data()
-                    .toggle_filter(self.category, &name, FilterState::Select);
-                self.base.len = self.len();
-            }
-            UIEvent::Remove => {
-                let name;
-                {
-                    let todo = self.base.data();
-                    name = todo
-                        .get_categories(self.category)
-                        .get_name(self.base.act())
-                        .clone();
-                }
-                self.base
-                    .data()
-                    .toggle_filter(self.category, &name, FilterState::Remove);
-                self.base.len = self.len();
-            }
+        let filter_state = match event {
+            UIEvent::Select => FilterState::Select,
+            UIEvent::Remove => FilterState::Remove,
             _ => return false,
-        }
+        };
+        let name = {
+            let todo = self.base.data();
+            todo.get_categories(self.category)
+                .get_name(self.base.act())
+                .clone()
+        };
+        self.base
+            .data()
+            .toggle_filter(self.category, &name, filter_state);
+        self.base.len = self.len();
         true
     }
 
@@ -89,8 +74,11 @@ impl State for StateCategories {
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {
-            let list = list.highlight_style(Style::default().bg(Color::LightRed)); // TODO add to config
-            f.render_stateful_widget(list, self.base.chunk, &mut self.base.state());
+            f.render_stateful_widget(
+                list.highlight_style(self.style.get_style()),
+                self.base.chunk,
+                &mut self.base.state(),
+            );
         }
     }
 

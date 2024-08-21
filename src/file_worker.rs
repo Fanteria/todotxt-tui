@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    error::{IOError, ToDoIoError, ToDoRes},
+    error::{IOError, Result, ToDoIoError},
     todo::ToDo,
 };
 use notify::{
@@ -67,8 +67,8 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    pub fn load(&self) -> ToDoRes<()> {
-        let mut todo = ToDo::new(&Config::default()); // TODO this can be improved
+    pub fn load(&self) -> Result<()> {
+        let mut todo = ToDo::default(); // TODO this can be improved
         Self::load_tasks(
             File::open(&self.todo_path).map_err(|e| ToDoIoError {
                 path: self.todo_path.to_path_buf(),
@@ -103,7 +103,7 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> ToDoRes<()> {
+    fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> Result<()> {
         for line in BufReader::new(reader).lines() {
             let line = line.map_err(IOError)?;
             let line = line.trim();
@@ -125,7 +125,7 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn save(&self) -> ToDoRes<()> {
+    fn save(&self) -> Result<()> {
         let mut f = File::create(&self.todo_path).map_err(|err| ToDoIoError {
             path: self.todo_path.to_path_buf(),
             err,
@@ -162,7 +162,7 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> ToDoRes<()> {
+    fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> Result<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
             writer
@@ -309,7 +309,7 @@ mod tests {
         "#;
 
     #[test]
-    fn test_load_tasks() -> ToDoRes<()> {
+    fn test_load_tasks() -> Result<()> {
         let mut todo = ToDo::default();
         FileWorker::load_tasks(TESTING_STRING.as_bytes(), &mut todo)?;
         assert_eq!(todo.pending.len(), 4);
@@ -345,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_tasks() -> ToDoRes<()> {
+    fn test_write_tasks() -> Result<()> {
         let mut todo = ToDo::default();
         FileWorker::load_tasks(TESTING_STRING.as_bytes(), &mut todo)?;
         let get_expected = |line: fn(&String) -> bool| {
@@ -358,7 +358,7 @@ mod tests {
                 .join("\n")
                 + "\n"
         };
-        let pretty_assert = |tasks, expected: &str, msg: &str| -> ToDoRes<()> {
+        let pretty_assert = |tasks, expected: &str, msg: &str| -> Result<()> {
             let mut buf: Vec<u8> = Vec::new();
             FileWorker::save_tasks(&mut buf, tasks)?;
             assert_eq!(

@@ -8,10 +8,10 @@ pub mod widget_type;
 
 use crate::{
     config::Config,
-    error::ToDoRes,
     layout::widget::widget_list::WidgetList,
     todo::{ToDo, ToDoCategory, ToDoData},
     ui::UIEvent,
+    Result,
 };
 use crossterm::event::KeyCode;
 use state_categories::StateCategories;
@@ -49,7 +49,7 @@ impl Widget {
     /// # Returns
     ///
     /// Returns a new instance of the specified widget type.
-    pub fn new(widget_type: WidgetType, data: RCToDo, config: &Config) -> ToDoRes<Self> {
+    pub fn new(widget_type: WidgetType, data: RCToDo, config: &Config) -> Result<Self> {
         use WidgetType::*;
         Ok(match widget_type {
             List => Self::List(StateList::new(
@@ -65,14 +65,17 @@ impl Widget {
             Project => Self::Category(StateCategories::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoCategory::Projects,
+                &config.active_color_config,
             )),
             Context => Self::Category(StateCategories::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoCategory::Contexts,
+                &config.active_color_config,
             )),
             Hashtag => Self::Category(StateCategories::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoCategory::Hashtags,
+                &config.active_color_config,
             )),
             Preview => Self::Preview(StatePreview::new(
                 WidgetBase::new(&widget_type, data, config),

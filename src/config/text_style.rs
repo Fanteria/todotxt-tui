@@ -15,9 +15,7 @@ use tui::style::Style;
 /// and text modifiers.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TextStyle {
-    // #[serde(default, with = "opt_color")]
     bg: Option<Color>,
-    // #[serde(default, with = "opt_color")]
     fg: Option<Color>,
     modifier: Option<TextModifier>,
 }
@@ -141,29 +139,18 @@ impl TextStyle {
 }
 
 impl Display for TextStyle {
-    // TODO try to implement better display
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut is_first = true;
-        if let Some(fg) = self.fg {
-            f.write_fmt(format_args!("{}", fg))?;
-            is_first = false;
-        }
-        if let Some(bg) = self.bg {
-            if is_first {
-                f.write_fmt(format_args!("^{}", bg))?;
-            } else {
-                f.write_fmt(format_args!(" ^{}", bg))?;
-            }
-            is_first = false;
-        }
-        if let Some(modifiers) = self.modifier {
-            if is_first {
-                f.write_fmt(format_args!("{:?}", modifiers))?;
-            } else {
-                f.write_fmt(format_args!(" {:?}", modifiers))?;
-            }
-        }
-        Ok(())
+        f.write_str(
+            &[
+                self.fg.map(|f| f.to_string()),
+                self.bg.map(|b| format!("^{b}")),
+                self.modifier.map(|m| format!("{m:?}")),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" "),
+        )
     }
 }
 
@@ -282,7 +269,7 @@ impl FromStr for TextStyleList {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::ToDoRes;
+    use crate::Result;
     use tui::style::Color as tuiColor;
 
     use super::*;
@@ -337,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn from_str() -> ToDoRes<()> {
+    fn from_str() -> Result<()> {
         assert_eq!(
             TextStyle::from_str("red")?,
             TextStyle::default().fg(Color::red())
@@ -394,7 +381,55 @@ mod tests {
     }
 
     #[test]
-    fn text_style_list_from_str() -> ToDoRes<()> {
+    fn display() {
+        assert_eq!(
+            &format!(
+                "{}",
+                TextStyle {
+                    bg: None,
+                    fg: Some(Color::green()),
+                    modifier: None
+                }
+            ),
+            "Green"
+        );
+        assert_eq!(
+            &format!(
+                "{}",
+                TextStyle {
+                    bg: Some(Color::red()),
+                    fg: None,
+                    modifier: None
+                }
+            ),
+            "^Red"
+        );
+        assert_eq!(
+            &format!(
+                "{}",
+                TextStyle {
+                    bg: None,
+                    fg: None,
+                    modifier: Some(TextModifier::Bold)
+                }
+            ),
+            "Bold"
+        );
+        assert_eq!(
+            &format!(
+                "{}",
+                TextStyle {
+                    bg: Some(Color::yellow()),
+                    fg: Some(Color::black()),
+                    modifier: Some(TextModifier::Italic)
+                }
+            ),
+            "Black ^Yellow Italic"
+        );
+    }
+
+    #[test]
+    fn text_style_list_from_str() -> Result<()> {
         let mut expected = HashMap::<String, TextStyle>::new();
         expected.insert("A".to_string(), TextStyle::default().fg(Color::red()));
         assert_eq!(TextStyleList::from_str("A:green")?, TextStyleList(expected));

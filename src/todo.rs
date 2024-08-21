@@ -9,7 +9,7 @@ pub use self::{
     todo_state::*,
 };
 
-use crate::config::{Config, SetFinalDateType, Styles, ToDoConfig};
+use crate::config::{SetFinalDateType, Styles, ToDoConfig};
 use chrono::{NaiveDate, Utc};
 use std::{collections::btree_set::BTreeSet, str::FromStr};
 use todo_txt::Task;
@@ -30,14 +30,14 @@ impl ToDo {
     /// # Arguments
     ///
     /// * `use_done` - A boolean indicating whether to include done tasks in the ToDo data.
-    pub fn new(config: &Config) -> Self {
+    pub fn new(config: ToDoConfig, styles: Styles) -> Self {
         Self {
             pending: Vec::new(),
             done: Vec::new(),
             version: 0,
             state: ToDoState::default(),
-            config: config.todo_config.clone(), // TODO try to solve by some more inteligent way
-            styles: config.styles.clone(),
+            config,
+            styles,
         }
     }
 
@@ -370,7 +370,7 @@ impl ToDo {
 
 impl Default for ToDo {
     fn default() -> Self {
-        ToDo::new(&Config::default())
+        ToDo::new(ToDoConfig::default(), Styles::default())
     }
 }
 

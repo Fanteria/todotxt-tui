@@ -3,7 +3,7 @@ mod line_block;
 mod parts;
 
 use super::{ToDo, ToDoData};
-use crate::{config::Styles, ToDoError, ToDoRes};
+use crate::{config::Styles, Result, ToDoError};
 use line::Line;
 use line_block::LineBlock;
 use parts::Parts;
@@ -16,13 +16,13 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(value: &str, styles: Styles) -> ToDoRes<Self> {
+    pub fn new(value: &str, styles: Styles) -> Result<Self> {
         let lines = Parser::parse(value, &styles)?;
         log::debug!("Loaded parser: {:#?}", lines);
         Ok(Parser { lines, styles })
     }
 
-    fn read_block(iter: &mut Peekable<std::str::Chars<'_>>, delimiter: char) -> ToDoRes<String> {
+    fn read_block(iter: &mut Peekable<std::str::Chars<'_>>, delimiter: char) -> Result<String> {
         let mut read = String::default();
         loop {
             let c = match iter.next() {
@@ -41,7 +41,7 @@ impl Parser {
         Ok(read)
     }
 
-    fn parse(template: &str, styles: &Styles) -> ToDoRes<Vec<Line>> {
+    fn parse(template: &str, styles: &Styles) -> Result<Vec<Line>> {
         let mut ret = Vec::new();
         let mut line = Line::default();
         let mut act = String::default();
@@ -93,7 +93,7 @@ mod tests {
     use tui::style::Modifier;
 
     #[test]
-    fn read_block() -> ToDoRes<()> {
+    fn read_block() -> Result<()> {
         let mut iter = "block to parse]".chars().peekable();
         assert_eq!(&Parser::read_block(&mut iter, ']')?, "block to parse");
         assert_eq!(&iter.collect::<String>(), "");
@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    fn parse() -> ToDoRes<()> {
+    fn parse() -> Result<()> {
         let styles = Styles::default();
         assert_eq!(Parser::parse("", &Styles::default())?[0], Line::default());
         assert_eq!(
@@ -257,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn fill_base() -> ToDoRes<()> {
+    fn fill_base() -> Result<()> {
         let parser = Parser::new("some text", Styles::default())?;
         let mut todo = ToDo::default();
         todo.new_task("task").unwrap();
@@ -275,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn fill_counts() -> ToDoRes<()> {
+    fn fill_counts() -> Result<()> {
         let parser = Parser::new("Done: $done Pending: $pending", Styles::default())?;
         let mut todo = ToDo::default();
         todo.new_task("task").unwrap();

@@ -1,10 +1,11 @@
 use std::{
     env::VarError,
     path::{Path, PathBuf},
+    result::Result as stdResult,
 };
 
 /// Define a custom result type for ToDo related operations.
-pub type ToDoRes<T> = Result<T, ToDoError>;
+pub type Result<T> = stdResult<T, ToDoError>;
 
 /// Enum representing ToDo-related errors.
 #[derive(Debug, PartialEq, thiserror::Error)]

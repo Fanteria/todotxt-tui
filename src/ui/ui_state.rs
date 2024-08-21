@@ -1,13 +1,15 @@
-use std::fs::File;
-use std::io::{Read, Result as ioResult, Write};
-use std::path::Path;
-
+use crate::{
+    layout::widget::widget_type::WidgetType,
+    layout::Layout,
+    todo::{ToDo, ToDoState},
+    {Result, ToDoIoError},
+};
 use serde::{Deserialize, Serialize};
-
-use crate::error::{ToDoIoError, ToDoRes};
-use crate::layout::widget::widget_type::WidgetType;
-use crate::layout::Layout;
-use crate::todo::{ToDo, ToDoState};
+use std::{
+    fs::File,
+    io::{Read, Result as ioResult, Write},
+    path::Path,
+};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct UIState {
@@ -31,7 +33,7 @@ impl UIState {
         writer.write_all(toml::to_string_pretty(&self).unwrap().as_bytes())
     }
 
-    pub fn load(path: &Path) -> ToDoRes<Self> {
+    pub fn load(path: &Path) -> Result<Self> {
         let file = File::open(path).map_err(|err| ToDoIoError {
             path: path.to_path_buf(),
             err,

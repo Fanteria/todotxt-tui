@@ -26,10 +26,10 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                 if let Some(last_segment) = type_path.path.segments.last() {
                     format_ident!("{}{CONF_OPTION}", &last_segment.ident)
                 } else {
-                    panic!("TODO")
+                    panic!("Type path have not a single segment.")
                 }
             }
-            _ => panic!("TODO"),
+            _ => panic!("Cannot create conf type."),
         };
         fields_vec.push(quote! {
             #[clap(flatten)]
@@ -108,7 +108,7 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
         }
 
         impl crate::config::ConfMerge for #name {
-            fn from_args<Iter, T>(iter: Iter) -> crate::error::ToDoRes<Self>
+            fn from_args<Iter, T>(iter: Iter) -> crate::error::Result<Self>
             where
                 Iter: IntoIterator<Item = T>,
                 T: Into<std::ffi::OsString> + Clone,

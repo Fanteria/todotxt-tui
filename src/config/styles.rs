@@ -1,7 +1,7 @@
 use super::Styles;
 use super::TextStyle;
+use crate::Result;
 use crate::ToDoError;
-use crate::ToDoRes;
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 use std::{collections::HashMap, str::FromStr};
@@ -66,8 +66,8 @@ impl DerefMut for CustomCategoryStyle {
 impl FromStr for CustomCategoryStyle {
     type Err = ToDoError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        fn parse(item: &str) -> ToDoRes<(String, TextStyle)> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        fn parse(item: &str) -> Result<(String, TextStyle)> {
             let (key, value) =
                 item.split_once('=')
                     .ok_or(ToDoError::CustomCategoryStyleParseFailed(
@@ -76,7 +76,7 @@ impl FromStr for CustomCategoryStyle {
             Ok((key.to_string(), TextStyle::from_str(value)?))
         }
         Ok(CustomCategoryStyle(
-            s.split(',').map(parse).collect::<ToDoRes<_>>()?,
+            s.split(',').map(parse).collect::<Result<_>>()?,
         ))
     }
 }
@@ -89,7 +89,7 @@ mod tests {
     use tui::style::Color;
 
     #[test]
-    fn get_style() -> ToDoRes<()> {
+    fn get_style() -> Result<()> {
         let task = Task::from_str("(A) Task name +project #hashtag").unwrap();
         println!("{:#?}", task);
         let styles = Styles::default();

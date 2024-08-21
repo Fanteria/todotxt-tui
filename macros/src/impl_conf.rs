@@ -26,7 +26,7 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
             "TODOTXT_TUI_{}",
             field_name
                 .as_ref()
-                .expect("TODO")
+                .expect("Field name have no identifier.")
                 .to_string()
                 .to_uppercase()
         );
@@ -41,7 +41,7 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
 
         fields_vec.push(match ty {
             syn::Type::Path(path) => match impl_conf_functions::find_ident(path)
-                .expect("TODO")
+                .expect("Field name have no identifier.")
                 .to_string()
                 .as_str()
             {

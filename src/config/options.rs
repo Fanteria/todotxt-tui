@@ -80,12 +80,11 @@ impl From<TextModifier> for Modifier {
 
 #[cfg(test)]
 mod tests {
-    use crate::ToDoRes;
-
     use super::*;
+    use crate::Result;
 
     #[test]
-    fn fom_str_text_modifier() -> ToDoRes<()> {
+    fn fom_str_text_modifier() -> Result<()> {
         assert_eq!(TextModifier::from_str("bold")?, TextModifier::Bold);
         assert_eq!(TextModifier::from_str("iTALic")?, TextModifier::Italic);
         assert!(TextModifier::from_str("Some random data").is_err());

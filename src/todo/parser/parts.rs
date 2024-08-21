@@ -81,10 +81,10 @@ impl From<String> for Parts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ToDoRes;
+    use crate::error::Result;
 
     #[test]
-    fn fill() -> ToDoRes<()> {
+    fn fill() -> Result<()> {
         let mut todo = ToDo::default();
         todo.new_task("task").unwrap();
         todo.new_task("(A) task").unwrap();

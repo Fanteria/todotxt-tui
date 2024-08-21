@@ -3,7 +3,7 @@ mod render_trait;
 pub mod widget;
 
 use crate::{
-    config::Config, layout::widget::State, todo::ToDo, ui::HandleEvent, ToDoError, ToDoRes,
+    config::Config, layout::widget::State, todo::ToDo, ui::HandleEvent, Result, ToDoError,
 };
 use container::Container;
 use crossterm::event::KeyEvent;
@@ -95,8 +95,8 @@ impl Layout {
     ///
     /// # Returns
     ///
-    /// Returns a `ToDoRes` containing the converted `Constraint` or an error if parsing fails.
-    fn value_from_string(value: Option<&str>) -> ToDoRes<Constraint> {
+    /// Returns a `Result` containing the converted `Constraint` or an error if parsing fails.
+    fn value_from_string(value: Option<&str>) -> Result<Constraint> {
         Ok(match value {
             Some(value) => match value.find('%') {
                 Some(i) if i + 1 < value.len() => {
@@ -114,7 +114,7 @@ impl Layout {
         container: &mut Container,
         data: Arc<Mutex<ToDo>>,
         config: &Config,
-    ) -> ToDoRes<Option<Constraint>> {
+    ) -> Result<Option<Constraint>> {
         log::trace!("Process item: {item}");
         let s = item.to_lowercase();
         let x: Vec<&str> = s.splitn(2, ARG_SEPARATOR).map(|s| s.trim()).collect();
@@ -155,9 +155,9 @@ impl Layout {
     ///
     /// # Returns
     ///
-    /// A `ToDoRes<Self>` result containing the created `Layout` if successful, or an error if
+    /// A `Result<Self>` result containing the created `Layout` if successful, or an error if
     /// parsing fails.
-    pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>, config: &Config) -> ToDoRes<Self> {
+    pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>, config: &Config) -> Result<Self> {
         // Find first '[' and move start of template to it (start of first container)
         let index = match template.find('[') {
             Some(i) => i,
@@ -223,7 +223,6 @@ impl Layout {
                         if let Some(constrain) =
                             Self::process_item(&string, layout.act_mut(), data.clone(), config)?
                         {
-                            // TODO UNWRAP
                             constraints_stack.last_mut().unwrap().push(constrain);
                         }
                         string.clear();
@@ -425,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn test_basic_movement() -> ToDoRes<()> {
+    fn test_basic_movement() -> Result<()> {
         let mut l = mock_layout();
         assert_eq!(l.get_active_widget(), WidgetType::List);
 
@@ -458,7 +457,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_string() -> ToDoRes<()> {
+    fn test_from_string() -> Result<()> {
         let str_layout = r#"
             [
               dIrEcTiOn:HoRiZoNtAl,

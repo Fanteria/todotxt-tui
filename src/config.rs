@@ -17,9 +17,9 @@ pub use self::{
 
 use crate::{
     layout::widget::widget_type::WidgetType,
-    todo::ToDoData,
+    todo::{ToDoCategory, ToDoData},
     ui::{EventHandlerUI, UIEvent},
-    ToDoRes,
+    Result,
 };
 use clap::{builder::styling::AnsiColor, FromArgMatches};
 use crossterm::event::KeyCode;
@@ -61,11 +61,25 @@ pub struct ActiveColorConfig {
     #[arg(short = 'A')]
     list_active_color: TextStyle,
     /// The text style used to highlight an active task that is in the pending list.
+    /// This option overrides the `list_active_color`.
     #[arg(short = 'P')]
     pending_active_color: TextStyle,
     /// The text style used to highlight an active task that is in the completed list.
+    /// This option overrides the `list_active_color`.
     #[arg(short = 'D')]
     done_active_color: TextStyle,
+    /// The text style used to highlight an active category.
+    /// This option overrides the `list_active_color`.
+    category_active_color: TextStyle,
+    /// The text style used to highlight an active project.
+    /// This option overrides the `category_active_color`.
+    projects_active_color: TextStyle,
+    /// The text style used to highlight an active context.
+    /// This option overrides the `category_active_color`.
+    contexts_active_color: TextStyle,
+    /// The text style used to highlight an active tag.
+    /// This option overrides the `category_active_color`.
+    tags_active_color: TextStyle,
 }
 
 impl ActiveColorConfig {
@@ -75,6 +89,16 @@ impl ActiveColorConfig {
             ToDoData::Pending => self.pending_active_color,
         })
     }
+
+    pub fn get_active_config_style(&self, category: &ToDoCategory) -> TextStyle {
+        self.list_active_color
+            .combine(&self.category_active_color)
+            .combine(match category {
+                ToDoCategory::Projects => &self.projects_active_color,
+                ToDoCategory::Contexts => &self.contexts_active_color,
+                ToDoCategory::Hashtags => &self.tags_active_color,
+            })
+    }
 }
 
 impl Default for ActiveColorConfig {
@@ -83,6 +107,10 @@ impl Default for ActiveColorConfig {
             list_active_color: TextStyle::default().bg(Color::lightred()),
             pending_active_color: TextStyle::default(),
             done_active_color: TextStyle::default(),
+            category_active_color: TextStyle::default(),
+            projects_active_color: TextStyle::default(),
+            contexts_active_color: TextStyle::default(),
+            tags_active_color: TextStyle::default(),
         }
     }
 }
@@ -294,7 +322,7 @@ impl Styles {
         StylesValue::Const(style)
     }
 
-    pub fn get_style(&self, name: &str) -> ToDoRes<StylesValue> {
+    pub fn get_style(&self, name: &str) -> Result<StylesValue> {
         use StylesValue::*;
         Ok(match name {
             "priority" => Priority,
@@ -412,7 +440,7 @@ impl ConfigDefaults for Config {
 mod tests {
     use self::parsers::*;
     use super::*;
-    use crate::{layout::widget::widget_type::WidgetType, ToDoRes};
+    use crate::layout::widget::widget_type::WidgetType;
     use pretty_assertions::assert_eq;
     use std::{path::PathBuf, time::Duration};
     use test_log::test;
@@ -447,7 +475,59 @@ mod tests {
     }
 
     #[test]
-    fn test_load() -> ToDoRes<()> {
+    fn get_active_style() {
+        {
+            let mut color = ActiveColorConfig::default();
+            color.list_active_color = TextStyle::default().bg(Color::red());
+            color.pending_active_color = TextStyle::default().bg(Color::yellow());
+            assert_eq!(
+                color.get_active_style(&ToDoData::Pending),
+                TextStyle::default().bg(Color::yellow())
+            );
+        }
+
+        {
+            let mut color = ActiveColorConfig::default();
+            color.list_active_color = TextStyle::default().bg(Color::red());
+            assert_eq!(
+                color.get_active_style(&ToDoData::Pending),
+                TextStyle::default().bg(Color::red())
+            );
+        }
+
+        {
+            let mut color = ActiveColorConfig::default();
+            color.list_active_color = TextStyle::default().bg(Color::green()).fg(Color::blue());
+            color.done_active_color = TextStyle::default()
+                .fg(Color::black())
+                .modifier(TextModifier::Bold);
+            assert_eq!(
+                color.get_active_style(&ToDoData::Done),
+                TextStyle::default()
+                    .bg(Color::green())
+                    .fg(Color::black())
+                    .modifier(TextModifier::Bold)
+            );
+        }
+    }
+
+    #[test]
+    fn get_active_config_style() {
+        {
+            let mut color = ActiveColorConfig::default();
+            color.list_active_color = TextStyle::default().bg(Color::red());
+            color.category_active_color = TextStyle::default().fg(Color::white());
+            assert_eq!(
+                color.get_active_config_style(&ToDoCategory::Projects),
+                TextStyle::default().bg(Color::red()).fg(Color::white())
+            );
+        }
+        // let mut color = ActiveColorConfig::default();
+        // color.list
+    }
+
+    #[test]
+    fn test_load() -> Result<()> {
         let s = r#"
         active_color = "Blue"
         window_title = "Title"
@@ -469,7 +549,7 @@ mod tests {
     }
 
     #[test]
-    fn help_can_be_generated() -> ToDoRes<()> {
+    fn help_can_be_generated() -> Result<()> {
         Config::from_args(Vec::<&str>::new())?;
         Ok(())
     }
@@ -481,7 +561,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_config() -> ToDoRes<()> {
+    fn empty_config() -> Result<()> {
         let empty_config = get_test_file("empty_config.toml");
         let default = Config::from_file(empty_config)?;
         assert_eq!(default, Config::default());
@@ -490,7 +570,7 @@ mod tests {
     }
 
     #[test]
-    fn changed_config() -> ToDoRes<()> {
+    fn changed_config() -> Result<()> {
         let testing_config = get_test_file("testing_config.toml");
         let config = Config::from_file(testing_config)?;
         let mut expected = Config::default();
@@ -535,7 +615,7 @@ mod tests {
     }
 
     #[test]
-    fn default_values_clap() -> ToDoRes<()> {
+    fn default_values_clap() -> Result<()> {
         let empty_config = get_test_file("empty_config.toml");
         let default = Config::from_args(vec![
             "NAME",
@@ -547,7 +627,7 @@ mod tests {
     }
 
     #[test]
-    fn custom_clap_arguments() -> ToDoRes<()> {
+    fn custom_clap_arguments() -> Result<()> {
         let testing_config = get_test_file("testing_config.toml");
         let config = Config::from_args(vec![
             "NAME",

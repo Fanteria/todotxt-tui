@@ -1,7 +1,8 @@
-use super::Parts;
-use super::ToDo;
-use crate::config::{Styles, StylesValue};
-use crate::{ToDoError, ToDoRes};
+use super::{Parts, ToDo};
+use crate::{
+    config::{Styles, StylesValue},
+    {Result, ToDoError},
+};
 use tui::style::Style;
 
 #[derive(Debug)]
@@ -12,7 +13,7 @@ pub struct LineBlock {
 }
 
 impl LineBlock {
-    fn parse_variables(block: &str) -> ToDoRes<Vec<Parts>> {
+    fn parse_variables(block: &str) -> Result<Vec<Parts>> {
         let mut ret = Vec::new();
         let mut iter = block.chars();
         let mut read_variable = false;
@@ -77,7 +78,7 @@ impl LineBlock {
         ))
     }
 
-    pub fn try_from_styled(value: &str, style: Option<String>, styles: &Styles) -> ToDoRes<Self> {
+    pub fn try_from_styled(value: &str, style: Option<String>, styles: &Styles) -> Result<Self> {
         Ok(LineBlock {
             parts: Self::parse_variables(value)?,
             style: match style {
@@ -93,7 +94,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_variables() -> ToDoRes<()> {
+    fn parse_variables() -> Result<()> {
         let parts = LineBlock::parse_variables("")?;
         assert_eq!(parts[0], Parts::Text("".into()));
 
