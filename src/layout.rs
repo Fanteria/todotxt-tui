@@ -367,6 +367,52 @@ impl Layout {
             None => panic!("Actual is not widget"),
         }
     }
+
+    pub fn click(&mut self, column: u16, row: u16) {
+        log::debug!("Click on column {column}, row {row}");
+        let cont_act_index = self.act().get_index();
+        let indexes = match self
+            .containers
+            .iter_mut()
+            .enumerate()
+            .flat_map(|(layout_index, container)| {
+                container
+                    .get_widgets_mut()
+                    .into_iter()
+                    .enumerate()
+                    .map(move |(widget_index, widget)| (layout_index, widget_index, widget))
+            })
+            .find(|(_, _, w)| {
+                let chunk = &w.get_base().chunk;
+                let x = chunk.x < column && column < chunk.x + chunk.width;
+                let y = chunk.y < row && row < chunk.y + chunk.height;
+                x && y
+            }) {
+            Some((layout_index, cont_index, widget)) => {
+                widget.click(column.into(), row.into());
+                if self.act == layout_index && cont_act_index == cont_index {
+                    None
+                } else if widget.focus() {
+                    Some((layout_index, cont_index))
+                } else {
+                    None
+                }
+            }
+            None => {
+                log::error!("There is no chunk laying on column {column}, row {row}");
+                None
+            }
+        };
+
+        if let Some((layout_index, cont_index)) = indexes {
+            if let Some(w) = self.act_mut().actual_mut() {
+                w.unfocus()
+            }
+            self.act = layout_index;
+            self.act_mut().set_index(cont_index);
+            Container::actualize_layout(self);
+        }
+    }
 }
 
 impl Render for Layout {
@@ -377,7 +423,7 @@ impl Render for Layout {
     fn unfocus(&mut self) {
         match self.act_mut().actual_mut() {
             Some(w) => w.unfocus(),
-            None => panic!("Actual to unfocus is  not a widget"),
+            None => panic!("Actual to unfocus is not a widget"),
         }
     }
 

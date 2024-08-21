@@ -236,6 +236,16 @@ impl Container {
             Self::update_chunk(chunks[i], containers, index);
         }
     }
+
+    pub fn get_widgets_mut(&mut self) -> impl IntoIterator<Item = &mut Widget> {
+        self.items.iter_mut().filter_map(|item| {
+            if let It::Item(w) = item {
+                Some(w)
+            } else {
+                None
+            }
+        })
+    }
 }
 
 impl Default for Container {

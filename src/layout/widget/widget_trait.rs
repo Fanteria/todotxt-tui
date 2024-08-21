@@ -74,6 +74,9 @@ pub trait State {
     fn get_internal_event(&self, _: &KeyCode) -> UIEvent {
         UIEvent::None
     }
+
+    #[allow(unused_variables)]
+    fn handle_click(&mut self, column: usize, row: usize) {}
 }
 
 impl<S: State> HandleEvent for S {
@@ -88,6 +91,10 @@ impl<S: State> HandleEvent for S {
 
     fn handle_event(&mut self, event: UIEvent) -> bool {
         self.handle_event_state(event)
+    }
+
+    fn click(&mut self, column: usize, row: usize) {
+        self.handle_click(column, row)
     }
 }
 

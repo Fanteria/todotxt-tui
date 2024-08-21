@@ -66,6 +66,10 @@ impl WidgetList {
         self.state.clone()
     }
 
+    pub fn state_mut(&mut self) -> &mut ListState {
+        &mut self.state
+    }
+
     /// Sets the size of the list widget.
     ///
     /// # Parameters
@@ -192,6 +196,14 @@ impl HandleEvent for WidgetList {
             _ => return false,
         }
         true
+    }
+
+    fn click(&mut self, _column: usize, row: usize) {
+        let index = row - usize::from(self.base.chunk.y) - 1;
+        if index < self.len {
+            log::debug!("Click on item with index {index}.");
+            self.state.select(Some(index));
+        }
     }
 }
 

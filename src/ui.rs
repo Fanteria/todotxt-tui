@@ -13,7 +13,7 @@ use crate::{
 };
 use crossterm::{
     self,
-    event::{self, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEvent},
     execute,
     terminal::{
         disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
@@ -257,8 +257,14 @@ impl UI {
                 log::debug!("Resize event: width {width}, height {height}");
                 self.update_chunk(Rect::new(0, 0, width, height));
             }
-            Event::Mouse(event) => {
-                log::debug!("Mouse event: {:?}", event);
+            Event::Mouse(MouseEvent {
+                kind: event::MouseEventKind::Up(event::MouseButton::Left),
+                column,
+                row,
+                modifiers: _,
+            }) => {
+                log::debug!("Mouse event: column {column}, row {row}");
+                self.layout.click(column, row);
             }
             Event::Key(event) => match self.mode {
                 Mode::Input => match event.code {

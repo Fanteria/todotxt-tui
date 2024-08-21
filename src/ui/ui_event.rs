@@ -109,6 +109,9 @@ pub trait HandleEvent {
         log::trace!("EventHandler: Key '{:?}' cause event '{:?}'", key, event);
         self.handle_event(event)
     }
+
+    #[allow(unused_variables)]
+    fn click(&mut self, column: usize, row: usize) {}
 }
 
 /// Struct for handling UI events based on key bindings.

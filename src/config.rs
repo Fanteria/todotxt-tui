@@ -477,9 +477,11 @@ mod tests {
     #[test]
     fn get_active_style() {
         {
-            let mut color = ActiveColorConfig::default();
-            color.list_active_color = TextStyle::default().bg(Color::red());
-            color.pending_active_color = TextStyle::default().bg(Color::yellow());
+            let color = ActiveColorConfig {
+                list_active_color: TextStyle::default().bg(Color::red()),
+                pending_active_color: TextStyle::default().bg(Color::yellow()),
+                ..Default::default()
+            };
             assert_eq!(
                 color.get_active_style(&ToDoData::Pending),
                 TextStyle::default().bg(Color::yellow())
@@ -487,8 +489,10 @@ mod tests {
         }
 
         {
-            let mut color = ActiveColorConfig::default();
-            color.list_active_color = TextStyle::default().bg(Color::red());
+            let color = ActiveColorConfig {
+                list_active_color: TextStyle::default().bg(Color::red()),
+                ..Default::default()
+            };
             assert_eq!(
                 color.get_active_style(&ToDoData::Pending),
                 TextStyle::default().bg(Color::red())
@@ -496,11 +500,13 @@ mod tests {
         }
 
         {
-            let mut color = ActiveColorConfig::default();
-            color.list_active_color = TextStyle::default().bg(Color::green()).fg(Color::blue());
-            color.done_active_color = TextStyle::default()
-                .fg(Color::black())
-                .modifier(TextModifier::Bold);
+            let color = ActiveColorConfig {
+                list_active_color: TextStyle::default().bg(Color::green()).fg(Color::blue()),
+                done_active_color: TextStyle::default()
+                    .fg(Color::black())
+                    .modifier(TextModifier::Bold),
+                ..Default::default()
+            };
             assert_eq!(
                 color.get_active_style(&ToDoData::Done),
                 TextStyle::default()
@@ -513,17 +519,15 @@ mod tests {
 
     #[test]
     fn get_active_config_style() {
-        {
-            let mut color = ActiveColorConfig::default();
-            color.list_active_color = TextStyle::default().bg(Color::red());
-            color.category_active_color = TextStyle::default().fg(Color::white());
-            assert_eq!(
-                color.get_active_config_style(&ToDoCategory::Projects),
-                TextStyle::default().bg(Color::red()).fg(Color::white())
-            );
-        }
-        // let mut color = ActiveColorConfig::default();
-        // color.list
+        let color = ActiveColorConfig {
+            list_active_color: TextStyle::default().bg(Color::red()),
+            category_active_color: TextStyle::default().fg(Color::white()),
+            ..Default::default()
+        };
+        assert_eq!(
+            color.get_active_config_style(&ToDoCategory::Projects),
+            TextStyle::default().bg(Color::red()).fg(Color::white())
+        );
     }
 
     #[test]

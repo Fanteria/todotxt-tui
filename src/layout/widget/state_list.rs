@@ -141,4 +141,8 @@ impl State for StateList {
     fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
         self.base.get_event(key)
     }
+
+    fn handle_click(&mut self, column: usize, row: usize) {
+        self.base.click(column, row);
+    }
 }
