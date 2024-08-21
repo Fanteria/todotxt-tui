@@ -168,6 +168,17 @@ impl EventHandlerUI {
             Ordering::Equal
         }
     }
+
+    pub fn combine(&mut self, other: Self) {
+        other.events.into_iter().for_each(|event| {
+            match self.events.iter_mut().find(|e| e.key == event.key) {
+                Some(e) => *e = event,
+                None => self.events.push(event),
+            }
+        });
+        self.events
+            .sort_by(|left, right| left.key.partial_cmp(&right.key).unwrap_or(Ordering::Equal));
+    }
 }
 
 impl FromStr for EventHandlerUI {
@@ -262,6 +273,27 @@ mod tests {
                 }
             ),
             "[f:None, CapsLock:MoveItem]"
+        );
+    }
+
+    #[test]
+    fn combine() {
+        let mut base = EventHandlerUI::new(&[
+            (KeyCode::Char('a'), UIEvent::ListDown),
+            (KeyCode::Char('b'), UIEvent::ListUp),
+        ]);
+        let addition = EventHandlerUI::new(&[
+            (KeyCode::Char('b'), UIEvent::MoveUp),
+            (KeyCode::Char('c'), UIEvent::ListUp),
+        ]);
+        base.combine(addition);
+        assert_eq!(
+            base,
+            EventHandlerUI::new(&[
+                (KeyCode::Char('a'), UIEvent::ListDown),
+                (KeyCode::Char('b'), UIEvent::MoveUp),
+                (KeyCode::Char('c'), UIEvent::ListUp),
+            ])
         );
     }
 }

@@ -102,9 +102,28 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
                 #mandatory
             },
         });
-        fields_merge.push(quote! {
-            #field_name: additional.#field_name.unwrap_or(source.#field_name),
-        });
+        match ty {
+            syn::Type::Path(path) => match impl_conf_functions::find_ident(path)
+                .expect("Field name have no identifier.")
+                .to_string()
+                .as_str()
+            {
+                "EventHandlerUI" => fields_merge.push(quote! {
+                    #field_name: match additional.#field_name {
+                        Some(a) => {
+                            let mut s = source.#field_name;
+                            s.combine(a);
+                            s
+                        }
+                        None => source.#field_name,
+                    },
+                }),
+                _ => fields_merge.push(quote! {
+                    #field_name: additional.#field_name.unwrap_or(source.#field_name),
+                }),
+            },
+            _ => panic!("TODO"),
+        }
         fields_from_trait.push(quote! {
             #field_name: Some(value.#field_name),
         })

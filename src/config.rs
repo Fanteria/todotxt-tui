@@ -590,17 +590,40 @@ mod tests {
         expected.todo_config.set_final_date = SetFinalDateType::Never;
         expected.preview_config.preview_format = String::from("unimportant preview");
         expected.preview_config.wrap_preview = false;
-        expected.ui_config.window_keybinds =
-            EventHandlerUI::new(&[(KeyCode::Char('e'), UIEvent::EditMode)]);
+        expected.ui_config.window_keybinds = EventHandlerUI::new(&[
+            (KeyCode::Char('e'), UIEvent::EditMode),
+            (KeyCode::Char('q'), UIEvent::Quit),
+            (KeyCode::Char('S'), UIEvent::Save),
+            (KeyCode::Char('u'), UIEvent::Load),
+            (KeyCode::Char('H'), UIEvent::MoveLeft),
+            (KeyCode::Char('L'), UIEvent::MoveRight),
+            (KeyCode::Char('K'), UIEvent::MoveUp),
+            (KeyCode::Char('J'), UIEvent::MoveDown),
+            (KeyCode::Char('I'), UIEvent::InsertMode),
+            (KeyCode::Char('E'), UIEvent::EditMode),
+        ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(10);
         expected.active_color_config.list_active_color = TextStyle::default().bg(Color::green());
         expected.file_worker_config.autosave_duration = Duration::from_secs(100);
-        expected.list_config.list_keybind =
-            EventHandlerUI::new(&[(KeyCode::Char('g'), UIEvent::ListLast)]);
-        expected.widget_base_config.tasks_keybind =
-            EventHandlerUI::new(&[(KeyCode::Char('s'), UIEvent::Select)]);
-        expected.widget_base_config.category_keybind =
-            EventHandlerUI::new(&[(KeyCode::Char('r'), UIEvent::Remove)]);
+        expected.list_config.list_keybind = EventHandlerUI::new(&[
+            (KeyCode::Char('g'), UIEvent::ListLast),
+            (KeyCode::Char('j'), UIEvent::ListDown),
+            (KeyCode::Char('k'), UIEvent::ListUp),
+            (KeyCode::Char('G'), UIEvent::ListLast),
+        ]);
+        expected.widget_base_config.tasks_keybind = EventHandlerUI::new(&[
+            (KeyCode::Char('s'), UIEvent::Select),
+            (KeyCode::Char('U'), UIEvent::SwapUpItem),
+            (KeyCode::Char('D'), UIEvent::SwapDownItem),
+            (KeyCode::Char('x'), UIEvent::RemoveItem),
+            (KeyCode::Char('d'), UIEvent::MoveItem),
+            (KeyCode::Enter, UIEvent::Select),
+        ]);
+        expected.widget_base_config.category_keybind = EventHandlerUI::new(&[
+            (KeyCode::Char('r'), UIEvent::Remove),
+            (KeyCode::Enter, UIEvent::Select),
+            (KeyCode::Backspace, UIEvent::Remove),
+        ]);
         expected.styles.category_select_style = TextStyle::default().fg(Color::red());
         expected.styles.category_remove_style = TextStyle::default().fg(Color::green());
         expected.styles.custom_category_style = CustomCategoryStyle::default();
@@ -686,18 +709,41 @@ mod tests {
         expected.todo_config.set_final_date = SetFinalDateType::Override;
         expected.preview_config.preview_format = String::from("extra important preview");
         expected.preview_config.wrap_preview = true;
-        expected.ui_config.window_keybinds =
-            EventHandlerUI::new(&[(KeyCode::Char('e'), UIEvent::EditMode)]);
+        expected.ui_config.window_keybinds = EventHandlerUI::new(&[
+            (KeyCode::Char('e'), UIEvent::EditMode),
+            (KeyCode::Char('q'), UIEvent::Quit),
+            (KeyCode::Char('S'), UIEvent::Save),
+            (KeyCode::Char('u'), UIEvent::Load),
+            (KeyCode::Char('H'), UIEvent::MoveLeft),
+            (KeyCode::Char('L'), UIEvent::MoveRight),
+            (KeyCode::Char('K'), UIEvent::MoveUp),
+            (KeyCode::Char('J'), UIEvent::MoveDown),
+            (KeyCode::Char('I'), UIEvent::InsertMode),
+            (KeyCode::Char('E'), UIEvent::EditMode),
+        ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(15);
         expected.active_color_config.list_active_color =
             TextStyle::default().bg(Color::blue()).fg(Color::yellow());
         expected.file_worker_config.autosave_duration = Duration::from_secs(150);
-        expected.list_config.list_keybind =
-            EventHandlerUI::new(&[(KeyCode::Char('g'), UIEvent::ListLast)]);
-        expected.widget_base_config.tasks_keybind =
-            EventHandlerUI::new(&[(KeyCode::Char('s'), UIEvent::Select)]);
-        expected.widget_base_config.category_keybind =
-            EventHandlerUI::new(&[(KeyCode::Char('r'), UIEvent::Remove)]);
+        expected.list_config.list_keybind = EventHandlerUI::new(&[
+            (KeyCode::Char('g'), UIEvent::ListLast),
+            (KeyCode::Char('j'), UIEvent::ListDown),
+            (KeyCode::Char('k'), UIEvent::ListUp),
+            (KeyCode::Char('G'), UIEvent::ListLast),
+        ]);
+        expected.widget_base_config.tasks_keybind = EventHandlerUI::new(&[
+            (KeyCode::Char('s'), UIEvent::Select),
+            (KeyCode::Char('U'), UIEvent::SwapUpItem),
+            (KeyCode::Char('D'), UIEvent::SwapDownItem),
+            (KeyCode::Char('x'), UIEvent::RemoveItem),
+            (KeyCode::Char('d'), UIEvent::MoveItem),
+            (KeyCode::Enter, UIEvent::Select),
+        ]);
+        expected.widget_base_config.category_keybind = EventHandlerUI::new(&[
+            (KeyCode::Char('r'), UIEvent::Remove),
+            (KeyCode::Enter, UIEvent::Select),
+            (KeyCode::Backspace, UIEvent::Remove),
+        ]);
         expected.styles.category_select_style = TextStyle::default().fg(Color::blue());
         expected.styles.category_remove_style = TextStyle::default().fg(Color::yellow());
         let mut custom_styles = CustomCategoryStyle::default();
