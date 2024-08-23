@@ -14,9 +14,8 @@ set_final_date = "Never"
 preview_format = "unimportant preview"
 wrap_preview = false
 
-[[window_keybinds.events]]
-event = "EditMode"
-key.Char = "e"
+[window_keybinds]
+e = "EditMode"
 
 [list_refresh_rate]
 secs = 10
@@ -29,17 +28,14 @@ bg = "Green"
 secs = 100
 nanos = 0
 
-[[list_keybind.events]]
-event = "ListLast"
-key.Char = "g"
+[list_keybind]
+g = "ListLast"
 
-[[tasks_keybind.events]]
-event = "Select"
-key.Char = "s"
+[tasks_keybind]
+s = "Select"
 
-[[category_keybind.events]]
-event = "Remove"
-key.Char = "r"
+[category_keybind]
+r = "Remove"
 
 [category_select_style]
 fg = "Red"

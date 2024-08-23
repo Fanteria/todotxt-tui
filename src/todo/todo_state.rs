@@ -32,7 +32,7 @@ impl ToDoData {
     ///
     /// * `data` - The type of ToDo data to retrieve (Pending or Done).
     pub fn get_data_mut<'a>(&self, todo: &'a mut ToDo) -> &'a mut Vec<Task> {
-        todo.version += 1;
+        todo.version.update(self);
         match self {
             Self::Pending => &mut todo.pending,
             Self::Done => &mut todo.done,

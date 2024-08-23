@@ -16,7 +16,7 @@ macros = { path = "./macros" }
 chrono = "0.4"
 clap = { version = "4.4", features = ["derive", "wrap_help", "env"] }
 clap_complete = "4.4"
-crossterm = "0.27"
+crossterm = { version = "0.27", features = ["serde"] }
 enum_dispatch = "0.3"
 log = "0.4"
 log4rs = "1.2"

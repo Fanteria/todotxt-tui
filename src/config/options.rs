@@ -44,6 +44,14 @@ impl Display for TaskSort {
     }
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize, Default, ValueEnum, Debug, PartialEq, Eq)]
+pub enum SavePolicy {
+    Manual,
+    #[default]
+    AutoSave,
+    OnChange,
+}
+
 /// Serialization and deserialization support for the TUI text modifier type.
 ///
 /// This enum is used to serialize and deserialize TUI `Modifier` objects.

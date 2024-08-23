@@ -3,6 +3,7 @@ pub mod category_list;
 pub mod parser;
 pub mod task_list;
 pub mod todo_state;
+pub mod version;
 
 pub use self::{
     autocomplete::autocomplete, category_list::CategoryList, parser::Parser, task_list::TaskList,
@@ -13,12 +14,13 @@ use crate::config::{SetFinalDateType, Styles, ToDoConfig};
 use chrono::{NaiveDate, Utc};
 use std::{collections::btree_set::BTreeSet, str::FromStr};
 use todo_txt::Task;
+use version::Version;
 
 /// Struct to manage ToDo tasks and theirs state.
 pub struct ToDo {
     pub pending: Vec<Task>,
     pub done: Vec<Task>,
-    version: usize,
+    version: Version,
     state: ToDoState,
     config: ToDoConfig,
     styles: Styles,
@@ -34,7 +36,7 @@ impl ToDo {
         Self {
             pending: Vec::new(),
             done: Vec::new(),
-            version: 0,
+            version: Version::default(),
             state: ToDoState::default(),
             config,
             styles,
@@ -49,13 +51,17 @@ impl ToDo {
     pub fn move_data(&mut self, other: Self) {
         self.pending = other.pending;
         self.done = other.done;
-        self.version += 1;
+        self.version.update_all();
     }
 
     /// Gets the current version of the ToDo data.
     /// Version is increased on every data change.
-    pub fn get_version(&self) -> usize {
-        self.version
+    pub fn get_version(&self) -> &Version {
+        &self.version
+    }
+
+    pub fn get_version_mut(&mut self) -> &mut Version {
+        &mut self.version
     }
 
     /// Gets the actual index of an item in the ToDo data without filters.
@@ -82,11 +88,12 @@ impl ToDo {
     ///
     /// * `task` - The `Task` to be added to the ToDo list.
     pub fn add_task(&mut self, task: Task) {
-        self.version += 1;
         if task.finished {
             self.done.push(task);
+            self.version.update(&ToDoData::Done);
         } else {
             self.pending.push(task);
+            self.version.update(&ToDoData::Pending);
         }
     }
 
@@ -128,7 +135,7 @@ impl ToDo {
     /// * `data` - The type of ToDo data from which to move the task.
     /// * `index` - The index of the task to be moved in the specified data.
     pub fn move_task(&mut self, data: ToDoData, index: usize) {
-        self.version += 1;
+        self.version.update_all();
         let index = match self.get_actual_index(data, index) {
             Some(index) => index,
             None => {
@@ -219,7 +226,6 @@ impl ToDo {
     ///
     /// A `Result` indicating success or an error if the task string cannot be parsed.
     pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
-        self.version += 1;
         let task = task.replace("due:today ", &format!("due:{}", Self::get_actual_date()));
         let task = task.replace("due: ", &format!("due:{}", Self::get_actual_date()));
         let mut task = Task::from_str(&task)?;
@@ -228,8 +234,10 @@ impl ToDo {
         }
         if task.finished {
             self.done.push(task);
+            self.version.update(&ToDoData::Done);
         } else {
             self.pending.push(task);
+            self.version.update(&ToDoData::Pending);
         }
         Ok(())
     }
@@ -649,10 +657,21 @@ mod tests {
     #[test]
     fn version() {
         let mut todo = ToDo::default();
-        assert_eq!(todo.get_version(), 0);
+        assert!(todo.get_version().is_actual(0, &ToDoData::Pending));
+        assert!(todo.get_version().is_actual(0, &ToDoData::Done));
         todo.move_data(example_todo());
-        assert_eq!(todo.get_version(), 1);
+        println!("{:?}", todo.get_version());
+        assert!(todo.get_version().is_actual(1, &ToDoData::Pending));
+        assert!(todo.get_version().is_actual(1, &ToDoData::Done));
         todo.move_task(ToDoData::Done, 1);
+        assert!(todo.get_version().is_actual(2, &ToDoData::Pending));
+        assert!(todo.get_version().is_actual(2, &ToDoData::Done));
+        todo.add_task(Task::from_str("Some simple task").unwrap());
+        assert!(todo.get_version().is_actual(3, &ToDoData::Pending));
+        assert!(todo.get_version().is_actual(2, &ToDoData::Done));
+        todo.add_task(Task::from_str("x Some simple task").unwrap());
+        assert!(todo.get_version().is_actual(3, &ToDoData::Pending));
+        assert!(todo.get_version().is_actual(3, &ToDoData::Done));
     }
 
     #[test]

@@ -1,6 +1,8 @@
+mod handle_event_trait;
 mod ui_event;
 mod ui_state;
 
+pub use handle_event_trait::HandleEvent;
 pub use ui_event::*;
 pub use ui_state::*;
 
@@ -181,21 +183,23 @@ impl UI {
     ///
     /// An `Result` indicating the success of the main loop.
     fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
-        let mut version = self.data.lock().unwrap().get_version();
-        let mut new_version;
+        let mut versions = self.data.lock().unwrap().get_version().get_version_all();
         loop {
             if event::poll(self.config.list_refresh_rate).map_err(IOError)? {
                 if self.process_event()? {
                     break;
                 }
-                version = self.data.lock().unwrap().get_version();
+                versions = self.data.lock().unwrap().get_version().get_version_all();
                 self.draw(terminal)?;
-            } else {
-                new_version = self.data.lock().unwrap().get_version();
-                if new_version != version {
-                    version = self.data.lock().unwrap().get_version();
-                    self.draw(terminal)?;
-                }
+            } else if !self
+                .data
+                .lock()
+                .unwrap()
+                .get_version()
+                .is_actual_all(versions)
+            {
+                versions = self.data.lock().unwrap().get_version().get_version_all();
+                self.draw(terminal)?;
             }
         }
         Ok(())
@@ -405,33 +409,14 @@ mod tests {
                 r#"
             todo_path = "{}todo.txt"
 
-            [[list_keybind.events]]
-            event = "ListDown"
-            key.Char = "j"
-
-            [[list_keybind.events]]
-            event = "Select"
-            key = "Enter"
-
-            [[list_keybind.events]]
-            event = "InsertMode"
-            key.Char = "I"
-
-            [[list_keybind.events]]
-            event = "EditMode"
-            key.Char = "E"
-
-            [[list_keybind.events]]
-            event = "Quit"
-            key.Char = "q"
-
-            [[list_keybind.events]]
-            event = "Save"
-            key.Char = "S"
-
-            [[list_keybind.events]]
-            event = "Load"
-            key.Char = "L"
+            [list_keybind]
+            E = "EditMode"
+            Enter = "Select"
+            I = "InsertMode"
+            L = "Load"
+            S = "Save"
+            j = "ListDown"
+            q = "Quit"
             "#,
                 env::var("TODO_TUI_TEST_DIR")?
             )

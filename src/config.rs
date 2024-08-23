@@ -24,6 +24,7 @@ use crate::{
 use clap::{builder::styling::AnsiColor, FromArgMatches};
 use crossterm::event::KeyCode;
 use macros::{Conf, ConfMerge};
+use options::SavePolicy;
 use std::{env::var, path::PathBuf, str::FromStr, time::Duration};
 use tui::style::Color as tuiColor;
 use tui::style::Style;
@@ -130,7 +131,7 @@ impl Default for ListConfig {
     fn default() -> Self {
         Self {
             list_shift: 4,
-            list_keybind: EventHandlerUI::new(&[
+            list_keybind: EventHandlerUI::from([
                 (KeyCode::Char('j'), UIEvent::ListDown),
                 (KeyCode::Char('k'), UIEvent::ListUp),
                 (KeyCode::Char('g'), UIEvent::ListFirst),
@@ -216,6 +217,8 @@ pub struct UiConfig {
     /// This can be customized using a layout string.
     #[arg(short = 'l')]
     pub layout: String, // TODO describe layout language
+
+    pub save_policy: SavePolicy,
 }
 
 impl Default for UiConfig {
@@ -223,7 +226,7 @@ impl Default for UiConfig {
         Self {
             init_widget: WidgetType::List,
             window_title: String::from("ToDo tui"),
-            window_keybinds: EventHandlerUI::new(&[
+            window_keybinds: EventHandlerUI::from([
                 (KeyCode::Char('q'), UIEvent::Quit),
                 (KeyCode::Char('S'), UIEvent::Save),
                 (KeyCode::Char('u'), UIEvent::Load),
@@ -253,6 +256,7 @@ impl Default for UiConfig {
                 "  ],",
                 "]",
             )),
+            save_policy: SavePolicy::default(),
         }
     }
 }
@@ -270,14 +274,14 @@ pub struct WidgetBaseConfig {
 impl Default for WidgetBaseConfig {
     fn default() -> Self {
         Self {
-            tasks_keybind: EventHandlerUI::new(&[
+            tasks_keybind: EventHandlerUI::from([
                 (KeyCode::Char('U'), UIEvent::SwapUpItem),
                 (KeyCode::Char('D'), UIEvent::SwapDownItem),
                 (KeyCode::Char('x'), UIEvent::RemoveItem),
                 (KeyCode::Char('d'), UIEvent::MoveItem),
                 (KeyCode::Enter, UIEvent::Select),
             ]),
-            category_keybind: EventHandlerUI::new(&[
+            category_keybind: EventHandlerUI::from([
                 (KeyCode::Enter, UIEvent::Select),
                 (KeyCode::Backspace, UIEvent::Remove),
             ]),
@@ -594,7 +598,7 @@ mod tests {
         expected.todo_config.set_final_date = SetFinalDateType::Never;
         expected.preview_config.preview_format = String::from("unimportant preview");
         expected.preview_config.wrap_preview = false;
-        expected.ui_config.window_keybinds = EventHandlerUI::new(&[
+        expected.ui_config.window_keybinds = EventHandlerUI::from([
             (KeyCode::Char('e'), UIEvent::EditMode),
             (KeyCode::Char('q'), UIEvent::Quit),
             (KeyCode::Char('S'), UIEvent::Save),
@@ -609,13 +613,13 @@ mod tests {
         expected.ui_config.list_refresh_rate = Duration::from_secs(10);
         expected.active_color_config.list_active_color = TextStyle::default().bg(Color::green());
         expected.file_worker_config.autosave_duration = Duration::from_secs(100);
-        expected.list_config.list_keybind = EventHandlerUI::new(&[
+        expected.list_config.list_keybind = EventHandlerUI::from([
             (KeyCode::Char('g'), UIEvent::ListLast),
             (KeyCode::Char('j'), UIEvent::ListDown),
             (KeyCode::Char('k'), UIEvent::ListUp),
             (KeyCode::Char('G'), UIEvent::ListLast),
         ]);
-        expected.widget_base_config.tasks_keybind = EventHandlerUI::new(&[
+        expected.widget_base_config.tasks_keybind = EventHandlerUI::from([
             (KeyCode::Char('s'), UIEvent::Select),
             (KeyCode::Char('U'), UIEvent::SwapUpItem),
             (KeyCode::Char('D'), UIEvent::SwapDownItem),
@@ -623,7 +627,7 @@ mod tests {
             (KeyCode::Char('d'), UIEvent::MoveItem),
             (KeyCode::Enter, UIEvent::Select),
         ]);
-        expected.widget_base_config.category_keybind = EventHandlerUI::new(&[
+        expected.widget_base_config.category_keybind = EventHandlerUI::from([
             (KeyCode::Char('r'), UIEvent::Remove),
             (KeyCode::Enter, UIEvent::Select),
             (KeyCode::Backspace, UIEvent::Remove),
@@ -636,7 +640,17 @@ mod tests {
             TextStyle::default().fg(Color::green()),
         );
 
-        assert_eq!(config, expected);
+        // assert_eq!(config, expected);
+        // assert_eq!(config.list_config.list_keybind, expected.list_config.list_keybind);
+
+        assert_eq!(config.ui_config, expected.ui_config);
+        assert_eq!(config.todo_config, expected.todo_config);
+        assert_eq!(config.file_worker_config, expected.file_worker_config);
+        assert_eq!(config.widget_base_config, expected.widget_base_config);
+        assert_eq!(config.list_config, expected.list_config);
+        assert_eq!(config.preview_config, expected.preview_config);
+        assert_eq!(config.active_color_config, expected.active_color_config);
+        assert_eq!(config.styles, expected.styles);
 
         Ok(())
     }
@@ -713,7 +727,7 @@ mod tests {
         expected.todo_config.set_final_date = SetFinalDateType::Override;
         expected.preview_config.preview_format = String::from("extra important preview");
         expected.preview_config.wrap_preview = true;
-        expected.ui_config.window_keybinds = EventHandlerUI::new(&[
+        expected.ui_config.window_keybinds = EventHandlerUI::from([
             (KeyCode::Char('e'), UIEvent::EditMode),
             (KeyCode::Char('q'), UIEvent::Quit),
             (KeyCode::Char('S'), UIEvent::Save),
@@ -729,13 +743,13 @@ mod tests {
         expected.active_color_config.list_active_color =
             TextStyle::default().bg(Color::blue()).fg(Color::yellow());
         expected.file_worker_config.autosave_duration = Duration::from_secs(150);
-        expected.list_config.list_keybind = EventHandlerUI::new(&[
+        expected.list_config.list_keybind = EventHandlerUI::from([
             (KeyCode::Char('g'), UIEvent::ListLast),
             (KeyCode::Char('j'), UIEvent::ListDown),
             (KeyCode::Char('k'), UIEvent::ListUp),
             (KeyCode::Char('G'), UIEvent::ListLast),
         ]);
-        expected.widget_base_config.tasks_keybind = EventHandlerUI::new(&[
+        expected.widget_base_config.tasks_keybind = EventHandlerUI::from([
             (KeyCode::Char('s'), UIEvent::Select),
             (KeyCode::Char('U'), UIEvent::SwapUpItem),
             (KeyCode::Char('D'), UIEvent::SwapDownItem),
@@ -743,7 +757,7 @@ mod tests {
             (KeyCode::Char('d'), UIEvent::MoveItem),
             (KeyCode::Enter, UIEvent::Select),
         ]);
-        expected.widget_base_config.category_keybind = EventHandlerUI::new(&[
+        expected.widget_base_config.category_keybind = EventHandlerUI::from([
             (KeyCode::Char('r'), UIEvent::Remove),
             (KeyCode::Enter, UIEvent::Select),
             (KeyCode::Backspace, UIEvent::Remove),

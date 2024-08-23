@@ -142,10 +142,7 @@ impl FileWorker {
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.archive_path {
             Some(s) => Self::save_tasks(
-                &mut File::create(s).map_err(|err| ToDoIoError {
-                    path: s.to_path_buf(),
-                    err,
-                })?,
+                &mut File::create(s).map_err(|err| ToDoIoError::new(s, err))?,
                 &todo.done,
             ),
             None => Self::save_tasks(&mut f, &todo.done),
@@ -197,40 +194,39 @@ impl FileWorker {
         }
 
         if self.file_watcher {
-            Self::spawn_watcher(tx.clone(), &self.todo_path.clone());
+            Self::spawn_watcher(tx.clone(), &self.todo_path);
             if let Some(path) = &self.archive_path {
                 Self::spawn_watcher(tx.clone(), path);
             }
         }
 
         thread::spawn(move || {
-            let mut version = self.todo.lock().unwrap().get_version();
-            let mut skip_count: usize = 0;
+            let mut versions = self.todo.lock().unwrap().get_version().get_version_all();
             for received in rx {
                 if let Err(e) = match received {
                     Save => {
-                        let act_version = self.todo.lock().unwrap().get_version();
-                        if version == act_version {
-                            log::debug!("File Worker: Todo list is actual.");
+                        log::trace!("Try to save Todo list.");
+                        if self
+                            .todo
+                            .lock()
+                            .unwrap()
+                            .get_version()
+                            .is_actual_all(versions)
+                        {
+                            log::info!("File Worker: Todo list is actual.");
                             Ok(())
                         } else {
-                            skip_count += 2;
-                            version = act_version;
                             self.save()
                         }
                     }
                     ForceSave => {
-                        skip_count += 2;
-                        self.save()
+                        let result = self.save();
+                        versions = self.todo.lock().unwrap().get_version().get_version_all();
+                        result
                     }
                     Load => {
-                        if skip_count > 0 {
-                            skip_count -= 1;
-                            log::debug!("Load file 'skip_count': {}", skip_count);
-                            continue;
-                        }
                         let result = self.load();
-                        version = self.todo.lock().unwrap().get_version();
+                        versions = self.todo.lock().unwrap().get_version().get_version_all();
                         log::info!("Todo list updated from file.");
                         result
                     }
@@ -250,12 +246,11 @@ impl FileWorker {
     /// * `tx` - A sender for sending `FileWorkerCommands` to the `FileWorker` thread.
     /// * `duration` - The duration between automatic saves of todo data.
     fn spawn_autosave(tx: Sender<FileWorkerCommands>, duration: Duration) {
-        let tx_worker = tx.clone();
         log::trace!("Start autosaver");
         thread::spawn(move || loop {
             thread::sleep(duration);
             log::trace!("Autosave with duration {}", duration.as_secs_f64());
-            if tx_worker.send(FileWorkerCommands::Save).is_err() {
+            if tx.send(FileWorkerCommands::Save).is_err() {
                 log::trace!("Autosave end");
             }
         });
