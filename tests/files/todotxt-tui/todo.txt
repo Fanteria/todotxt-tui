@@ -1,6 +1,5 @@
 2023-10-03 First task
 2023-10-04 Second task
-x 2023-10-05 First done task
 (A) 2023-10-06 Priority task
 2023-10-07 3rd +some @three
 2023-10-08 4th +project @four
@@ -27,3 +26,4 @@ x 2023-10-05 First done task
 2023-10-29 25th +project
 2023-10-30 26th
 2023-10-31 27th
+x 2023-10-05 First done task
