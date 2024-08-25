@@ -9,7 +9,7 @@ mod traits;
 pub use self::{
     colors::Color,
     keycode::KeyCodeDef,
-    options::{SetFinalDateType, TaskSort, TextModifier, SavePolicy},
+    options::{SavePolicy, SetFinalDateType, TaskSort, TextModifier},
     styles::{CustomCategoryStyle, StylesValue},
     text_style::{TextStyle, TextStyleList},
     traits::{Conf, ConfMerge, ConfigDefaults},
