@@ -62,6 +62,19 @@ pub enum ToDoError {
     CannotParseUIEvent(String),
     #[error("Cannot parse custom category style: {0}")]
     CustomCategoryStyleParseFailed(&'static str),
+    #[error("notify")]
+    NotifyError(#[from] NotifyError),
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("IOError: {0}")]
+pub struct NotifyError(#[from] pub notify::Error);
+
+impl PartialEq for NotifyError {
+    fn eq(&self, _: &Self) -> bool {
+        // TODO implement
+        false
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

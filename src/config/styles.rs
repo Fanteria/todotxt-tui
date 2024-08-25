@@ -46,6 +46,18 @@ impl StylesValue {
     }
 }
 
+impl Default for StylesValue {
+    fn default() -> Self {
+        Self::Const(Style::default())
+    }
+}
+
+impl From<Style> for StylesValue {
+    fn from(style: Style) -> Self {
+        StylesValue::Const(style)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Default)]
 pub struct CustomCategoryStyle(HashMap<String, TextStyle>);
 

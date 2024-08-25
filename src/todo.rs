@@ -60,6 +60,7 @@ impl ToDo {
         &self.version
     }
 
+    /// Returns a mutable reference to the `Version` field within the current struct instance.
     pub fn get_version_mut(&mut self) -> &mut Version {
         &mut self.version
     }
@@ -78,6 +79,8 @@ impl ToDo {
         self.get_filtered_and_sorted(data).get_actual_index(index)
     }
 
+    /// Retrieves the current date from UTC time without any modifications or adjustments
+    /// applied to it.
     fn get_actual_date() -> NaiveDate {
         Utc::now().naive_utc().date()
     }
@@ -367,10 +370,12 @@ impl ToDo {
         self.get_filtered_and_sorted(data).len()
     }
 
+    /// Returns a reference to the current state of the ToDo list.
     pub fn get_state(&self) -> &ToDoState {
         &self.state
     }
 
+    /// Updates the ToDo list's state to the provided `ToDoState`.
     pub fn update_state(&mut self, state: ToDoState) {
         self.state = state
     }

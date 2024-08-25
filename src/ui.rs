@@ -89,6 +89,16 @@ impl UI {
         }
     }
 
+    /// Builds a new `UI` instance using the provided configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config`: A reference to a `Config` struct containing all necessary settings for building the UI.
+    ///
+    /// # Returns
+    ///
+    /// * On success, returns an `Ok(UI)` containing the newly built UI.
+    /// * On failure, returns an `Err(Result<(), ErrorKind>)`.
     pub fn build(config: &Config) -> Result<UI> {
         let mut todo = ToDo::new(config.todo_config.clone(), config.styles.clone());
 
@@ -99,10 +109,10 @@ impl UI {
         }
 
         let todo = Arc::new(Mutex::new(todo));
-        let file_worker = FileWorker::new(config, todo.clone());
+        let file_worker = FileWorker::new(config.file_worker_config.clone(), todo.clone());
 
         file_worker.load()?;
-        let tx = file_worker.run();
+        let tx = file_worker.run()?;
 
         let layout = Layout::from_str(&config.ui_config.layout, todo.clone(), config)?;
 
@@ -255,6 +265,23 @@ impl UI {
         Ok(self.quit)
     }
 
+    /// Handles window events, such as resizing and mouse clicks, to manage the
+    /// user interface state.
+    ///
+    /// # Arguments
+    ///
+    /// * `e`: The event that triggers the function, which can be a resize event
+    /// or a mouse click event.
+    ///
+    /// # Details
+    ///
+    /// This function processes different types of events:
+    /// - **Resize Event**: Adjusts the UI chunk based on the new window dimensions.
+    /// - **Mouse Click Event**: Triggers a click action in the layout manager
+    /// at the specified column and row.
+    /// - **Keyboard Events**: Depending on the current mode (`Mode::Input`, `Mode::Edit`,
+    /// or `Mode::Normal`), handles input for task creation, editing, and general navigation
+    /// using specific keys.
     fn handle_event_window(&mut self, e: Event) {
         match e {
             Event::Resize(width, height) => {

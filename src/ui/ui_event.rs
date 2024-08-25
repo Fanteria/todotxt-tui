@@ -169,6 +169,8 @@ impl EventHandlerUI {
         *self.0.get(&KeyCodeA(*key)).unwrap_or(&UIEvent::None)
     }
 
+    /// Combines the elements of another `Vec` into the current instance,
+    /// extending the current vector with the elements from the provided vector.
     pub fn combine(&mut self, other: Self) {
         self.0.extend(other.0);
     }

@@ -87,10 +87,9 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use super::Line;
     use super::*;
-    use tui::style::Color;
-    use tui::style::Modifier;
+    use crate::config::StylesValue;
+    use tui::style::{Color, Modifier};
 
     #[test]
     fn read_block() -> Result<()> {
@@ -139,27 +138,26 @@ mod tests {
 
     #[test]
     fn parse() -> Result<()> {
-        let styles = Styles::default();
         assert_eq!(Parser::parse("", &Styles::default())?[0], Line::default());
         assert_eq!(
             Parser::parse("some text", &Styles::default())?[0],
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
-                style: styles.get_style_default(),
+                style: StylesValue::default(),
             }])
         );
         assert_eq!(
             Parser::parse("some text \\[ with escapes \\]", &Styles::default())?[0],
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text [ with escapes ]".to_string())],
-                style: styles.get_style_default(),
+                style: StylesValue::default(),
             }])
         );
         assert_eq!(
             Parser::parse("[some text](Red)", &Styles::default())?[0],
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
-                style: styles.get_style_from_style(Style::default().fg(Color::Red)),
+                style: Style::default().fg(Color::Red).into(),
             }])
         );
         assert_eq!(
@@ -167,11 +165,11 @@ mod tests {
             Line(vec![
                 LineBlock {
                     parts: vec![Parts::Text("some text".to_string())],
-                    style: styles.get_style_default(),
+                    style: StylesValue::default(),
                 },
                 LineBlock {
                     parts: vec![Parts::Text(" and another text".to_string())],
-                    style: styles.get_style_default(),
+                    style: StylesValue::default(),
                 }
             ])
         );
@@ -180,11 +178,11 @@ mod tests {
             Line(vec![
                 LineBlock {
                     parts: vec![Parts::Text("some text".to_string())],
-                    style: styles.get_style_default(),
+                    style: StylesValue::default(),
                 },
                 LineBlock {
                     parts: vec![Parts::Text("[ and escaped text ]".to_string())],
-                    style: styles.get_style_default(),
+                    style: StylesValue::default(),
                 }
             ])
         );
@@ -192,7 +190,7 @@ mod tests {
             Parser::parse("[some text]", &Styles::default())?[0],
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
-                style: styles.get_style_default(),
+                style: StylesValue::default(),
             }])
         );
         assert_eq!(
@@ -203,19 +201,18 @@ mod tests {
             Line(vec![
                 LineBlock {
                     parts: vec![Parts::Text("some text".to_string())],
-                    style: styles.get_style_from_style(Style::default().fg(Color::Red)),
+                    style: Style::default().fg(Color::Red).into(),
                 },
                 LineBlock {
                     parts: vec![Parts::Text(" text between ".to_string())],
-                    style: styles.get_style_default(),
+                    style: StylesValue::default(),
                 },
                 LineBlock {
                     parts: vec![Parts::Text("another text".to_string())],
-                    style: styles.get_style_from_style(
-                        Style::default()
-                            .fg(Color::Blue)
-                            .add_modifier(Modifier::BOLD)
-                    ),
+                    style: Style::default()
+                        .fg(Color::Blue)
+                        .add_modifier(Modifier::BOLD)
+                        .into(),
                 }
             ])
         );
@@ -223,7 +220,7 @@ mod tests {
             Parser::parse("[some text](priority:A)", &Styles::default())?[0],
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
-                style: styles.get_style_from_style(Style::default().fg(Color::Red)),
+                style: Style::default().fg(Color::Red).into(),
             },])
         );
         let parse = Parser::parse("some text\nnew line", &Styles::default())?;
@@ -232,14 +229,14 @@ mod tests {
             parse[0],
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
-                style: styles.get_style_default(),
+                style: StylesValue::default(),
             }])
         );
         assert_eq!(
             parse[1],
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("new line".to_string())],
-                style: styles.get_style_default(),
+                style: StylesValue::default(),
             }])
         );
 

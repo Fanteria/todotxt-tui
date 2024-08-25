@@ -29,7 +29,12 @@ impl Version {
     pub fn update_all(&mut self) {
         self.versions.pending += 1;
         self.versions.done += 1;
-        // TODO save file
+        if let Some(tx) = &self.tx {
+            if let Err(e) = tx.send(FileWorkerCommands::Save) {
+                log::error!("Error while send signal to save todo list from update all: {e}");
+                // TODO show something on screen
+            }
+        }
     }
 
     pub fn update(&mut self, data_type: &ToDoData) {
@@ -38,6 +43,12 @@ impl Version {
                 self.versions.pending += 1;
             }
             ToDoData::Done => self.versions.done += 1,
+        }
+        if let Some(tx) = &self.tx {
+            if let Err(e) = tx.send(FileWorkerCommands::Save) {
+                log::error!("Error while send signal to save todo list from update: {e}");
+                // TODO show something on screen
+            }
         }
     }
 

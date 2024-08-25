@@ -41,6 +41,12 @@ pub trait HandleEvent {
         self.handle_event(event)
     }
 
+    /// Handle a click event on a specified coordinates in the UI.
+    ///
+    /// # Arguments
+    ///
+    /// * `column` - `x` coordinate.
+    /// * `row` - `y` coordinate.
     #[allow(unused_variables)]
     fn click(&mut self, column: usize, row: usize) {}
 }

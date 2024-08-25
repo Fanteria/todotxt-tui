@@ -83,7 +83,7 @@ impl LineBlock {
             parts: Self::parse_variables(value)?,
             style: match style {
                 Some(style) => styles.get_style(&style)?,
-                None => styles.get_style_default(),
+                None => StylesValue::default(),
             },
         })
     }

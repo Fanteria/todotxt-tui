@@ -9,7 +9,7 @@ mod traits;
 pub use self::{
     colors::Color,
     keycode::KeyCodeDef,
-    options::{SetFinalDateType, TaskSort, TextModifier},
+    options::{SetFinalDateType, TaskSort, TextModifier, SavePolicy},
     styles::{CustomCategoryStyle, StylesValue},
     text_style::{TextStyle, TextStyleList},
     traits::{Conf, ConfMerge, ConfigDefaults},
@@ -24,7 +24,6 @@ use crate::{
 use clap::{builder::styling::AnsiColor, FromArgMatches};
 use crossterm::event::KeyCode;
 use macros::{Conf, ConfMerge};
-use options::SavePolicy;
 use std::{env::var, path::PathBuf, str::FromStr, time::Duration};
 use tui::style::Color as tuiColor;
 use tui::style::Style;
@@ -43,6 +42,8 @@ pub struct FileWorkerConfig {
     /// when changes are detected.
     #[arg(short = 'f')]
     pub file_watcher: bool,
+
+    pub save_policy: SavePolicy,
 }
 
 impl Default for FileWorkerConfig {
@@ -52,6 +53,7 @@ impl Default for FileWorkerConfig {
             archive_path: None,
             autosave_duration: Duration::from_secs(900),
             file_watcher: true,
+            save_policy: SavePolicy::default(),
         }
     }
 }
@@ -84,6 +86,8 @@ pub struct ActiveColorConfig {
 }
 
 impl ActiveColorConfig {
+    /// Retrieves the active style for a given `ToDoData` type, combining it with
+    /// the list's active color.
     pub fn get_active_style(&self, data_type: &ToDoData) -> TextStyle {
         self.list_active_color.combine(&match data_type {
             ToDoData::Done => self.done_active_color,
@@ -91,6 +95,10 @@ impl ActiveColorConfig {
         })
     }
 
+    /// Returns the active configuration style for a given category.
+    /// This function combines three color settings based on the specified `ToDoCategory`:
+    /// - The list active color.
+    /// - The category specific active color (projects, contexts, or hashtags).
     pub fn get_active_config_style(&self, category: &ToDoCategory) -> TextStyle {
         self.list_active_color
             .combine(&self.category_active_color)
@@ -217,8 +225,6 @@ pub struct UiConfig {
     /// This can be customized using a layout string.
     #[arg(short = 'l')]
     pub layout: String, // TODO describe layout language
-
-    pub save_policy: SavePolicy,
 }
 
 impl Default for UiConfig {
@@ -256,7 +262,6 @@ impl Default for UiConfig {
                 "  ],",
                 "]",
             )),
-            save_policy: SavePolicy::default(),
         }
     }
 }
@@ -318,14 +323,7 @@ pub struct Styles {
 }
 
 impl Styles {
-    pub fn get_style_default(&self) -> StylesValue {
-        StylesValue::Const(Style::default())
-    }
-
-    pub fn get_style_from_style(&self, style: Style) -> StylesValue {
-        StylesValue::Const(style)
-    }
-
+    /// Retrieves the style configuration for a given name, which can be one of several predefined types such as "priority", "custom_category", or specific categories like projects, contexts, and hashtags. If the name is prefixed with "priority:" or "custom_category:", it attempts to extract and return the corresponding priority or custom category style; otherwise, it interprets the name directly into a text style if possible, defaulting to a base configuration if not found.
     pub fn get_style(&self, name: &str) -> Result<StylesValue> {
         use StylesValue::*;
         Ok(match name {
@@ -362,6 +360,9 @@ impl Styles {
         })
     }
 
+    /// Retrieves the text style for a specified category. If a custom style
+    /// has been defined for the category, it will be used; otherwise,
+    /// the base style for that category is employed.
     pub fn get_category_style(&self, category: &str) -> TextStyle {
         match self.custom_category_style.get(category) {
             Some(style) => *style,
@@ -369,6 +370,10 @@ impl Styles {
         }
     }
 
+    /// Retrieves the base style for a specified category based on its initial
+    /// character: '+' for projects, '@' for contexts, and '#' for hashtags.
+    /// If the category does not match any of these prefixes, it defaults
+    /// to the general `category_style`.
     fn get_category_base_style(&self, category: &str) -> TextStyle {
         match category.chars().next().unwrap() {
             '+' => self.category_style.combine(&self.projects_style),

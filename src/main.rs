@@ -11,6 +11,10 @@ use todotxt_tui::{
     ui::UI,
 };
 
+/// Initializes the logging system.
+///
+/// Reads the log configuration file path from the environment variable.
+/// If it is not set, the default path `config_folder/log4rs.yaml` is used.
 fn log_init() -> Result<(), Box<dyn Error>> {
     let config_folder = Config::config_folder();
     let log_file = match env::var(format!("{}LOGCONFIG", Config::env_prefix())) {
