@@ -271,17 +271,17 @@ impl UI {
     /// # Arguments
     ///
     /// * `e`: The event that triggers the function, which can be a resize event
-    ///  or a mouse click event.
+    ///   or a mouse click event.
     ///
     /// # Details
     ///
     /// This function processes different types of events:
     /// - **Resize Event**: Adjusts the UI chunk based on the new window dimensions.
     /// - **Mouse Click Event**: Triggers a click action in the layout manager
-    ///  at the specified column and row.
+    ///   at the specified column and row.
     /// - **Keyboard Events**: Depending on the current mode (`Mode::Input`, `Mode::Edit`,
-    ///  or `Mode::Normal`), handles input for task creation, editing, and general navigation
-    ///  using specific keys.
+    ///   or `Mode::Normal`), handles input for task creation, editing, and general navigation
+    ///   using specific keys.
     fn handle_event_window(&mut self, e: Event) {
         match e {
             Event::Resize(width, height) => {
