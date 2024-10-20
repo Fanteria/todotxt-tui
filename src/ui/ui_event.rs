@@ -99,7 +99,9 @@ pub enum UIEvent {
     MoveDown,
     InsertMode,
     EditMode,
+    SearchMode,
 
+    CleanSearch,
     ListDown, // Widget list
     ListUp,
     ListFirst,
@@ -129,7 +131,9 @@ impl FromStr for UIEvent {
             "movedown" => MoveDown,
             "insertmode" => InsertMode,
             "editmode" => EditMode,
+            "searchmode" => SearchMode,
 
+            "cleansearch" => CleanSearch,
             "listdown" => ListDown,
             "listup" => ListUp,
             "listfirst" => ListFirst,

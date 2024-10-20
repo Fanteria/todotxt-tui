@@ -413,6 +413,22 @@ impl Layout {
             Container::actualize_layout(self);
         }
     }
+
+    pub fn search(&mut self, to_search: String) {
+        log::debug!("search to_search={to_search}");
+        match self.act_mut().actual_mut() {
+            Some(w) => w.search_event(to_search),
+            None => panic!("Actual to search is not a widget"),
+        }
+    }
+
+    pub fn clean_search(&mut self) {
+        log::debug!("clean_search");
+        match self.act_mut().actual_mut() {
+            Some(w) => w.clear_search(),
+            None => panic!("Actual to search is not a widget"),
+        }
+    }
 }
 
 impl Render for Layout {

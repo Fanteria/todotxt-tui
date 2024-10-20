@@ -4,6 +4,7 @@ pub mod parser;
 pub mod task_list;
 pub mod todo_state;
 pub mod version;
+pub mod search;
 
 pub use self::{
     autocomplete::autocomplete, category_list::CategoryList, parser::Parser, task_list::TaskList,
@@ -12,7 +13,7 @@ pub use self::{
 
 use crate::config::{SetFinalDateType, Styles, ToDoConfig};
 use chrono::{NaiveDate, Utc};
-use std::{collections::btree_set::BTreeSet, str::FromStr};
+use std::str::FromStr;
 use todo_txt::Task;
 use version::Version;
 
@@ -110,25 +111,7 @@ impl ToDo {
     ///
     /// A `CategoryList` containing the filtered categories and their selection status.
     pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
-        let tasks = if self.config.use_done {
-            vec![&self.pending, &self.done]
-        } else {
-            vec![&self.pending]
-        };
-
-        let selected = self.state.get_category(category);
-        CategoryList {
-            vec: tasks
-                .iter()
-                .flat_map(|list| list.iter())
-                .flat_map(|task| category.get_data(task).iter())
-                .chain(self.state.get_category(category).keys())
-                .collect::<BTreeSet<&String>>()
-                .iter()
-                .map(|item| (*item, selected.get(*item).cloned()))
-                .collect(),
-            styles: &self.styles,
-        }
+        CategoryList::new(self, category)
     }
 
     /// Moves a task from one section (Pending or Done) to the other.
@@ -379,6 +362,26 @@ impl ToDo {
     pub fn update_state(&mut self, state: ToDoState) {
         self.state = state
     }
+
+    pub fn find_task(&self, data: ToDoData, to_find: &str) -> Vec<usize> {
+        let tasks = match data {
+            ToDoData::Pending => &self.pending,
+            ToDoData::Done => &self.done,
+        };
+        let (case_sensitive, to_find) = match to_find.chars().next() {
+            Some(c) if c.is_uppercase() => (true, to_find.to_uppercase()),
+            _ => (false, String::from(to_find)),
+        };
+        tasks
+            .iter()
+            .enumerate()
+            .filter_map(|(i, task)| match case_sensitive {
+                true if task.subject.to_uppercase().contains(&to_find) => Some(i),
+                false if task.subject.contains(&to_find) => Some(i),
+                _ => None,
+            })
+            .collect()
+    }
 }
 
 impl Default for ToDo {
@@ -471,55 +474,6 @@ mod tests {
         assert_eq!(todo.pending[1].contexts().len(), 1);
         assert_eq!(todo.pending[1].projects().len(), 1);
         assert_eq!(todo.pending[1].hashtags.len(), 0);
-    }
-
-    fn create_vec(items: &[String]) -> Vec<(&String, Option<FilterState>)> {
-        let mut vec: Vec<(&String, Option<FilterState>)> = Vec::new();
-        items.iter().for_each(|item| {
-            vec.push((item, None));
-        });
-        vec
-    }
-
-    #[test]
-    fn test_categeries_list() -> Result<(), Box<dyn Error>> {
-        let mut todo = example_todo();
-        assert_eq!(
-            todo.get_categories(ToDoCategory::Projects).vec,
-            create_vec(&[String::from("project2"), String::from("project3")])
-        );
-        assert_eq!(
-            todo.get_categories(ToDoCategory::Contexts).vec,
-            create_vec(&[String::from("context2"), String::from("context3")])
-        );
-        assert_eq!(
-            todo.get_categories(ToDoCategory::Hashtags).vec,
-            create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
-        );
-
-        todo.config.use_done = true;
-        assert_eq!(
-            todo.get_categories(ToDoCategory::Projects).vec,
-            create_vec(&[
-                String::from("project1"),
-                String::from("project2"),
-                String::from("project3"),
-            ])
-        );
-        assert_eq!(
-            todo.get_categories(ToDoCategory::Contexts).vec,
-            create_vec(&[
-                String::from("context1"),
-                String::from("context2"),
-                String::from("context3"),
-            ])
-        );
-        assert_eq!(
-            todo.get_categories(ToDoCategory::Hashtags).vec,
-            create_vec(&[String::from("hashtag1"), String::from("hashtag2")])
-        );
-
-        Ok(())
     }
 
     #[test]

@@ -154,7 +154,6 @@ impl Display for TextStyle {
     }
 }
 
-// TODO doc comment
 impl FromStr for TextStyle {
     type Err = ToDoError;
 

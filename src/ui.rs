@@ -42,6 +42,7 @@ use tui_input::{backend::crossterm::EventHandler, Input};
 enum Mode {
     Input,
     Edit,
+    Search,
     Normal,
 }
 
@@ -228,8 +229,8 @@ impl UI {
         let mut block = Block::default()
             .borders(Borders::ALL)
             .title("Input")
-            .border_type(BorderType::Rounded);
-        if self.mode == Mode::Input || self.mode == Mode::Edit {
+            .border_type(BorderType::Rounded); // TODO add this to config????
+        if self.mode == Mode::Input || self.mode == Mode::Edit || self.mode == Mode::Search {
             block = block.border_style(Style::default().fg(self.active_color));
         }
         terminal
@@ -350,6 +351,22 @@ impl UI {
                         self.tinput.handle_event(&e);
                     }
                 },
+                Mode::Search => match event.code {
+                    KeyCode::Enter => {
+                        self.mode = Mode::Normal;
+                        self.layout.focus();
+                    }
+                    KeyCode::Esc => {
+                        self.tinput.reset();
+                        self.mode = Mode::Normal;
+                        self.layout.clean_search();
+                        self.layout.focus();
+                    }
+                    _ => {
+                        self.tinput.handle_event(&e);
+                        self.layout.search(self.tinput.to_string())
+                    }
+                }
                 Mode::Normal => {
                     let _ = self.handle_key(&event.code) || self.layout.handle_key(&event);
                 }
@@ -412,6 +429,11 @@ impl HandleEvent for UI {
                     self.layout.unfocus();
                     // self.in
                 }
+            }
+            SearchMode => {
+                self.tinput.reset();
+                self.mode = Mode::Search;
+                self.layout.unfocus();
             }
             _ => {
                 return false;

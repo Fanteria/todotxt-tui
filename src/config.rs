@@ -144,6 +144,7 @@ impl Default for ListConfig {
                 (KeyCode::Char('k'), UIEvent::ListUp),
                 (KeyCode::Char('g'), UIEvent::ListFirst),
                 (KeyCode::Char('G'), UIEvent::ListLast),
+                (KeyCode::Char('h'), UIEvent::CleanSearch),
             ]),
         }
     }
@@ -242,6 +243,7 @@ impl Default for UiConfig {
                 (KeyCode::Char('J'), UIEvent::MoveDown),
                 (KeyCode::Char('I'), UIEvent::InsertMode),
                 (KeyCode::Char('E'), UIEvent::EditMode),
+                (KeyCode::Char('/'), UIEvent::SearchMode),
             ]),
             list_refresh_rate: Duration::from_secs(5),
             save_state_path: None,
@@ -320,6 +322,8 @@ pub struct Styles {
     /// Note: Custom styles defined here will override all other category-specific styles,
     /// including `category_style`, `category_select_style`, and `category_remove_style`.
     custom_category_style: CustomCategoryStyle,
+    /// TODO comment
+    pub highlight: TextStyle
 }
 
 impl Styles {
@@ -401,6 +405,7 @@ impl Default for Styles {
             category_select_style: TextStyle::default().fg(Color::green()),
             category_remove_style: TextStyle::default().fg(Color::red()),
             custom_category_style,
+            highlight: TextStyle::default().bg(Color::yellow()),
         }
     }
 }
@@ -614,6 +619,7 @@ mod tests {
             (KeyCode::Char('J'), UIEvent::MoveDown),
             (KeyCode::Char('I'), UIEvent::InsertMode),
             (KeyCode::Char('E'), UIEvent::EditMode),
+            (KeyCode::Char('/'), UIEvent::SearchMode),
         ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(10);
         expected.active_color_config.list_active_color = TextStyle::default().bg(Color::green());
@@ -623,6 +629,7 @@ mod tests {
             (KeyCode::Char('j'), UIEvent::ListDown),
             (KeyCode::Char('k'), UIEvent::ListUp),
             (KeyCode::Char('G'), UIEvent::ListLast),
+            (KeyCode::Char('h'), UIEvent::CleanSearch),
         ]);
         expected.widget_base_config.tasks_keybind = EventHandlerUI::from([
             (KeyCode::Char('s'), UIEvent::Select),
@@ -743,6 +750,7 @@ mod tests {
             (KeyCode::Char('J'), UIEvent::MoveDown),
             (KeyCode::Char('I'), UIEvent::InsertMode),
             (KeyCode::Char('E'), UIEvent::EditMode),
+            (KeyCode::Char('/'), UIEvent::SearchMode),
         ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(15);
         expected.active_color_config.list_active_color =
@@ -753,6 +761,7 @@ mod tests {
             (KeyCode::Char('j'), UIEvent::ListDown),
             (KeyCode::Char('k'), UIEvent::ListUp),
             (KeyCode::Char('G'), UIEvent::ListLast),
+            (KeyCode::Char('h'), UIEvent::CleanSearch),
         ]);
         expected.widget_base_config.tasks_keybind = EventHandlerUI::from([
             (KeyCode::Char('s'), UIEvent::Select),

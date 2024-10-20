@@ -6,6 +6,8 @@ use tui::text::Line;
 use tui::text::Span;
 use tui::widgets::ListItem;
 
+use super::search::Search;
+
 type Item<'a> = (usize, &'a Task);
 
 /// Represents a list of tasks, where each task is a tuple of `(usize, &'a Task)`.
@@ -18,6 +20,7 @@ pub struct TaskList<'a> {
 pub struct TaskSlice<'a> {
     pub vec: &'a [Item<'a>],
     pub styles: &'a Styles,
+    pub to_search: Option<&'a str>,
 }
 
 impl<'a> TaskList<'a> {
@@ -53,16 +56,19 @@ impl<'a> TaskList<'a> {
     /// # Returns
     ///
     /// A `TaskSlice` containing the sliced tasks.
-    pub fn slice(&self, first: usize, last: usize) -> TaskSlice {
+    // TODO this function is disgusting use ranges... and solve to_search some move inteligent way
+    pub fn slice(&'a self, first: usize, last: usize, to_search: Option<&'a str>) -> TaskSlice {
         if last > self.vec.len() {
             TaskSlice {
                 vec: &self.vec[first..],
                 styles: self.styles,
+                to_search,
             }
         } else {
             TaskSlice {
                 vec: &self.vec[first..last],
                 styles: self.styles,
+                to_search,
             }
         }
     }
@@ -98,7 +104,14 @@ impl<'a> TaskList<'a> {
     /// # Returns
     ///
     /// A vector of `Span` elements representing the parsed task.
-    pub fn parse_task_string(task: &'a Task, styles: &'a Styles) -> Vec<Span<'a>> {
+    pub fn parse_task_string(
+        task: &'a Task,
+        styles: &'a Styles,
+        to_search: Option<&str>,
+    ) -> Vec<Span<'a>> {
+        let style = styles
+            .priority_style
+            .get_style(u8::from(task.priority.clone()));
         let mut indexes = Vec::new();
 
         let mut collect_indexes = |separator, iter: core::slice::Iter<'_, String>| {
@@ -116,17 +129,14 @@ impl<'a> TaskList<'a> {
         collect_indexes('@', task.contexts().iter());
         collect_indexes('#', task.hashtags.iter());
 
-        let style = styles
-            .priority_style
-            .get_style(u8::from(task.priority.clone()));
-
         if indexes.is_empty() {
-            return vec![Span::styled(&task.subject, style)];
+            return Search::highlight(&task.subject, to_search, styles, style);
         }
 
         indexes.sort_by(|a, b| a.0.cmp(&b.0));
 
-        let mut parsed = vec![Span::styled(&task.subject[0..indexes[0].0], style)];
+        let mut parsed =
+            Search::highlight(&task.subject[0..indexes[0].0], to_search, styles, style);
         indexes.iter().zip(indexes.iter().skip(1)).for_each(
             |((act_index, act_len), (next_index, _))| {
                 let end_index = act_index + act_len;
@@ -155,7 +165,11 @@ impl<'a> From<TaskSlice<'a>> for Vec<ListItem<'a>> {
         val.vec
             .iter()
             .map(|(_, task)| {
-                ListItem::new(Line::from(TaskList::parse_task_string(task, val.styles)))
+                ListItem::new(Line::from(TaskList::parse_task_string(
+                    task,
+                    val.styles,
+                    val.to_search,
+                )))
             })
             .collect::<Vec<ListItem<'a>>>()
     }
@@ -170,7 +184,7 @@ mod tests {
     fn parse_task_string() {
         let styles = Styles::default();
         let task = Task::from_str("measure space for 1 +project1 ~ @context1 #hashtag1").unwrap();
-        let parsed = TaskList::parse_task_string(&task, &styles);
+        let parsed = TaskList::parse_task_string(&task, &styles, None);
         assert_eq!(parsed[0].content, "measure space for 1 ");
         assert_eq!(parsed[1].content, "+project1");
         assert_eq!(parsed[2].content, " ~ ");
@@ -190,13 +204,13 @@ mod tests {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
         };
-        let slice = tasklist.slice(1, 3);
+        let slice = tasklist.slice(1, 3, None);
 
         assert_eq!(slice.vec.len(), 2);
         assert_eq!(slice.vec[0], (1, &task2));
         assert_eq!(slice.vec[1], (2, &task3));
 
-        let slice = tasklist.slice(1, 100_000);
+        let slice = tasklist.slice(1, 100_000, None);
         assert_eq!(slice.vec.len(), 3);
         assert_eq!(slice.vec[0], (1, &task2));
         assert_eq!(slice.vec[1], (2, &task3));

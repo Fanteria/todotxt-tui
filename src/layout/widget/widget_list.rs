@@ -13,6 +13,7 @@ pub struct WidgetList {
     first: usize,
     size: usize,
     config: ListConfig,
+    pub to_search: Option<String>,
 }
 
 impl WidgetList {
@@ -34,6 +35,7 @@ impl WidgetList {
             first: 0,
             size: 0,
             config: config.list_config.clone(),
+            to_search: None,
         };
         def.state.select(Some(0));
         def
@@ -173,6 +175,14 @@ impl WidgetList {
         }
     }
 
+    pub fn set_search(&mut self, to_search: String) {
+        self.to_search = Some(to_search)
+    }
+
+    pub fn clear_search(&mut self) {
+        self.to_search = None
+    }
+
     /// Gets the range of items currently displayed in the list.
     ///
     /// # Returns
@@ -194,6 +204,7 @@ impl HandleEvent for WidgetList {
             UIEvent::ListUp => self.up(),
             UIEvent::ListFirst => self.first(),
             UIEvent::ListLast => self.last(),
+            UIEvent::CleanSearch => self.clear_search(),
             _ => return false,
         }
         true

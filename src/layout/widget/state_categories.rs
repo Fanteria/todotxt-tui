@@ -71,7 +71,8 @@ impl State for StateCategories {
         let todo = self.base.data();
         let data = todo.get_categories(self.category);
         let (first, last) = self.base.range();
-        let list = List::new(data.slice(first, last)).block(self.get_block());
+        let list =
+            List::new(data.slice(first, last, self.base.to_search.as_deref())).block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {
@@ -92,8 +93,20 @@ impl State for StateCategories {
     }
 
     fn focus_event(&mut self) -> bool {
-        self.base.len = self.len();
+        let len = self.len();
+        self.base.len = len;
+        if self.base.act() >= len && len > 0 {
+            self.base.last();
+        }
         true
+    }
+
+    fn search_event(&mut self, to_search: String) {
+        self.base.set_search(to_search);
+    }
+
+    fn clear_search(&mut self) {
+        self.base.clear_search();
     }
 
     fn update_chunk_event(&mut self) {

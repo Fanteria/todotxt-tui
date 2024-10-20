@@ -76,6 +76,7 @@ impl StateList {
 
 impl State for StateList {
     fn handle_event_state(&mut self, event: UIEvent) -> bool {
+        log::trace!("StateList handle event {event:?}");
         if self.base.handle_event(event) {
             return true;
         }
@@ -107,7 +108,8 @@ impl State for StateList {
         let data = self.base.data();
         let filtered = data.get_filtered_and_sorted(self.data_type);
         let (first, last) = self.base.range();
-        let list = List::new(filtered.slice(first, last)).block(self.get_block());
+        let filtered = filtered.slice(first, last, self.base.to_search.as_deref());
+        let list = List::new(filtered).block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {
@@ -131,6 +133,14 @@ impl State for StateList {
             self.base.last();
         }
         true
+    }
+
+    fn search_event(&mut self, to_search: String) {
+        self.base.set_search(to_search);
+    }
+
+    fn clear_search(&mut self) {
+        self.base.clear_search();
     }
 
     fn update_chunk_event(&mut self) {

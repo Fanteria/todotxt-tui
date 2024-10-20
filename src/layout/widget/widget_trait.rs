@@ -43,7 +43,7 @@ pub trait State {
         let mut block = Block::default()
             .borders(Borders::ALL)
             .title(base.title.clone())
-            .border_type(BorderType::Rounded);
+            .border_type(BorderType::Rounded); // TODO add this to config???
         if base.focus {
             block = block.border_style(Style::default().fg(base.active_color));
         }
@@ -60,6 +60,11 @@ pub trait State {
 
     /// Called when the widget's rendering area (chunk) is updated.
     fn update_chunk_event(&mut self) {}
+
+    // TODO comment
+    fn search_event(&mut self, _: String) {}
+
+    fn clear_search(&mut self) {}
 
     /// Retrieves an internal UI event based on a key code.
     /// This can be used for custom event handling within a state.
