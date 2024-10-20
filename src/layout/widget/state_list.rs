@@ -107,8 +107,7 @@ impl State for StateList {
         let data = self.base.data();
         let filtered = data.get_filtered_and_sorted(self.data_type);
         let (first, last) = self.base.range();
-        let filtered = filtered.slice(first, last);
-        let list = List::new(filtered).block(self.get_block());
+        let list = List::new(filtered.slice(first, last)).block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {

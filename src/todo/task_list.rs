@@ -55,14 +55,15 @@ impl<'a> TaskList<'a> {
     /// A `TaskSlice` containing the sliced tasks.
     pub fn slice(&self, first: usize, last: usize) -> TaskSlice {
         if last > self.vec.len() {
-            return TaskSlice {
+            TaskSlice {
                 vec: &self.vec[first..],
                 styles: self.styles,
-            };
-        };
-        TaskSlice {
-            vec: &self.vec[first..last],
-            styles: self.styles,
+            }
+        } else {
+            TaskSlice {
+                vec: &self.vec[first..last],
+                styles: self.styles,
+            }
         }
     }
 

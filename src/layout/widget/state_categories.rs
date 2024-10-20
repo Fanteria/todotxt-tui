@@ -70,7 +70,8 @@ impl State for StateCategories {
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
         let todo = self.base.data();
         let data = todo.get_categories(self.category);
-        let list = List::new(data).block(self.get_block());
+        let (first, last) = self.base.range();
+        let list = List::new(data.slice(first, last)).block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {

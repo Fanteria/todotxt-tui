@@ -96,10 +96,11 @@ impl WidgetList {
             self.state.select(Some(act + 1));
         }
         log::trace!(
-            "List go down: act: {}, size: {} len: {}, shift: {}",
+            "List go down: act: {}, size: {} len: {}, first: {} shift: {}",
             act,
             self.size,
             self.len,
+            self.first,
             self.config.list_shift
         );
     }

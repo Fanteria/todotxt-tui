@@ -11,6 +11,12 @@ pub struct CategoryList<'a> {
     pub styles: &'a Styles,
 }
 
+// TODO doc comment
+pub struct CategorySlice<'a> {
+    pub vec: &'a [(&'a String, Option<FilterState>)],
+    pub styles: &'a Styles,
+}
+
 impl<'a> CategoryList<'a> {
     /// Returns a vector of references to categories that start with the specified pattern.
     ///
@@ -55,10 +61,24 @@ impl<'a> CategoryList<'a> {
     pub fn get_name(&self, index: usize) -> &String {
         self.vec[index].0
     }
+
+    pub fn slice(&self, first: usize, last: usize) -> CategorySlice {
+        if last > self.vec.len() {
+            CategorySlice {
+                vec: &self.vec[first..],
+                styles: self.styles,
+            }
+        } else {
+            CategorySlice {
+                vec: &self.vec[first..last],
+                styles: self.styles,
+            }
+        }
+    }
 }
 
-impl<'a> From<CategoryList<'a>> for Vec<ListItem<'a>> {
-    fn from(val: CategoryList<'a>) -> Self {
+impl<'a> From<CategorySlice<'a>> for Vec<ListItem<'a>> {
+    fn from(val: CategorySlice<'a>) -> Self {
         val.vec
             .iter()
             .map(|(category, active)| {
