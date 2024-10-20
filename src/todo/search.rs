@@ -1,6 +1,5 @@
 use std::{borrow::Cow, ops::Deref};
 
-use clap::builder::IntoResettable;
 use tui::text::Span;
 
 use crate::config::Styles;
@@ -43,7 +42,7 @@ impl Search {
             Some(to_search) => {
                 let mut visitor = SearchVisitor::new(subject, to_search);
                 let mut ret = Vec::new();
-                while let Some((before_str, match_str)) = visitor.next() {
+                for (before_str, match_str) in visitor.by_ref() {
                     if let Some(s) = before_str {
                         ret.push(Span::styled(s, style))
                     }
@@ -54,7 +53,7 @@ impl Search {
                 ret.push(Span::styled(visitor.remaining(), style));
                 ret
             }
-            None => return vec![Span::styled(subject, style)],
+            None => vec![Span::styled(subject, style)],
         }
     }
 }

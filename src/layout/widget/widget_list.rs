@@ -1,7 +1,5 @@
 use super::{RCToDo, WidgetBase, WidgetType};
 use crate::config::{Config, ListConfig};
-use crate::todo::search::Search;
-use crate::todo::ToDo;
 use crate::ui::{HandleEvent, UIEvent};
 use crossterm::event::KeyCode;
 use std::ops::{Deref, DerefMut};

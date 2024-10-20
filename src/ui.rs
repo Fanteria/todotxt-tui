@@ -366,7 +366,7 @@ impl UI {
                         self.tinput.handle_event(&e);
                         self.layout.search(self.tinput.to_string())
                     }
-                }
+                },
                 Mode::Normal => {
                     let _ = self.handle_key(&event.code) || self.layout.handle_key(&event);
                 }

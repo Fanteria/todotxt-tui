@@ -1,10 +1,10 @@
 pub mod autocomplete;
 pub mod category_list;
 pub mod parser;
+pub mod search;
 pub mod task_list;
 pub mod todo_state;
 pub mod version;
-pub mod search;
 
 pub use self::{
     autocomplete::autocomplete, category_list::CategoryList, parser::Parser, task_list::TaskList,

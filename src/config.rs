@@ -327,7 +327,7 @@ pub struct Styles {
     /// including `category_style`, `category_select_style`, and `category_remove_style`.
     custom_category_style: CustomCategoryStyle,
     /// TODO comment
-    pub highlight: TextStyle
+    pub highlight: TextStyle,
 }
 
 impl Styles {

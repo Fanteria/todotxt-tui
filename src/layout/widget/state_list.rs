@@ -106,7 +106,7 @@ impl State for StateList {
                         let filtered = data.get_filtered_and_sorted(self.data_type);
                         let next = Search::find(
                             filtered.vec.iter().skip(self.base.index() + 1).enumerate(),
-                            &to_search,
+                            to_search,
                             |t| t.1 .1.subject.as_str(),
                         );
                         next.map(|next| next.0)
@@ -131,14 +131,14 @@ impl State for StateList {
                                 .rev()
                                 .skip(filtered.vec.len() - self.base.index())
                                 .enumerate(),
-                            &to_search,
+                            to_search,
                             |t| t.1 .1.subject.as_str(),
                         );
                         prev.map(|prev| prev.0)
                     };
                     if let Some(prev) = prev {
                         log::debug!("Search prev: {} times up", prev);
-                        for _ in 0..prev+1 {
+                        for _ in 0..prev + 1 {
                             self.base.up()
                         }
                     }

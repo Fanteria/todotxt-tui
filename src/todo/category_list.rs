@@ -2,8 +2,8 @@ use std::collections::BTreeSet;
 
 use super::{FilterState, ToDo, ToDoCategory};
 use crate::config::Styles;
-use crate::todo::search::{Search, SearchMatches};
-use tui::text::{Line, Span};
+use crate::todo::search::Search;
+use tui::text::Line;
 use tui::widgets::ListItem;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -150,6 +150,7 @@ mod tests {
     use std::{error::Error, str::FromStr};
 
     use todo_txt::Task;
+    use tui::text::Span;
 
     use crate::config::Config;
 

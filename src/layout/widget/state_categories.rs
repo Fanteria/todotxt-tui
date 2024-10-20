@@ -72,7 +72,7 @@ impl State for StateCategories {
                         let data = todo.get_categories(self.category);
                         let next = Search::find(
                             data.vec.iter().skip(self.base.index() + 1).enumerate(),
-                            &to_search,
+                            to_search,
                             |c| c.1.name,
                         );
                         next.map(|next| next.0)
@@ -96,7 +96,7 @@ impl State for StateCategories {
                                 .rev()
                                 .skip(data.vec.len() - self.base.index())
                                 .enumerate(),
-                            &to_search,
+                            to_search,
                             |t| t.1.name,
                         );
                         prev.map(|prev| prev.0)
