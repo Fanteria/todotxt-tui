@@ -1,7 +1,7 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
     config::Config,
-    todo::{ToDo, ToDoData},
+    todo::{search::Search, ToDo, ToDoData},
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
@@ -98,6 +98,51 @@ impl State for StateList {
                 self.base
                     .data()
                     .set_active(self.data_type, self.base.index());
+            }
+            UIEvent::NextSearch => {
+                if let Some(to_search) = &self.base.to_search {
+                    let next = {
+                        let data = self.base.data();
+                        let filtered = data.get_filtered_and_sorted(self.data_type);
+                        let next = Search::find(
+                            filtered.vec.iter().skip(self.base.index() + 1).enumerate(),
+                            &to_search,
+                            |t| t.1 .1.subject.as_str(),
+                        );
+                        next.map(|next| next.0)
+                    };
+                    if let Some(next) = next {
+                        log::debug!("Search next: {} times down", next);
+                        for _ in 0..next + 1 {
+                            self.base.down()
+                        }
+                    }
+                }
+            }
+            UIEvent::PrevSearch => {
+                if let Some(to_search) = &self.base.to_search {
+                    let prev = {
+                        let data = self.base.data();
+                        let filtered = data.get_filtered_and_sorted(self.data_type);
+                        let prev = Search::find(
+                            filtered
+                                .vec
+                                .iter()
+                                .rev()
+                                .skip(filtered.vec.len() - self.base.index())
+                                .enumerate(),
+                            &to_search,
+                            |t| t.1 .1.subject.as_str(),
+                        );
+                        prev.map(|prev| prev.0)
+                    };
+                    if let Some(prev) = prev {
+                        log::debug!("Search prev: {} times up", prev);
+                        for _ in 0..prev+1 {
+                            self.base.up()
+                        }
+                    }
+                }
             }
             _ => return false,
         }

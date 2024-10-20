@@ -287,10 +287,14 @@ impl Default for WidgetBaseConfig {
                 (KeyCode::Char('x'), UIEvent::RemoveItem),
                 (KeyCode::Char('d'), UIEvent::MoveItem),
                 (KeyCode::Enter, UIEvent::Select),
+                (KeyCode::Char('n'), UIEvent::NextSearch),
+                (KeyCode::Char('N'), UIEvent::PrevSearch),
             ]),
             category_keybind: EventHandlerUI::from([
                 (KeyCode::Enter, UIEvent::Select),
                 (KeyCode::Backspace, UIEvent::Remove),
+                (KeyCode::Char('n'), UIEvent::NextSearch),
+                (KeyCode::Char('N'), UIEvent::PrevSearch),
             ]),
         }
     }
@@ -638,11 +642,15 @@ mod tests {
             (KeyCode::Char('x'), UIEvent::RemoveItem),
             (KeyCode::Char('d'), UIEvent::MoveItem),
             (KeyCode::Enter, UIEvent::Select),
+            (KeyCode::Char('n'), UIEvent::NextSearch),
+            (KeyCode::Char('N'), UIEvent::PrevSearch),
         ]);
         expected.widget_base_config.category_keybind = EventHandlerUI::from([
             (KeyCode::Char('r'), UIEvent::Remove),
             (KeyCode::Enter, UIEvent::Select),
             (KeyCode::Backspace, UIEvent::Remove),
+            (KeyCode::Char('n'), UIEvent::NextSearch),
+            (KeyCode::Char('N'), UIEvent::PrevSearch),
         ]);
         expected.styles.category_select_style = TextStyle::default().fg(Color::red());
         expected.styles.category_remove_style = TextStyle::default().fg(Color::green());
@@ -770,11 +778,15 @@ mod tests {
             (KeyCode::Char('x'), UIEvent::RemoveItem),
             (KeyCode::Char('d'), UIEvent::MoveItem),
             (KeyCode::Enter, UIEvent::Select),
+            (KeyCode::Char('n'), UIEvent::NextSearch),
+            (KeyCode::Char('N'), UIEvent::PrevSearch),
         ]);
         expected.widget_base_config.category_keybind = EventHandlerUI::from([
             (KeyCode::Char('r'), UIEvent::Remove),
             (KeyCode::Enter, UIEvent::Select),
             (KeyCode::Backspace, UIEvent::Remove),
+            (KeyCode::Char('n'), UIEvent::NextSearch),
+            (KeyCode::Char('N'), UIEvent::PrevSearch),
         ]);
         expected.styles.category_select_style = TextStyle::default().fg(Color::blue());
         expected.styles.category_remove_style = TextStyle::default().fg(Color::yellow());

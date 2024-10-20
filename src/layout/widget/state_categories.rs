@@ -1,7 +1,7 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
     config::{ActiveColorConfig, TextStyle},
-    todo::{FilterState, ToDoCategory},
+    todo::{search::Search, FilterState, ToDoCategory},
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
@@ -42,18 +42,8 @@ impl StateCategories {
     pub fn len(&self) -> usize {
         self.base.data().get_categories(self.category).len()
     }
-}
 
-impl State for StateCategories {
-    fn handle_event_state(&mut self, event: UIEvent) -> bool {
-        if self.base.handle_event(event) {
-            return true;
-        }
-        let filter_state = match event {
-            UIEvent::Select => FilterState::Select,
-            UIEvent::Remove => FilterState::Remove,
-            _ => return false,
-        };
+    fn toggle_filter(&mut self, filter_state: FilterState) {
         let name = {
             let todo = self.base.data();
             todo.get_categories(self.category)
@@ -64,6 +54,63 @@ impl State for StateCategories {
             .data()
             .toggle_filter(self.category, &name, filter_state);
         self.base.len = self.len();
+    }
+}
+
+impl State for StateCategories {
+    fn handle_event_state(&mut self, event: UIEvent) -> bool {
+        if self.base.handle_event(event) {
+            return true;
+        }
+        match event {
+            UIEvent::Select => self.toggle_filter(FilterState::Select),
+            UIEvent::Remove => self.toggle_filter(FilterState::Remove),
+            UIEvent::NextSearch => {
+                if let Some(to_search) = &self.base.to_search {
+                    let next = {
+                        let todo = self.base.data();
+                        let data = todo.get_categories(self.category);
+                        let next = Search::find(
+                            data.vec.iter().skip(self.base.index() + 1).enumerate(),
+                            &to_search,
+                            |c| c.1.name,
+                        );
+                        next.map(|next| next.0)
+                    };
+                    if let Some(next) = next {
+                        log::debug!("Search next: {} times down", next);
+                        for _ in 0..next + 1 {
+                            self.base.down()
+                        }
+                    }
+                }
+            }
+            UIEvent::PrevSearch => {
+                if let Some(to_search) = &self.base.to_search {
+                    let prev = {
+                        let todo = self.base.data();
+                        let data = todo.get_categories(self.category);
+                        let prev = Search::find(
+                            data.vec
+                                .iter()
+                                .rev()
+                                .skip(data.vec.len() - self.base.index())
+                                .enumerate(),
+                            &to_search,
+                            |t| t.1.name,
+                        );
+                        prev.map(|prev| prev.0)
+                    };
+                    if let Some(prev) = prev {
+                        log::debug!("Search prev: {} times up", prev);
+                        for _ in 0..prev + 1 {
+                            self.base.up()
+                        }
+                    }
+                }
+            }
+            _ => return false,
+        };
         true
     }
 
@@ -71,8 +118,8 @@ impl State for StateCategories {
         let todo = self.base.data();
         let data = todo.get_categories(self.category);
         let (first, last) = self.base.range();
-        let list =
-            List::new(data.slice(first, last, self.base.to_search.as_deref())).block(self.get_block());
+        let list = List::new(data.slice(first, last, self.base.to_search.as_deref()))
+            .block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {

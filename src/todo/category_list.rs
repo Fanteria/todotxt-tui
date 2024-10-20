@@ -2,13 +2,13 @@ use std::collections::BTreeSet;
 
 use super::{FilterState, ToDo, ToDoCategory};
 use crate::config::Styles;
-use crate::todo::search::Search;
+use crate::todo::search::{Search, SearchMatches};
 use tui::text::{Line, Span};
 use tui::widgets::ListItem;
 
 #[derive(Debug, PartialEq, Eq)]
-struct CategoryState<'a> {
-    name: &'a String,
+pub struct CategoryState<'a> {
+    pub name: &'a String,
     state: Option<FilterState>,
 }
 
@@ -16,7 +16,7 @@ struct CategoryState<'a> {
 /// The `String` value represents name of category and the `bool` value represents
 /// whether the category is selected or not.
 pub struct CategoryList<'a> {
-    vec: Vec<CategoryState<'a>>,
+    pub vec: Vec<CategoryState<'a>>,
     styles: &'a Styles,
 }
 

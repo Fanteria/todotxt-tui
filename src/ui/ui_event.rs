@@ -102,6 +102,8 @@ pub enum UIEvent {
     SearchMode,
 
     CleanSearch,
+    NextSearch,
+    PrevSearch,
     ListDown, // Widget list
     ListUp,
     ListFirst,
