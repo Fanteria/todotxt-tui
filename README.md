@@ -6,9 +6,17 @@ Todo.txt TUI is a highly customizable terminal-based application for managing yo
 
 ## Installation
 
-Please note that this Todo.txt TUI application is intended for personal use and is not published on Rust's docs.rs or crates.io. Therefore, it must be installed manually.
+### crates.io
 
-1. Clone the repository or download the latest release.
+You can install the application directly from [crates.io](https://crates.io/crates/todotxt-tui) with the following command:
+
+```bash
+cargo install todotxt-tui
+```
+
+### Manual
+
+1. Clone the [repository](https://github.com/Fanteria/todotxt-tui).
 2. Build the application using Rust's package manager, Cargo.
 
 ```bash
@@ -20,6 +28,16 @@ Copy the executable from the target directory to a directory included in your sy
 ```bash
 cp target/release/todotxt-tui /usr/local/bin/
 ```
+
+### Initial setup
+
+To set up the basic configuration, create a directory called `todotxt-tui` in your configuration folder (_the default is `$HOME/.config`_), and export the default configuration to this directory:
+
+```bash
+todo-tui --export-default-config "$HOME/.config/todotxt-tui/todotxt-tui.toml"
+```
+
+Next, open the configuration file and set the `todo_path` to the full path of your `todo.txt` file.
 
 ## Basic Usage
 
@@ -41,12 +59,17 @@ Todo.txt TUI provides a straightforward and customizable interface for managing 
 - `H`: Move to the widget on the left.
 - `L`: Move to the widget on the right.
 - `q`: Quit the application.
+- `Backspace`: Filter categories from the pending and done lists.
+- `S`: Save tasks to the file.
+- `u`: Update tasks from the file.
+- `/`: Search within the current list.
+- `n`: Jump to the next search result.
+- `N`: Jump to the previous search result.
+- `h`: Clear the search term for the current list.
 
 ## Configuration
 
-In Todo.txt TUI, you can customize various settings to tailor the application to your preferences.
-Todo.txt TUI uses a TOML configuration file located at `~/.config/todo-tui.toml` for customization.
-Here's an overview of some of the key settings:
+Todo.txt TUI allows extensive customization through a TOML configuration file located in the `todotxt-tui/todotxt-tui.toml` directory. You can also use flags or environment variables to override configuration settings, following this priority order: Configuration file < Environment variables < Flags.
 
 ### Color Settings
 
@@ -62,7 +85,7 @@ Here's an example of how to configure custom color and text modifiers for projec
 
 ```toml
 [custom_category_style."+todo-tui"]
-fg = [255, 0, 0]  # Set foreground color to red using RGB values
+fg = "#ff0000"  # Set foreground color to red using RGB values
 bg = "Black"      # Set background color to black
 modifiers = "Italic"  # Apply italic styling
 ```
@@ -128,221 +151,6 @@ Here's an example of a custom layout configuration:
 This example creates a layout with a horizontal split, where the list takes up 50% of the width, and the preview occupies the remaining space. On the right side, there's a vertical split with the list of completed tasks, contexts, and projects.
 
 Feel free to adjust these settings to create a Todo.txt TUI interface that suits your workflow and preferences.
-
-<details>
-  <summary>Example config file</summary>
-    
-Cofig file with default values. And description for every setting.
-
-```toml
-# The active color for selected items
-# You can set the color by name ("Blue"), by RGB values ([255, 0, 0]), or by index in the terminal (fg.Index = 5).
-active_color = "Red"
-
-# The initial widget to be displayed
-init_widget = "List"
-
-# The window title
-window_title = "Todo.txt tui"
-
-# The path to your todo.txt file
-todo_path = "/home/jirka/todo.txt"
-
-# The path to your archive.txt file
-# archive_path =
-
-# Wrap long lines in the preview
-wrap_preview = true
-
-# Log file path
-log_file = "log.log"
-
-# Log format (uses placeholders)
-log_format = "{d} [{h({l})}] {M}: {m}{n}"
-
-# Log level (e.g., INFO, DEBUG)
-log_level = "INFO"
-
-# Enable file watcher for auto-reloading
-file_watcher = true
-
-# Indentation level for lists
-list_shift = 4
-
-# Sorting option for pending tasks
-pending_sort = "None"
-
-# Sorting option for completed tasks
-done_sort = "None"
-
-# Preview format (uses placeholders)
-preview_format = """
-Pending: {n}   Done: {N}
-Subject: {s}
-Priority: {p}
-Create date: {c}
-"""
-
-# Layout configuration
-layout = """
-[
-    Direction: Horizontal,
-    Size: 50%,
-    [
-        List: 50%,
-        Preview,
-    ],
-    [ Direction: Vertical,
-      Done,
-      [
-        Contexts,
-        Projects,
-      ],
-    ],
-]
-"""
-
-# Priority-specific colors
-[priority_colors.B]
-fg = "Yellow"
-
-[priority_colors.A]
-fg = "Red"
-
-[priority_colors.C]
-fg = "Blue"
-
-# Background color for categories
-[category_color]
-bg = "Blue"
-
-# Background color for the active list item
-[list_active_color]
-bg = "LightRed"
-
-# Background color for active pending tasks
-[pending_active_color]
-
-# Background color for active completed tasks
-[done_active_color]
-
-# Autosave duration (in seconds)
-[autosave_duration]
-secs = 900
-nanos = 0
-
-# List refresh rate (in seconds)
-[list_refresh_rate]
-secs = 5
-nanos = 0
-
-# Task keybindings
-[[tasks_keybind.events]]
-key = "Enter"
-event = "Select"
-
-[[tasks_keybind.events]]
-event = "SwapDownItem"
-key.Char = "D"
-
-[[tasks_keybind.events]]
-event = "SwapUpItem"
-key.Char = "U"
-
-[[tasks_keybind.events]]
-event = "MoveItem"
-key.Char = "d"
-
-[[tasks_keybind.events]]
-event = "RemoveItem"
-key.Char = "x"
-
-# Category keybindings
-[[category_keybind.events]]
-key = "Enter"
-event = "Select"
-
-# List keybindings
-[[list_keybind.events]]
-event = "ListLast"
-key.Char = "G"
-
-[[list_keybind.events]]
-event = "ListFirst"
-key.Char = "g"
-
-[[list_keybind.events]]
-event = "ListDown"
-key.Char = "j"
-
-[[list_keybind.events]]
-event = "ListUp"
-key.Char = "k"
-
-# Window keybindings
-[[window_keybind.events]]
-event = "EditMode"
-key.Char = "E"
-
-[[window_keybind.events]]
-event = "MoveLeft"
-key.Char = "H"
-
-[[window_keybind.events]]
-event = "InsertMode"
-key.Char = "I"
-
-[[window_keybind.events]]
-event = "MoveDown"
-key.Char = "J"
-
-[[window_keybind.events]]
-event = "MoveUp"
-key.Char = "K"
-
-[[window_keybind.events]]
-event = "MoveRight"
-key.Char = "L"
-
-[[window_keybind.events]]
-event = "Save"
-key.Char = "S"
-
-[[window_keybind.events]]
-event = "Quit"
-key.Char = "q"
-
-[[window_keybind.events]]
-event = "Load"
-key.Char = "u"
-
-# Style for categories to filter
-[category_select_style]
-fg = "Green"
-
-# Style for categories removes while filtering
-[category_remove_style]
-fg = "Red"
-
-# Category style
-[category_style]
-fg = "DarkGray"
-
-# Projects style
-[projects_style]
-
-# Contexts style
-[contexts_style]
-
-# Hashtags style
-[hashtags_style]
-
-# Custom category style for "todo-tui"
-[custom_category_style."+todo-tui"]
-fg = "LightBlue"
-```
-
-</details>
 
 ## Feedback and Bug Reporting
 

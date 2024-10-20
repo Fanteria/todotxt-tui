@@ -137,15 +137,22 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                     );
                     let from_matches = #name_conf::from_arg_matches(&matches).unwrap();
                     let conf = #name_conf::merge(from_reader, from_matches);
-                    let conf: #name_conf = conf.into();
+                    let mut conf: #name_conf = conf.into();
+
+                    // TODO ugly hack
+                    conf.ui_config.save_state_path = None;
+                    conf.file_worker_config.archive_path = None;
 
                     let mut output = std::fs::File::create(path).map_err(|e| crate::ToDoIoError::new(path, e))?;
                     write!(output, "{}", toml::to_string_pretty(&conf)?).map_err(|e| crate::IOError(e))?;
                     std::process::exit(0);
                 } else if let Some(path) = &from_matches.export_default_config {
                     use std::io::Write;
-                    let default: #name_conf = Self::default().into();
+                    let mut default: #name_conf = Self::default().into();
                     let mut output = std::fs::File::create(path).map_err(|e| crate::ToDoIoError::new(path, e))?;
+                    // TODO ugly hack
+                    default.ui_config.save_state_path = None;
+                    default.file_worker_config.archive_path = None;
                     write!(output, "{}", toml::to_string_pretty(&default)?)
                         .map_err(|e| crate::IOError(e))?;
                     std::process::exit(0);
