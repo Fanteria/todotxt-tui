@@ -1,20 +1,21 @@
+mod handle_event_trait;
 mod ui_event;
 mod ui_state;
 
+pub use handle_event_trait::HandleEvent;
 pub use ui_event::*;
 pub use ui_state::*;
 
 use crate::{
-    config::Config,
+    config::{Config, UiConfig},
     file_worker::{FileWorker, FileWorkerCommands},
-    layout::Layout,
-    layout::Render,
-    todo::autocomplete,
-    todo::ToDo,
+    layout::{Layout, Render},
+    todo::{autocomplete, ToDo},
+    IOError, Result,
 };
 use crossterm::{
     self,
-    event::{self, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEvent},
     execute,
     terminal::{
         disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
@@ -22,12 +23,9 @@ use crossterm::{
     ExecutableCommand,
 };
 use std::{
-    error::Error,
     io,
-    path::PathBuf,
     sync::mpsc::Sender,
     sync::{Arc, Mutex},
-    time::Duration,
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -44,6 +42,7 @@ use tui_input::{backend::crossterm::EventHandler, Input};
 enum Mode {
     Input,
     Edit,
+    Search,
     Normal,
 }
 
@@ -55,12 +54,9 @@ pub struct UI {
     mode: Mode,
     data: Arc<Mutex<ToDo>>,
     tx: Sender<FileWorkerCommands>,
-    event_handler: EventHandlerUI,
     quit: bool,
-    window_title: String,
-    list_refresh_rate: Duration,
     active_color: Color,
-    save_state_path: Option<PathBuf>,
+    config: UiConfig,
 }
 
 impl UI {
@@ -88,35 +84,38 @@ impl UI {
             mode: Mode::Normal,
             data,
             tx,
-            event_handler: config.get_window_keybind(),
             quit: false,
-            window_title: config.get_window_title(),
-            list_refresh_rate: config.get_list_refresh_rate(),
-            active_color: config.get_active_color(),
-            save_state_path: config.get_save_state_path(),
+            active_color: *config.styles.active_color,
+            config: config.ui_config.clone(),
         }
     }
 
-    pub fn build(config: &Config) -> Result<UI, Box<dyn Error>> {
-        let mut todo = ToDo::new(config);
+    /// Builds a new `UI` instance using the provided configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config`: A reference to a `Config` struct containing all necessary settings for building the UI.
+    ///
+    /// # Returns
+    ///
+    /// * On success, returns an `Ok(UI)` containing the newly built UI.
+    /// * On failure, returns an `Err(Result<(), ErrorKind>)`.
+    pub fn build(config: &Config) -> Result<UI> {
+        let mut todo = ToDo::new(config.todo_config.clone(), config.styles.clone());
 
-        if let Some(path) = &config.get_save_state_path() {
+        if let Some(path) = &config.ui_config.save_state_path {
             let state = UIState::load(path)?;
             let (_active, todo_state) = (state.active, state.todo_state);
             todo.update_state(todo_state);
         }
 
         let todo = Arc::new(Mutex::new(todo));
-        let file_worker = FileWorker::new(
-            config.get_todo_path(),
-            config.get_archive_path(),
-            todo.clone(),
-        );
+        let file_worker = FileWorker::new(config.file_worker_config.clone(), todo.clone());
 
         file_worker.load()?;
-        let tx = file_worker.run(config.get_autosave_duration(), config.get_file_watcher());
+        let tx = file_worker.run()?;
 
-        let layout = Layout::from_str(&config.get_layout(), todo.clone(), config)?;
+        let layout = Layout::from_str(&config.ui_config.layout, todo.clone(), config)?;
 
         Ok(UI::new(layout, todo, tx.clone(), config))
     }
@@ -144,32 +143,35 @@ impl UI {
     ///
     /// # Returns
     ///
-    /// An `io::Result` indicating the success of running the user interface.
-    pub fn run(&mut self) -> io::Result<()> {
-        fn run_ui(this: &mut UI) -> io::Result<()> {
+    /// An `Result` indicating the success of running the user interface.
+    pub fn run(&mut self) -> Result<()> {
+        fn run_ui(this: &mut UI) -> Result<()> {
             // setup terminal
-            enable_raw_mode()?;
+            enable_raw_mode().map_err(IOError)?;
             let mut stdout = io::stdout();
-            execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+            execute!(stdout, EnterAlternateScreen, EnableMouseCapture).map_err(IOError)?;
 
             let mut backend = CrosstermBackend::new(stdout);
-            backend.execute(SetTitle(this.window_title.clone()))?;
+            backend
+                .execute(SetTitle(this.config.window_title.clone()))
+                .map_err(IOError)?;
 
-            let mut terminal = Terminal::new(backend)?;
-            terminal.hide_cursor()?;
-            this.update_chunk(terminal.size()?);
+            let mut terminal = Terminal::new(backend).map_err(IOError)?;
+            terminal.hide_cursor().map_err(IOError)?;
+            this.update_chunk(terminal.size().map_err(IOError)?);
 
             this.draw(&mut terminal)?;
             this.main_loop(&mut terminal)?;
 
             // restore terminal
-            disable_raw_mode()?;
+            disable_raw_mode().map_err(IOError)?;
             execute!(
                 terminal.backend_mut(),
                 LeaveAlternateScreen,
                 DisableMouseCapture
-            )?;
-            terminal.show_cursor()?;
+            )
+            .map_err(IOError)?;
+            terminal.show_cursor().map_err(IOError)?;
 
             Ok(())
         }
@@ -190,23 +192,25 @@ impl UI {
     ///
     /// # Returns
     ///
-    /// An `io::Result` indicating the success of the main loop.
-    fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
-        let mut version = self.data.lock().unwrap().get_version();
-        let mut new_version;
+    /// An `Result` indicating the success of the main loop.
+    fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
+        let mut versions = self.data.lock().unwrap().get_version().get_version_all();
         loop {
-            if event::poll(self.list_refresh_rate)? {
+            if event::poll(self.config.list_refresh_rate).map_err(IOError)? {
                 if self.process_event()? {
                     break;
                 }
-                version = self.data.lock().unwrap().get_version();
+                versions = self.data.lock().unwrap().get_version().get_version_all();
                 self.draw(terminal)?;
-            } else {
-                new_version = self.data.lock().unwrap().get_version();
-                if new_version != version {
-                    version = self.data.lock().unwrap().get_version();
-                    self.draw(terminal)?;
-                }
+            } else if !self
+                .data
+                .lock()
+                .unwrap()
+                .get_version()
+                .is_actual_all(versions)
+            {
+                versions = self.data.lock().unwrap().get_version().get_version_all();
+                self.draw(terminal)?;
             }
         }
         Ok(())
@@ -220,33 +224,35 @@ impl UI {
     ///
     /// # Returns
     ///
-    /// An `io::Result` indicating the success of drawing.
-    fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> io::Result<()> {
+    /// An `Result` indicating the success of drawing.
+    fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> Result<()> {
         let mut block = Block::default()
             .borders(Borders::ALL)
             .title("Input")
-            .border_type(BorderType::Rounded);
-        if self.mode == Mode::Input || self.mode == Mode::Edit {
+            .border_type(BorderType::Rounded); // TODO add this to config????
+        if self.mode == Mode::Input || self.mode == Mode::Edit || self.mode == Mode::Search {
             block = block.border_style(Style::default().fg(self.active_color));
         }
-        terminal.draw(|f| {
-            f.render_widget(
-                Paragraph::new(self.tinput.value()).block(block),
-                self.input_chunk,
-            );
-            self.layout.render(f);
-
-            if self.mode == Mode::Input || self.mode == Mode::Edit {
-                let width = self.input_chunk.width.max(3) - 3;
-                let scroll = self.tinput.visual_scroll(width as usize);
-                f.set_cursor(
-                    self.input_chunk.x
-                        + (self.tinput.visual_cursor().max(scroll) - scroll) as u16
-                        + 1,
-                    self.input_chunk.y + 1,
+        terminal
+            .draw(|f| {
+                f.render_widget(
+                    Paragraph::new(self.tinput.value()).block(block),
+                    self.input_chunk,
                 );
-            }
-        })?;
+                self.layout.render(f);
+
+                if self.mode == Mode::Input || self.mode == Mode::Edit {
+                    let width = self.input_chunk.width.max(3) - 3;
+                    let scroll = self.tinput.visual_scroll(width as usize);
+                    f.set_cursor(
+                        self.input_chunk.x
+                            + (self.tinput.visual_cursor().max(scroll) - scroll) as u16
+                            + 1,
+                        self.input_chunk.y + 1,
+                    );
+                }
+            })
+            .map_err(IOError)?;
         Ok(())
     }
 
@@ -254,29 +260,51 @@ impl UI {
     ///
     /// # Returns
     ///
-    /// An `io::Result` indicating whether the application should exit.
-    fn process_event(&mut self) -> io::Result<bool> {
-        self.handle_event_window(read()?);
+    /// An `Result` indicating whether the application should exit.
+    fn process_event(&mut self) -> Result<bool> {
+        self.handle_event_window(read().map_err(IOError)?);
         Ok(self.quit)
     }
 
+    /// Handles window events, such as resizing and mouse clicks, to manage the
+    /// user interface state.
+    ///
+    /// # Arguments
+    ///
+    /// * `e`: The event that triggers the function, which can be a resize event
+    ///   or a mouse click event.
+    ///
+    /// # Details
+    ///
+    /// This function processes different types of events:
+    /// - **Resize Event**: Adjusts the UI chunk based on the new window dimensions.
+    /// - **Mouse Click Event**: Triggers a click action in the layout manager
+    ///   at the specified column and row.
+    /// - **Keyboard Events**: Depending on the current mode (`Mode::Input`, `Mode::Edit`,
+    ///   or `Mode::Normal`), handles input for task creation, editing, and general navigation
+    ///   using specific keys.
     fn handle_event_window(&mut self, e: Event) {
         match e {
             Event::Resize(width, height) => {
                 log::debug!("Resize event: width {width}, height {height}");
                 self.update_chunk(Rect::new(0, 0, width, height));
             }
-            Event::Mouse(event) => {
-                log::debug!("Mouse event: {:?}", event);
+            Event::Mouse(MouseEvent {
+                kind: event::MouseEventKind::Up(event::MouseButton::Left),
+                column,
+                row,
+                modifiers: _,
+            }) => {
+                log::debug!("Mouse event: column {column}, row {row}");
+                self.layout.click(column, row);
             }
             Event::Key(event) => match self.mode {
                 Mode::Input => match event.code {
                     KeyCode::Enter => {
-                        self.data
-                            .lock()
-                            .unwrap()
-                            .new_task(self.tinput.value())
-                            .unwrap(); // TODO fix
+                        if let Err(e) = self.data.lock().unwrap().new_task(self.tinput.value()) {
+                            log::error!("Error while adding new task: {e}");
+                            // TODO show something on screen
+                        }
                         self.tinput.reset();
                         self.mode = Mode::Normal;
                         self.layout.focus();
@@ -298,11 +326,11 @@ impl UI {
                 },
                 Mode::Edit => match event.code {
                     KeyCode::Enter => {
-                        self.data
-                            .lock()
-                            .unwrap()
-                            .update_active(self.tinput.value())
-                            .unwrap();
+                        if let Err(e) = self.data.lock().unwrap().update_active(self.tinput.value())
+                        {
+                            log::error!("Error while updating existing task: {e}");
+                            // TODO show something on screen
+                        }
                         self.tinput.reset();
                         self.mode = Mode::Normal;
                         self.layout.focus();
@@ -323,6 +351,22 @@ impl UI {
                         self.tinput.handle_event(&e);
                     }
                 },
+                Mode::Search => match event.code {
+                    KeyCode::Enter => {
+                        self.mode = Mode::Normal;
+                        self.layout.focus();
+                    }
+                    KeyCode::Esc => {
+                        self.tinput.reset();
+                        self.mode = Mode::Normal;
+                        self.layout.clean_search();
+                        self.layout.focus();
+                    }
+                    _ => {
+                        self.tinput.handle_event(&e);
+                        self.layout.search(self.tinput.to_string())
+                    }
+                },
                 Mode::Normal => {
                     let _ = self.handle_key(&event.code) || self.layout.handle_key(&event);
                 }
@@ -334,14 +378,14 @@ impl UI {
 
 impl HandleEvent for UI {
     fn get_event(&self, key: &KeyCode) -> UIEvent {
-        self.event_handler.get_event(key)
+        self.config.window_keybinds.get_event(key)
     }
 
     fn handle_event(&mut self, event: UIEvent) -> bool {
         use UIEvent::*;
         match event {
             Quit => {
-                if let Some(path) = &self.save_state_path {
+                if let Some(path) = &self.config.save_state_path {
                     if let Err(e) =
                         UIState::new(&self.layout, &self.data.lock().unwrap()).save(path)
                     {
@@ -368,13 +412,13 @@ impl HandleEvent for UI {
             }
             Save => {
                 if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
-                    log::error!("Error while send signal to save todo list: {}", e);
+                    log::error!("Error while send signal to save todo list: {e}");
                     // TODO show something on screen
                 }
             }
             Load => {
                 if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
-                    log::error!("Error while send signal to load todo list: {}", e);
+                    log::error!("Error while send signal to load todo list: {e}");
                     // TODO show something on screen
                 }
             }
@@ -386,6 +430,11 @@ impl HandleEvent for UI {
                     // self.in
                 }
             }
+            SearchMode => {
+                self.tinput.reset();
+                self.mode = Mode::Search;
+                self.layout.unfocus();
+            }
             _ => {
                 return false;
             }
@@ -396,55 +445,37 @@ impl HandleEvent for UI {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::config::Conf;
     use crossterm::event::{KeyEvent, KeyModifiers};
     use std::env;
+    use std::error::Error;
     use test_log::test;
 
-    use super::*;
-
-    fn default_ui() -> Result<UI, Box<dyn Error>> {
-        let config = Config::load_from_buffer(
+    fn default_ui() -> Result<UI> {
+        let config = Config::from_reader(
             format!(
                 r#"
             todo_path = "{}todo.txt"
 
-            [[list_keybind.events]]
-            event = "ListDown"
-            key.Char = "j"
-
-            [[list_keybind.events]]
-            event = "Select"
-            key = "Enter"
-
-            [[list_keybind.events]]
-            event = "InsertMode"
-            key.Char = "I"
-
-            [[list_keybind.events]]
-            event = "EditMode"
-            key.Char = "E"
-
-            [[list_keybind.events]]
-            event = "Quit"
-            key.Char = "q"
-
-            [[list_keybind.events]]
-            event = "Save"
-            key.Char = "S"
-
-            [[list_keybind.events]]
-            event = "Load"
-            key.Char = "L"
+            [list_keybind]
+            E = "EditMode"
+            Enter = "Select"
+            I = "InsertMode"
+            L = "Load"
+            S = "Save"
+            j = "ListDown"
+            q = "Quit"
             "#,
                 env::var("TODO_TUI_TEST_DIR")?
             )
             .as_bytes(),
-        );
+        )?;
         UI::build(&config)
     }
 
     #[test]
-    fn test_behaviour() -> Result<(), Box<dyn Error>> {
+    fn test_behaviour() -> std::result::Result<(), Box<dyn Error>> {
         let mut ui = default_ui()?;
         ui.update_chunk(Rect::new(0, 0, 20, 20));
 

@@ -1,0 +1,29 @@
+2023-10-03 First task
+2023-10-04 Second task
+(A) 2023-10-06 Priority task
+2023-10-07 3rd +some @three
+2023-10-08 4th +project @four
+2023-10-09 5th +else @five
+2023-10-10 6th
+2023-10-11 7th +else @six
+2023-10-12 8th +some @seven
+2023-10-13 9th +project @eight
+2023-10-14 10th +else @nine
+2023-10-15 11th +else @ten
+2023-10-16 12th +else @eleven
+2023-10-17 13th +some @twelve
+2023-10-18 14th @thirteen
+2023-10-19 15th +project @fourteen
+2023-10-20 16th +else @fifteen
+2023-10-21 17th @sixteen
+2023-10-22 18th +some
+2023-10-23 19th +project
+2023-10-24 20th +project
+2023-10-25 21th
+2023-10-26 22th
+2023-10-27 23th +some
+2023-10-28 24th +project
+2023-10-29 25th +project
+2023-10-30 26th
+2023-10-31 27th
+x 2023-10-05 First done task

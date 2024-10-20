@@ -2,4 +2,6 @@
 lcov = "llvm-cov --lcov --output-path lcov.info"
 
 [env]
-TODO_TUI_TEST_DIR = { value = "test_files/", relative = true }
+TODO_TUI_TEST_DIR = { value = "tests/files/", relative = true }
+RUST_LOG = { value = "trace", force = false }
+XDG_CONFIG_HOME = { value = "tests/files/", force = true, relative = true }

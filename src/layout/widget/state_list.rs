@@ -1,7 +1,7 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
     config::Config,
-    todo::{ToDo, ToDoData},
+    todo::{search::Search, ToDo, ToDoData},
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
@@ -30,11 +30,8 @@ impl StateList {
         Self {
             base,
             style: config
-                .get_list_active_color()
-                .combine(&match data_type {
-                    ToDoData::Done => config.get_done_active_color(),
-                    ToDoData::Pending => config.get_pending_active_color(),
-                })
+                .active_color_config
+                .get_active_style(&data_type)
                 .get_style(),
             data_type,
         }
@@ -79,6 +76,7 @@ impl StateList {
 
 impl State for StateList {
     fn handle_event_state(&mut self, event: UIEvent) -> bool {
+        log::trace!("StateList handle event {event:?}");
         if self.base.handle_event(event) {
             return true;
         }
@@ -101,6 +99,51 @@ impl State for StateList {
                     .data()
                     .set_active(self.data_type, self.base.index());
             }
+            UIEvent::NextSearch => {
+                if let Some(to_search) = &self.base.to_search {
+                    let next = {
+                        let data = self.base.data();
+                        let filtered = data.get_filtered_and_sorted(self.data_type);
+                        let next = Search::find(
+                            filtered.vec.iter().skip(self.base.index() + 1).enumerate(),
+                            to_search,
+                            |t| t.1 .1.subject.as_str(),
+                        );
+                        next.map(|next| next.0)
+                    };
+                    if let Some(next) = next {
+                        log::debug!("Search next: {} times down", next);
+                        for _ in 0..next + 1 {
+                            self.base.down()
+                        }
+                    }
+                }
+            }
+            UIEvent::PrevSearch => {
+                if let Some(to_search) = &self.base.to_search {
+                    let prev = {
+                        let data = self.base.data();
+                        let filtered = data.get_filtered_and_sorted(self.data_type);
+                        let prev = Search::find(
+                            filtered
+                                .vec
+                                .iter()
+                                .rev()
+                                .skip(filtered.vec.len() - self.base.index())
+                                .enumerate(),
+                            to_search,
+                            |t| t.1 .1.subject.as_str(),
+                        );
+                        prev.map(|prev| prev.0)
+                    };
+                    if let Some(prev) = prev {
+                        log::debug!("Search prev: {} times up", prev);
+                        for _ in 0..prev + 1 {
+                            self.base.up()
+                        }
+                    }
+                }
+            }
             _ => return false,
         }
         true
@@ -110,7 +153,7 @@ impl State for StateList {
         let data = self.base.data();
         let filtered = data.get_filtered_and_sorted(self.data_type);
         let (first, last) = self.base.range();
-        let filtered = filtered.slice(first, last);
+        let filtered = filtered.slice(first, last, self.base.to_search.as_deref());
         let list = List::new(filtered).block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
@@ -137,11 +180,23 @@ impl State for StateList {
         true
     }
 
+    fn search_event(&mut self, to_search: String) {
+        self.base.set_search(to_search);
+    }
+
+    fn clear_search(&mut self) {
+        self.base.clear_search();
+    }
+
     fn update_chunk_event(&mut self) {
         self.base.set_size(self.base.chunk.height - 2); // Two chars are borders.
     }
 
     fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
         self.base.get_event(key)
+    }
+
+    fn handle_click(&mut self, column: usize, row: usize) {
+        self.base.click(column, row);
     }
 }

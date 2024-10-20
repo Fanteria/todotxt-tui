@@ -1,20 +1,17 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
-    todo::{FilterState, ToDoCategory},
+    config::{ActiveColorConfig, TextStyle},
+    todo::{search::Search, FilterState, ToDoCategory},
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
-use tui::{
-    backend::Backend,
-    style::{Color, Style},
-    widgets::List,
-    Frame,
-};
+use tui::{backend::Backend, widgets::List, Frame};
 
 /// Represents the state for a widget that displays categories.
 pub struct StateCategories {
     base: WidgetList,
     pub category: ToDoCategory,
+    style: TextStyle,
 }
 
 impl StateCategories {
@@ -28,8 +25,13 @@ impl StateCategories {
     /// # Returns
     ///
     /// A new `StateCategories` instance.
-    pub fn new(base: WidgetList, category: ToDoCategory) -> Self {
-        Self { base, category }
+    pub fn new(base: WidgetList, category: ToDoCategory, active_color: &ActiveColorConfig) -> Self {
+        log::error!("{:?}", active_color.get_active_config_style(&category));
+        Self {
+            base,
+            category,
+            style: active_color.get_active_config_style(&category),
+        }
     }
 
     /// Returns the number of items in the category associated with this widget.
@@ -40,6 +42,19 @@ impl StateCategories {
     pub fn len(&self) -> usize {
         self.base.data().get_categories(self.category).len()
     }
+
+    fn toggle_filter(&mut self, filter_state: FilterState) {
+        let name = {
+            let todo = self.base.data();
+            todo.get_categories(self.category)
+                .get_name(self.base.act())
+                .clone()
+        };
+        self.base
+            .data()
+            .toggle_filter(self.category, &name, filter_state);
+        self.base.len = self.len();
+    }
 }
 
 impl State for StateCategories {
@@ -48,49 +63,71 @@ impl State for StateCategories {
             return true;
         }
         match event {
-            // TODO improve doubled code
-            UIEvent::Select => {
-                let name;
-                {
-                    let todo = self.base.data();
-                    name = todo
-                        .get_categories(self.category)
-                        .get_name(self.base.act())
-                        .clone();
+            UIEvent::Select => self.toggle_filter(FilterState::Select),
+            UIEvent::Remove => self.toggle_filter(FilterState::Remove),
+            UIEvent::NextSearch => {
+                if let Some(to_search) = &self.base.to_search {
+                    let next = {
+                        let todo = self.base.data();
+                        let data = todo.get_categories(self.category);
+                        let next = Search::find(
+                            data.vec.iter().skip(self.base.index() + 1).enumerate(),
+                            to_search,
+                            |c| c.1.name,
+                        );
+                        next.map(|next| next.0)
+                    };
+                    if let Some(next) = next {
+                        log::debug!("Search next: {} times down", next);
+                        for _ in 0..next + 1 {
+                            self.base.down()
+                        }
+                    }
                 }
-                self.base
-                    .data()
-                    .toggle_filter(self.category, &name, FilterState::Select);
-                self.base.len = self.len();
             }
-            UIEvent::Remove => {
-                let name;
-                {
-                    let todo = self.base.data();
-                    name = todo
-                        .get_categories(self.category)
-                        .get_name(self.base.act())
-                        .clone();
+            UIEvent::PrevSearch => {
+                if let Some(to_search) = &self.base.to_search {
+                    let prev = {
+                        let todo = self.base.data();
+                        let data = todo.get_categories(self.category);
+                        let prev = Search::find(
+                            data.vec
+                                .iter()
+                                .rev()
+                                .skip(data.vec.len() - self.base.index())
+                                .enumerate(),
+                            to_search,
+                            |t| t.1.name,
+                        );
+                        prev.map(|prev| prev.0)
+                    };
+                    if let Some(prev) = prev {
+                        log::debug!("Search prev: {} times up", prev);
+                        for _ in 0..prev + 1 {
+                            self.base.up()
+                        }
+                    }
                 }
-                self.base
-                    .data()
-                    .toggle_filter(self.category, &name, FilterState::Remove);
-                self.base.len = self.len();
             }
             _ => return false,
-        }
+        };
         true
     }
 
     fn render<B: Backend>(&self, f: &mut Frame<B>) {
         let todo = self.base.data();
         let data = todo.get_categories(self.category);
-        let list = List::new(data).block(self.get_block());
+        let (first, last) = self.base.range();
+        let list = List::new(data.slice(first, last, self.base.to_search.as_deref()))
+            .block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {
-            let list = list.highlight_style(Style::default().bg(Color::LightRed)); // TODO add to config
-            f.render_stateful_widget(list, self.base.chunk, &mut self.base.state());
+            f.render_stateful_widget(
+                list.highlight_style(self.style.get_style()),
+                self.base.chunk,
+                &mut self.base.state(),
+            );
         }
     }
 
@@ -103,8 +140,20 @@ impl State for StateCategories {
     }
 
     fn focus_event(&mut self) -> bool {
-        self.base.len = self.len();
+        let len = self.len();
+        self.base.len = len;
+        if self.base.act() >= len && len > 0 {
+            self.base.last();
+        }
         true
+    }
+
+    fn search_event(&mut self, to_search: String) {
+        self.base.set_search(to_search);
+    }
+
+    fn clear_search(&mut self) {
+        self.base.clear_search();
     }
 
     fn update_chunk_event(&mut self) {
@@ -113,5 +162,9 @@ impl State for StateCategories {
 
     fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
         self.base.get_event(key)
+    }
+
+    fn handle_click(&mut self, column: usize, row: usize) {
+        self.base.click(column, row);
     }
 }

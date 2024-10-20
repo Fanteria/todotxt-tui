@@ -1,0 +1,18 @@
+refresh_rate: 30 seconds
+appenders:
+  file:
+    kind: file
+    path: "log.log"
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} {M} [{l}] {m}{n}"
+  console:
+    kind: file
+    path: "/dev/pts/1"  # Replace with your actual terminal device path
+    encoder:
+      pattern: "{d(%H:%M:%S)} [{l}] {M} {m}{n}"
+
+root:
+  level: trace
+  appenders:
+    - file
+    # - console # If you want to use console.

@@ -1,6 +1,6 @@
 use super::{RCToDo, WidgetBase, WidgetType};
-use crate::config::Config;
-use crate::ui::{EventHandlerUI, HandleEvent, UIEvent};
+use crate::config::{Config, ListConfig};
+use crate::ui::{HandleEvent, UIEvent};
 use crossterm::event::KeyCode;
 use std::ops::{Deref, DerefMut};
 use tui::widgets::ListState;
@@ -12,8 +12,8 @@ pub struct WidgetList {
     pub len: usize,
     first: usize,
     size: usize,
-    event_handler: EventHandlerUI,
-    list_shift: usize,
+    config: ListConfig,
+    pub to_search: Option<String>,
 }
 
 impl WidgetList {
@@ -34,8 +34,8 @@ impl WidgetList {
             len: 0,
             first: 0,
             size: 0,
-            event_handler: config.get_list_keybind(),
-            list_shift: config.get_list_shift(),
+            config: config.list_config.clone(),
+            to_search: None,
         };
         def.state.select(Some(0));
         def
@@ -68,6 +68,10 @@ impl WidgetList {
         self.state.clone()
     }
 
+    pub fn state_mut(&mut self) -> &mut ListState {
+        &mut self.state
+    }
+
     /// Sets the size of the list widget.
     ///
     /// # Parameters
@@ -84,7 +88,7 @@ impl WidgetList {
             if self.len > act + 1 {
                 self.state.select(Some(act + 1));
             }
-        } else if self.size <= act + 1 + self.list_shift {
+        } else if self.size <= act + 1 + self.config.list_shift {
             if self.first + self.size < self.len {
                 self.first += 1;
             } else if self.size > act + 1 {
@@ -94,18 +98,19 @@ impl WidgetList {
             self.state.select(Some(act + 1));
         }
         log::trace!(
-            "List go down: act: {}, size: {} len: {}, shift: {}",
+            "List go down: act: {}, size: {} len: {}, first: {} shift: {}",
             act,
             self.size,
             self.len,
-            self.list_shift
+            self.first,
+            self.config.list_shift
         );
     }
 
     /// Moves the selection up the list.
     pub fn up(&mut self) {
         let act = self.act();
-        if act <= self.list_shift {
+        if act <= self.config.list_shift {
             if self.first > 0 {
                 self.first -= 1;
             } else if act > 0 {
@@ -170,6 +175,14 @@ impl WidgetList {
         }
     }
 
+    pub fn set_search(&mut self, to_search: String) {
+        self.to_search = Some(to_search)
+    }
+
+    pub fn clear_search(&mut self) {
+        self.to_search = None
+    }
+
     /// Gets the range of items currently displayed in the list.
     ///
     /// # Returns
@@ -182,7 +195,7 @@ impl WidgetList {
 
 impl HandleEvent for WidgetList {
     fn get_event(&self, key: &KeyCode) -> UIEvent {
-        self.event_handler.get_event(key)
+        self.config.list_keybind.get_event(key)
     }
 
     fn handle_event(&mut self, event: UIEvent) -> bool {
@@ -191,9 +204,18 @@ impl HandleEvent for WidgetList {
             UIEvent::ListUp => self.up(),
             UIEvent::ListFirst => self.first(),
             UIEvent::ListLast => self.last(),
+            UIEvent::CleanSearch => self.clear_search(),
             _ => return false,
         }
         true
+    }
+
+    fn click(&mut self, _column: usize, row: usize) {
+        let index = row - usize::from(self.base.chunk.y) - 1;
+        if index < self.len {
+            log::debug!("Click on item with index {index}.");
+            self.state.select(Some(index));
+        }
     }
 }
 

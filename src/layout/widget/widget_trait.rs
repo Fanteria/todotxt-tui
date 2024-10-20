@@ -43,7 +43,7 @@ pub trait State {
         let mut block = Block::default()
             .borders(Borders::ALL)
             .title(base.title.clone())
-            .border_type(BorderType::Rounded);
+            .border_type(BorderType::Rounded); // TODO add this to config???
         if base.focus {
             block = block.border_style(Style::default().fg(base.active_color));
         }
@@ -61,6 +61,11 @@ pub trait State {
     /// Called when the widget's rendering area (chunk) is updated.
     fn update_chunk_event(&mut self) {}
 
+    // TODO comment
+    fn search_event(&mut self, _: String) {}
+
+    fn clear_search(&mut self) {}
+
     /// Retrieves an internal UI event based on a key code.
     /// This can be used for custom event handling within a state.
     ///
@@ -74,6 +79,9 @@ pub trait State {
     fn get_internal_event(&self, _: &KeyCode) -> UIEvent {
         UIEvent::None
     }
+
+    #[allow(unused_variables)]
+    fn handle_click(&mut self, column: usize, row: usize) {}
 }
 
 impl<S: State> HandleEvent for S {
@@ -88,6 +96,10 @@ impl<S: State> HandleEvent for S {
 
     fn handle_event(&mut self, event: UIEvent) -> bool {
         self.handle_event_state(event)
+    }
+
+    fn click(&mut self, column: usize, row: usize) {
+        self.handle_click(column, row)
     }
 }
 

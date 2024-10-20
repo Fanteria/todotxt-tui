@@ -1,10 +1,5 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{
-    config::{Config, Styles},
-    error::ToDoRes,
-    todo::Parser,
-    ui::UIEvent,
-};
+use crate::{config::Config, todo::Parser, ui::UIEvent, Result};
 use tui::{
     backend::Backend,
     text::{Line, Span},
@@ -30,11 +25,11 @@ impl StatePreview {
     /// # Returns
     ///
     /// A new `StatePreview` instance.
-    pub fn new(base: WidgetBase, config: &Config) -> ToDoRes<Self> {
+    pub fn new(base: WidgetBase, config: &Config) -> Result<Self> {
         Ok(StatePreview {
             base,
-            parser: Parser::new(&config.get_preview_format(), Styles::new(config))?,
-            wrap_preview: config.get_wrap_preview(),
+            parser: Parser::new(&config.preview_config.preview_format, config.styles.clone())?,
+            wrap_preview: config.preview_config.wrap_preview,
         })
     }
 }

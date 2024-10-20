@@ -1,589 +1,551 @@
 mod colors;
 mod keycode;
-mod logger;
+mod options;
+mod parsers;
 mod styles;
-mod text_modifier;
 mod text_style;
-mod todo_config;
+mod traits;
 
-pub use self::keycode::KeyCodeDef;
-pub use self::logger::Logger;
-pub use self::styles::Styles;
-pub use self::styles::StylesValue;
-pub use self::text_style::TextStyle;
-pub use self::text_style::TextStyleList;
-pub use self::todo_config::ToDoConfig;
+pub use self::{
+    colors::Color,
+    keycode::KeyCodeDef,
+    options::{SavePolicy, SetFinalDateType, TaskSort, TextModifier},
+    styles::{CustomCategoryStyle, StylesValue},
+    text_style::{TextStyle, TextStyleList},
+    traits::{Conf, ConfMerge, ConfigDefaults},
+};
 
-use self::colors::opt_color;
 use crate::{
     layout::widget::widget_type::WidgetType,
-    todo::task_list::TaskSort,
+    todo::{ToDoCategory, ToDoData},
     ui::{EventHandlerUI, UIEvent},
+    Result,
 };
-use clap::{arg, CommandFactory, Parser};
-
-use clap_complete::{generate, shells::Bash};
+use clap::{builder::styling::AnsiColor, FromArgMatches};
 use crossterm::event::KeyCode;
-use log::LevelFilter;
-use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    env::var,
-    error::Error,
-    fs::File,
-    io::{self, Read, Write},
-    num::ParseIntError,
-    path::PathBuf,
-    time::Duration,
-};
-use tui::style::Color;
+use macros::{Conf, ConfMerge};
+use std::{env::var, path::PathBuf, str::FromStr, time::Duration};
+use tui::style::Color as tuiColor;
+use tui::style::Style;
 
-/// Configuration struct for the ToDo TUI application.
-#[derive(Serialize, Deserialize, Default, Parser)]
-#[command(author, version, about, long_about = None)]
-#[cfg_attr(test, derive(PartialEq, Debug))]
-pub struct Config {
-    /// Path to configuration file.
-    #[serde(skip)]
-    #[arg(short, long, value_name = "FILE")]
-    config_path: Option<PathBuf>,
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct FileWorkerConfig {
+    /// The path to your `todo.txt` file, which stores your task list.
+    pub todo_path: PathBuf,
+    /// The path to your `archive.txt` file, where completed tasks are stored.
+    /// If not provided, completed tasks will be archived within your `todo.txt` file.
+    pub archive_path: Option<PathBuf>,
+    /// The duration (in seconds) between automatic saves of the `todo.txt` file.
+    #[arg(short = 'd')]
+    pub autosave_duration: Duration,
+    /// Enable or disable the file watcher, which automatically reloads the `todo.txt` file
+    /// when changes are detected.
+    #[arg(short = 'f')]
+    pub file_watcher: bool,
 
-    /// Generate autocomplete script to given file path.
-    #[serde(skip)]
-    #[arg(long, value_name = "FILE", help_heading = "export")]
-    generate_autocomplete: Option<PathBuf>,
-
-    /// Generate full configuration file for actual session
-    /// so present configuration file and command lines
-    /// options are taken in account.
-    #[serde(skip)]
-    #[arg(long, value_name = "FILE", help_heading = "export")]
-    export_config: Option<PathBuf>,
-
-    /// Generate configuration file with default values
-    /// to given file path.
-    #[serde(skip)]
-    #[arg(long, value_name = "FILE", help_heading = "export")]
-    export_default_config: Option<PathBuf>,
-
-    #[serde(default, with = "opt_color")]
-    #[arg(long, value_name = "COLOR")]
-    active_color: Option<Color>,
-
-    /// Widget that will be active after start of the application.
-    #[arg(short, long, value_name = "WIDGET_TYPE")]
-    init_widget: Option<WidgetType>,
-
-    /// Title of window with opened todo-tui {env!("CARGO_PKG_NAME")} {AAAA}
-    #[arg(short = 'T', long, value_name = "STRING")]
-    window_title: Option<String>,
-
-    #[arg(short, long, value_name = "STRING")]
-    todo_path: Option<String>,
-
-    #[arg(short, long, value_name = "STRING")]
-    archive_path: Option<String>,
-
-    #[arg(long)] // TODO value type
-    priority_colors: Option<TextStyleList>,
-
-    #[arg(short, long, value_name = "FLAG")]
-    wrap_preview: Option<bool>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    list_active_color: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    pending_active_color: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    done_active_color: Option<TextStyle>,
-
-    #[arg(short = 'd', long, value_parser = parse_duration, value_name = "DURATION")]
-    autosave_duration: Option<Duration>,
-
-    #[arg(long, value_name = "FILE", help_heading = "export")]
-    save_state_path: Option<PathBuf>,
-
-    #[arg(long, value_name = "FILE")]
-    log_file: Option<PathBuf>,
-
-    #[arg(long, value_name = "FILE")]
-    log_format: Option<String>,
-
-    #[arg(long, value_name = "LOG_LEVEL")]
-    log_level: Option<LevelFilter>,
-
-    #[arg(short, long, value_name = "FLAG")]
-    file_watcher: Option<bool>,
-
-    #[arg(short = 'L', long, value_parser = parse_duration, value_name = "DURATION")]
-    list_refresh_rate: Option<Duration>,
-
-    #[arg(short, long, value_name = "NUMBER")]
-    list_shift: Option<usize>,
-
-    #[arg(long, value_name = "TASK_SORT")]
-    pending_sort: Option<TaskSort>,
-
-    #[arg(long, value_name = "TASK_SORT")]
-    done_sort: Option<TaskSort>,
-
-    #[arg(short, long, value_name = "STRING")]
-    preview_format: Option<String>,
-
-    #[arg(long, value_name = "STRING")]
-    layout: Option<String>,
-
-    #[clap(skip)]
-    tasks_keybind: Option<EventHandlerUI>,
-
-    #[clap(skip)]
-    category_keybind: Option<EventHandlerUI>,
-
-    #[clap(skip)]
-    list_keybind: Option<EventHandlerUI>,
-
-    #[clap(skip)]
-    window_keybind: Option<EventHandlerUI>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    category_style: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    category_select_style: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    category_remove_style: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    projects_style: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    contexts_style: Option<TextStyle>,
-
-    #[arg(long, value_name = "TEXT_STYLE")]
-    hashtags_style: Option<TextStyle>,
-
-    #[clap(skip)]
-    custom_category_style: Option<HashMap<String, TextStyle>>,
+    pub save_policy: SavePolicy,
 }
 
-impl Config {
-    pub fn new() -> Self {
-        let mut config = Config::parse();
-        if let Ok(load_config) = config.load_config() {
-            config = config.merge(load_config);
-        }
-        config
-    }
-
-    /// Loads the default configuration settings.
-    ///
-    /// This function first attempts to load the configuration file, and if it fails, it returns the default configuration.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the loaded configuration (`Ok`) or an error (`Err`) if loading fails.
-    pub fn load(path: &PathBuf) -> io::Result<Self> {
-        Ok(Self::load_from_buffer(File::open(path)?))
-    }
-
-    pub fn load_config(&self) -> io::Result<Self> {
-        match &self.config_path {
-            Some(path) => Config::load(path),
-            None => Self::load_default(),
-        }
-    }
-
-    /// Returns the default configuration file path based on environment variables.
-    ///
-    /// The configuration file path is determined based on the XDG_CONFIG_HOME and HOME environment variables.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the default configuration file path (`Ok`) or an error (`Err`) if the path cannot be determined.
-    pub fn load_default() -> io::Result<Self> {
-        const CONFIG_FOLDER: &str = "/.config/";
-        const CONFIG_NAME: &str = "todo-tui.toml";
-        let path = var("XDG_CONFIG_HOME")
-            .or_else(|_| var("HOME").map(|home| format!("{home}{CONFIG_FOLDER}")))
-            .unwrap_or(String::from("~") + CONFIG_FOLDER)
-            + CONFIG_NAME;
-        Ok(Self::load_from_buffer(File::open(path)?))
-    }
-
-    /// Loads a configuration from a provided reader.
-    ///
-    /// # Parameters
-    ///
-    /// - `reader`: A reader implementing the `Read` trait.
-    ///
-    /// # Returns
-    ///
-    /// The loaded configuration.
-    pub fn load_from_buffer<R>(mut reader: R) -> Self
-    where
-        R: Read,
-    {
-        let mut buf = String::default();
-        if let Err(e) = reader.read_to_string(&mut buf) {
-            log::error!("Cannot load config: {}", e);
-            return Self::default();
-        }
-        match toml::from_str(buf.as_str()) {
-            Ok(c) => c,
-            Err(e) => {
-                log::error!("Cannot parse config: {}", e);
-                Self::default()
-            }
-        }
-    }
-
-    pub fn merge(self, other: Config) -> Self {
+impl Default for FileWorkerConfig {
+    fn default() -> Self {
         Self {
-            config_path: self.config_path.or(other.config_path),
-            generate_autocomplete: self.generate_autocomplete.or(other.generate_autocomplete),
-            export_config: self.export_config.or(other.export_config),
-            export_default_config: self.export_default_config.or(other.export_default_config),
-            active_color: self.active_color.or(other.active_color),
-            init_widget: self.init_widget.or(other.init_widget),
-            window_title: self.window_title.or(other.window_title),
-            todo_path: self.todo_path.or(other.todo_path),
-            archive_path: self.archive_path.or(other.archive_path),
-            priority_colors: self.priority_colors.or(other.priority_colors),
-            wrap_preview: self.wrap_preview.or(other.wrap_preview),
-            list_active_color: self.list_active_color.or(other.list_active_color),
-            pending_active_color: self.pending_active_color.or(other.pending_active_color),
-            done_active_color: self.done_active_color.or(other.done_active_color),
-            autosave_duration: self.autosave_duration.or(other.autosave_duration),
-            save_state_path: self.save_state_path.or(other.save_state_path),
-            log_file: self.log_file.or(other.log_file),
-            log_format: self.log_format.or(other.log_format),
-            log_level: self.log_level.or(other.log_level),
-            file_watcher: self.file_watcher.or(other.file_watcher),
-            list_refresh_rate: self.list_refresh_rate.or(other.list_refresh_rate),
-            list_shift: self.list_shift.or(other.list_shift),
-            pending_sort: self.pending_sort.or(other.pending_sort),
-            done_sort: self.done_sort.or(other.done_sort),
-            preview_format: self.preview_format.or(other.preview_format),
-            layout: self.layout.or(other.layout),
-            tasks_keybind: self.tasks_keybind.or(other.tasks_keybind),
-            category_keybind: self.category_keybind.or(other.category_keybind),
-            list_keybind: self.list_keybind.or(other.list_keybind),
-            window_keybind: self.window_keybind.or(other.window_keybind),
-            category_style: self.category_style.or(other.category_style),
-            category_select_style: self.category_select_style.or(other.category_select_style),
-            category_remove_style: self.category_remove_style.or(other.category_remove_style),
-            projects_style: self.projects_style.or(other.projects_style),
-            contexts_style: self.contexts_style.or(other.contexts_style),
-            hashtags_style: self.hashtags_style.or(other.hashtags_style),
-            custom_category_style: self.custom_category_style.or(other.custom_category_style),
+            todo_path: PathBuf::from(var("HOME").unwrap_or(String::from("~")) + "/todo.txt"),
+            archive_path: None,
+            autosave_duration: Duration::from_secs(900),
+            file_watcher: true,
+            save_policy: SavePolicy::default(),
         }
     }
+}
 
-    pub fn fill(&self) -> Self {
-        Self {
-            config_path: self.config_path.clone(),
-            generate_autocomplete: self.generate_autocomplete.clone(),
-            export_config: self.export_config.clone(),
-            export_default_config: self.export_default_config.clone(),
-            active_color: Some(self.get_active_color()),
-            init_widget: Some(self.get_init_widget()),
-            window_title: Some(self.get_window_title()),
-            todo_path: Some(self.get_todo_path()),
-            archive_path: self.get_archive_path(),
-            priority_colors: Some(self.get_priority_colors()),
-            wrap_preview: Some(self.get_wrap_preview()),
-            list_active_color: Some(self.get_list_active_color()),
-            pending_active_color: Some(self.get_pending_active_color()),
-            done_active_color: Some(self.get_done_active_color()),
-            autosave_duration: Some(self.get_autosave_duration()),
-            save_state_path: self.get_save_state_path(),
-            log_file: Some(self.get_log_file()),
-            log_format: Some(self.get_log_format()),
-            log_level: Some(self.get_log_level()),
-            file_watcher: Some(self.get_file_watcher()),
-            list_refresh_rate: Some(self.get_list_refresh_rate()),
-            list_shift: Some(self.get_list_shift()),
-            pending_sort: Some(self.get_pending_sort()),
-            done_sort: Some(self.get_done_sort()),
-            preview_format: Some(self.get_preview_format()),
-            layout: Some(self.get_layout()),
-            tasks_keybind: Some(self.get_tasks_keybind()),
-            category_keybind: Some(self.get_category_keybind()),
-            list_keybind: Some(self.get_list_keybind()),
-            window_keybind: Some(self.get_window_keybind()),
-            category_style: Some(self.get_category_style()),
-            category_select_style: Some(self.get_category_select_style()),
-            category_remove_style: Some(self.get_category_remove_style()),
-            projects_style: Some(self.get_projects_style()),
-            contexts_style: Some(self.get_contexts_style()),
-            hashtags_style: Some(self.get_hashtags_style()),
-            custom_category_style: Some(self.get_custom_category_style()),
-        }
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct ActiveColorConfig {
+    /// The text style used to highlight the active item in a list.
+    #[arg(short = 'A')]
+    list_active_color: TextStyle,
+    /// The text style used to highlight an active task that is in the pending list.
+    /// This option overrides the `list_active_color`.
+    #[arg(short = 'P')]
+    pending_active_color: TextStyle,
+    /// The text style used to highlight an active task that is in the completed list.
+    /// This option overrides the `list_active_color`.
+    #[arg(short = 'D')]
+    done_active_color: TextStyle,
+    /// The text style used to highlight an active category.
+    /// This option overrides the `list_active_color`.
+    category_active_color: TextStyle,
+    /// The text style used to highlight an active project.
+    /// This option overrides the `category_active_color`.
+    projects_active_color: TextStyle,
+    /// The text style used to highlight an active context.
+    /// This option overrides the `category_active_color`.
+    contexts_active_color: TextStyle,
+    /// The text style used to highlight an active tag.
+    /// This option overrides the `category_active_color`.
+    tags_active_color: TextStyle,
+}
+
+impl ActiveColorConfig {
+    /// Retrieves the active style for a given `ToDoData` type, combining it with
+    /// the list's active color.
+    pub fn get_active_style(&self, data_type: &ToDoData) -> TextStyle {
+        self.list_active_color.combine(&match data_type {
+            ToDoData::Done => self.done_active_color,
+            ToDoData::Pending => self.pending_active_color,
+        })
     }
 
-    pub fn export(&self) -> Result<bool, Box<dyn Error>> {
-        let mut ret = false;
-        if let Some(path) = &self.generate_autocomplete {
-            generate(
-                Bash,
-                &mut Self::command(),
-                env!("CARGO_PKG_NAME"),
-                &mut File::create(path)?,
-            );
-            ret = true
-        }
-        if let Some(path) = &self.export_config {
-            let mut output = File::create(path)?;
-            write!(output, "{}", toml::to_string_pretty(&self.fill())?)?;
-            ret = true
-        }
-        if let Some(path) = &self.export_default_config {
-            let mut output = File::create(path)?;
-            write!(
-                output,
-                "{}",
-                toml::to_string_pretty(&Config::default().fill())?
-            )?;
-            ret = true
-        }
-        Ok(ret)
-    }
-
-    pub fn get_active_color(&self) -> Color {
-        self.active_color.unwrap_or(Color::Red)
-    }
-
-    pub fn get_init_widget(&self) -> WidgetType {
-        self.init_widget.unwrap_or(WidgetType::List)
-    }
-
-    pub fn get_window_title(&self) -> String {
-        self.window_title
-            .clone()
-            .unwrap_or(String::from("ToDo tui"))
-    }
-
-    pub fn get_todo_path(&self) -> String {
-        self.todo_path
-            .clone()
-            .unwrap_or(var("HOME").unwrap_or(String::from("~")) + "/todo.txt")
-    }
-
-    pub fn get_archive_path(&self) -> Option<String> {
-        self.archive_path.clone()
-    }
-
-    fn get_priority_colors(&self) -> TextStyleList {
-        self.priority_colors.clone().unwrap_or_default()
-    }
-
-    pub fn get_wrap_preview(&self) -> bool {
-        self.wrap_preview.unwrap_or(true)
-    }
-
-    pub fn get_list_active_color(&self) -> TextStyle {
+    /// Returns the active configuration style for a given category.
+    /// This function combines three color settings based on the specified `ToDoCategory`:
+    /// - The list active color.
+    /// - The category specific active color (projects, contexts, or hashtags).
+    pub fn get_active_config_style(&self, category: &ToDoCategory) -> TextStyle {
         self.list_active_color
-            .unwrap_or(TextStyle::default().bg(Color::LightRed))
+            .combine(&self.category_active_color)
+            .combine(match category {
+                ToDoCategory::Projects => &self.projects_active_color,
+                ToDoCategory::Contexts => &self.contexts_active_color,
+                ToDoCategory::Hashtags => &self.tags_active_color,
+            })
     }
+}
 
-    pub fn get_pending_active_color(&self) -> TextStyle {
-        self.pending_active_color.unwrap_or_default()
+impl Default for ActiveColorConfig {
+    fn default() -> Self {
+        Self {
+            list_active_color: TextStyle::default().bg(Color::lightred()),
+            pending_active_color: TextStyle::default(),
+            done_active_color: TextStyle::default(),
+            category_active_color: TextStyle::default(),
+            projects_active_color: TextStyle::default(),
+            contexts_active_color: TextStyle::default(),
+            tags_active_color: TextStyle::default(),
+        }
     }
+}
 
-    pub fn get_done_active_color(&self) -> TextStyle {
-        self.done_active_color.unwrap_or_default()
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct ListConfig {
+    /// The number of lines displayed above and below the currently active
+    /// item in a list when the list is moving.
+    #[arg(short = 's')]
+    pub list_shift: usize,
+    /// Keybindings configured for interacting with lists.
+    #[arg(short = 'L')]
+    pub list_keybind: EventHandlerUI,
+}
+
+impl Default for ListConfig {
+    fn default() -> Self {
+        Self {
+            list_shift: 4,
+            list_keybind: EventHandlerUI::from([
+                (KeyCode::Char('j'), UIEvent::ListDown),
+                (KeyCode::Char('k'), UIEvent::ListUp),
+                (KeyCode::Char('g'), UIEvent::ListFirst),
+                (KeyCode::Char('G'), UIEvent::ListLast),
+                (KeyCode::Char('h'), UIEvent::CleanSearch),
+            ]),
+        }
     }
+}
 
-    pub fn get_autosave_duration(&self) -> Duration {
-        self.autosave_duration.unwrap_or(Duration::from_secs(900))
-    }
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct PreviewConfig {
+    /// The format string used to generate the preview, supporting placeholders
+    /// for dynamic content.
+    #[arg(short = 'p')]
+    pub preview_format: String,
+    /// Determines whether long lines in the preview should be wrapped to fit
+    /// within the available width.
+    #[arg(short = 'w')]
+    pub wrap_preview: bool,
+}
 
-    pub fn get_save_state_path(&self) -> Option<PathBuf> {
-        self.save_state_path.clone()
-    }
-
-    fn get_log_file(&self) -> PathBuf {
-        self.log_file.clone().unwrap_or(PathBuf::from("log.log"))
-    }
-
-    fn get_log_format(&self) -> String {
-        self.log_format
-            .clone()
-            .unwrap_or(String::from("{d} [{h({l})}] {M}: {m}{n}"))
-    }
-
-    fn get_log_level(&self) -> LevelFilter {
-        self.log_level.unwrap_or(LevelFilter::Info)
-    }
-
-    pub fn get_file_watcher(&self) -> bool {
-        self.file_watcher.unwrap_or(true)
-    }
-
-    pub fn get_list_refresh_rate(&self) -> Duration {
-        self.list_refresh_rate.unwrap_or(Duration::from_secs(5))
-    }
-
-    pub fn get_list_shift(&self) -> usize {
-        self.list_shift.unwrap_or(4)
-    }
-
-    pub fn get_pending_sort(&self) -> TaskSort {
-        self.pending_sort.unwrap_or(TaskSort::None)
-    }
-
-    pub fn get_done_sort(&self) -> TaskSort {
-        self.done_sort.unwrap_or(TaskSort::None)
-    }
-
-    pub fn get_preview_format(&self) -> String {
-        self.preview_format.clone().unwrap_or(String::from(
-            "Pending: $pending Done: $done
+impl Default for PreviewConfig {
+    fn default() -> Self {
+        Self {
+            preview_format: String::from(
+                "Pending: $pending Done: $done
 Subject: $subject
 Priority: $priority
 Create date: $create_date
 Link: $link",
-        ))
-    }
-
-    pub fn get_layout(&self) -> String {
-        self.layout.clone().unwrap_or(String::from(
-            "
-[
-    Direction: Horizontal,
-    Size: 50%,
-    [
-        List: 20%,
-        Preview: 80%,
-    ],
-    [ Direction: Vertical,
-      Done: 60%,
-      [ 
-        Contexts: 10%,
-        Projects: 90%,
-      ],
-    ],
-]
-",
-        ))
-    }
-
-    pub fn get_tasks_keybind(&self) -> EventHandlerUI {
-        self.tasks_keybind.clone().unwrap_or(EventHandlerUI::new(&[
-            (KeyCode::Char('U'), UIEvent::SwapUpItem),
-            (KeyCode::Char('D'), UIEvent::SwapDownItem),
-            (KeyCode::Char('x'), UIEvent::RemoveItem),
-            (KeyCode::Char('d'), UIEvent::MoveItem),
-            (KeyCode::Enter, UIEvent::Select),
-        ]))
-    }
-
-    pub fn get_category_keybind(&self) -> EventHandlerUI {
-        self.category_keybind
-            .clone()
-            .unwrap_or(EventHandlerUI::new(&[
-                (KeyCode::Enter, UIEvent::Select),
-                (KeyCode::Backspace, UIEvent::Remove),
-            ]))
-    }
-
-    pub fn get_list_keybind(&self) -> EventHandlerUI {
-        self.list_keybind.clone().unwrap_or(EventHandlerUI::new(&[
-            (KeyCode::Char('j'), UIEvent::ListDown),
-            (KeyCode::Char('k'), UIEvent::ListUp),
-            (KeyCode::Char('g'), UIEvent::ListFirst),
-            (KeyCode::Char('G'), UIEvent::ListLast),
-        ]))
-    }
-
-    pub fn get_window_keybind(&self) -> EventHandlerUI {
-        self.window_keybind.clone().unwrap_or(EventHandlerUI::new(&[
-            (KeyCode::Char('q'), UIEvent::Quit),
-            (KeyCode::Char('S'), UIEvent::Save),
-            (KeyCode::Char('u'), UIEvent::Load),
-            (KeyCode::Char('H'), UIEvent::MoveLeft),
-            (KeyCode::Char('L'), UIEvent::MoveRight),
-            (KeyCode::Char('K'), UIEvent::MoveUp),
-            (KeyCode::Char('J'), UIEvent::MoveDown),
-            (KeyCode::Char('I'), UIEvent::InsertMode),
-            (KeyCode::Char('E'), UIEvent::EditMode),
-        ]))
-    }
-
-    fn get_category_style(&self) -> TextStyle {
-        self.category_style.unwrap_or_default()
-    }
-
-    fn get_category_select_style(&self) -> TextStyle {
-        self.category_select_style
-            .unwrap_or_else(|| TextStyle::default().fg(Color::Green))
-    }
-
-    fn get_category_remove_style(&self) -> TextStyle {
-        self.category_remove_style
-            .unwrap_or_else(|| TextStyle::default().fg(Color::Red))
-    }
-
-    fn get_projects_style(&self) -> TextStyle {
-        self.projects_style.unwrap_or_default()
-    }
-
-    fn get_contexts_style(&self) -> TextStyle {
-        self.contexts_style.unwrap_or_default()
-    }
-
-    fn get_hashtags_style(&self) -> TextStyle {
-        self.hashtags_style.unwrap_or_default()
-    }
-
-    fn get_custom_category_style(&self) -> HashMap<String, TextStyle> {
-        let default = || {
-            let mut custom_category_style = HashMap::new();
-            custom_category_style.insert(
-                String::from("+todo-tui"),
-                TextStyle::default().fg(Color::LightBlue),
-            );
-            custom_category_style
-        };
-        self.custom_category_style.clone().unwrap_or_else(default)
+            ),
+            wrap_preview: true,
+        }
     }
 }
 
-fn parse_duration(arg: &str) -> Result<Duration, ParseIntError> {
-    Ok(Duration::from_secs(arg.parse()?))
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct ToDoConfig {
+    /// Determines whether projects, contexts, and tags from completed tasks
+    /// should be included in the lists of available projects, contexts, and tags.
+    pub use_done: bool,
+    /// Sorting option to apply to pending tasks.
+    pub pending_sort: TaskSort,
+    /// Sorting option to apply to completed tasks.
+    pub done_sort: TaskSort,
+    /// Specifies whether to delete the final date (if it exists) when a task is moved from completed back to pending.
+    pub delete_final_date: bool,
+    /// Configures how the final date is handled when a task is marked as completed.
+    /// Options include overriding the date, only adding it if missing, or never setting it.
+    pub set_final_date: SetFinalDateType,
+}
+
+impl Default for ToDoConfig {
+    fn default() -> Self {
+        Self {
+            use_done: false,
+            pending_sort: TaskSort::default(),
+            done_sort: TaskSort::default(),
+            delete_final_date: true,
+            set_final_date: SetFinalDateType::default(),
+        }
+    }
+}
+
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct UiConfig {
+    /// The widget that will be active when the application starts.
+    #[arg(short = 'i')]
+    pub init_widget: WidgetType,
+    /// The title of the window when `todotxt-tui` is opened.
+    #[arg(short = 't')]
+    pub window_title: String,
+    /// Keybindings configured for interacting with the application window.
+    #[arg(short = 'W')]
+    pub window_keybinds: EventHandlerUI,
+    /// The refresh rate for the list display, in seconds.
+    #[arg(short = 'R')]
+    pub list_refresh_rate: Duration,
+    /// Path to save the application's state (currently unused).
+    #[arg(short = 'S')]
+    pub save_state_path: Option<PathBuf>, // TODO at now unused
+    /// The layout configuration for the user interface.
+    /// This can be customized using a layout string.
+    #[arg(short = 'l')]
+    pub layout: String, // TODO describe layout language
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            init_widget: WidgetType::List,
+            window_title: String::from("ToDo tui"),
+            window_keybinds: EventHandlerUI::from([
+                (KeyCode::Char('q'), UIEvent::Quit),
+                (KeyCode::Char('S'), UIEvent::Save),
+                (KeyCode::Char('u'), UIEvent::Load),
+                (KeyCode::Char('H'), UIEvent::MoveLeft),
+                (KeyCode::Char('L'), UIEvent::MoveRight),
+                (KeyCode::Char('K'), UIEvent::MoveUp),
+                (KeyCode::Char('J'), UIEvent::MoveDown),
+                (KeyCode::Char('I'), UIEvent::InsertMode),
+                (KeyCode::Char('E'), UIEvent::EditMode),
+                (KeyCode::Char('/'), UIEvent::SearchMode),
+            ]),
+            list_refresh_rate: Duration::from_secs(5),
+            save_state_path: None,
+            layout: String::from(concat!(
+                "[",
+                "  Direction: Horizontal,",
+                "  Size: 50%,",
+                "  [",
+                "    List: 80%, Preview: 20%,",
+                "  ],",
+                "  [",
+                "    Direction: Vertical,",
+                "    Done: 60%,",
+                "    [",
+                "      Contexts: 50%,",
+                "      Projects: 50%,",
+                "    ],",
+                "  ],",
+                "]",
+            )),
+        }
+    }
+}
+
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct WidgetBaseConfig {
+    /// Keybindings configured for interacting with tasks.
+    #[arg(short = 'T')]
+    pub tasks_keybind: EventHandlerUI,
+    /// Keybindings configured for interacting with categories.
+    #[arg(short = 'C')]
+    pub category_keybind: EventHandlerUI,
+}
+
+impl Default for WidgetBaseConfig {
+    fn default() -> Self {
+        Self {
+            tasks_keybind: EventHandlerUI::from([
+                (KeyCode::Char('U'), UIEvent::SwapUpItem),
+                (KeyCode::Char('D'), UIEvent::SwapDownItem),
+                (KeyCode::Char('x'), UIEvent::RemoveItem),
+                (KeyCode::Char('d'), UIEvent::MoveItem),
+                (KeyCode::Enter, UIEvent::Select),
+                (KeyCode::Char('n'), UIEvent::NextSearch),
+                (KeyCode::Char('N'), UIEvent::PrevSearch),
+            ]),
+            category_keybind: EventHandlerUI::from([
+                (KeyCode::Enter, UIEvent::Select),
+                (KeyCode::Backspace, UIEvent::Remove),
+                (KeyCode::Char('n'), UIEvent::NextSearch),
+                (KeyCode::Char('N'), UIEvent::PrevSearch),
+            ]),
+        }
+    }
+}
+
+#[derive(Conf, Clone, Debug, PartialEq, Eq)]
+pub struct Styles {
+    /// Defines the color used to highlight the active window.
+    pub active_color: Color,
+    /// A list of text styles applied to tasks based on their priority levels.
+    pub priority_style: TextStyleList,
+    /// Specifies the text style used for displaying projects within task lists.
+    projects_style: TextStyle,
+    /// Specifies the text style used for displaying contexts (e.g., @home, @work)
+    /// within task lists.
+    contexts_style: TextStyle,
+    /// Specifies the text style used for displaying hashtags within task lists.
+    /// Note: This style is overridden by custom styles defined for specific categories.
+    hashtags_style: TextStyle,
+    /// Defines the default text style for displaying projects, contexts,
+    /// and hashtags within task lists.
+    /// Note: This style is overridden by specific styles for individual categories.
+    category_style: TextStyle,
+    /// Specifies the text style applied to categories when they are selected for filtering.
+    pub category_select_style: TextStyle,
+    /// Specifies the text style applied to categories that are filtered out from the view.
+    pub category_remove_style: TextStyle,
+    /// Allows custom text styles to be applied to specific categories by name.
+    /// Note: Custom styles defined here will override all other category-specific styles,
+    /// including `category_style`, `category_select_style`, and `category_remove_style`.
+    custom_category_style: CustomCategoryStyle,
+    /// TODO comment
+    pub highlight: TextStyle,
+}
+
+impl Styles {
+    /// Retrieves the style configuration for a given name, which can be one of several predefined types such as "priority", "custom_category", or specific categories like projects, contexts, and hashtags. If the name is prefixed with "priority:" or "custom_category:", it attempts to extract and return the corresponding priority or custom category style; otherwise, it interprets the name directly into a text style if possible, defaulting to a base configuration if not found.
+    pub fn get_style(&self, name: &str) -> Result<StylesValue> {
+        use StylesValue::*;
+        Ok(match name {
+            "priority" => Priority,
+            "custom_category" => CustomCategory,
+            "projects" => Const(self.projects_style.get_style()),
+            "contexts" => Const(self.contexts_style.get_style()),
+            "hashtags" => Const(self.hashtags_style.get_style()),
+            "category" => Const(self.category_style.get_style()),
+            _ => {
+                if name.starts_with("priority:") {
+                    if let Some(priority) = name.get("priority:".len()..) {
+                        return Ok(Const(
+                            match self
+                                .priority_style
+                                .get_style_from_str(&priority.to_uppercase())
+                            {
+                                Some(style) => style.get_style(),
+                                None => Style::default(),
+                            },
+                        ));
+                    }
+                } else if name.starts_with("custom_category:") {
+                    if let Some(custom_category) = name.get("custom_category:".len()..) {
+                        if let Some(custom_category) =
+                            self.custom_category_style.get(custom_category)
+                        {
+                            return Ok(Const(custom_category.get_style()));
+                        }
+                    }
+                }
+                Const(TextStyle::from_str(name)?.get_style())
+            }
+        })
+    }
+
+    /// Retrieves the text style for a specified category. If a custom style
+    /// has been defined for the category, it will be used; otherwise,
+    /// the base style for that category is employed.
+    pub fn get_category_style(&self, category: &str) -> TextStyle {
+        match self.custom_category_style.get(category) {
+            Some(style) => *style,
+            None => self.get_category_base_style(category),
+        }
+    }
+
+    /// Retrieves the base style for a specified category based on its initial
+    /// character: '+' for projects, '@' for contexts, and '#' for hashtags.
+    /// If the category does not match any of these prefixes, it defaults
+    /// to the general `category_style`.
+    fn get_category_base_style(&self, category: &str) -> TextStyle {
+        match category.chars().next().unwrap() {
+            '+' => self.category_style.combine(&self.projects_style),
+            '@' => self.category_style.combine(&self.contexts_style),
+            '#' => self.category_style.combine(&self.hashtags_style),
+            _ => self.category_style,
+        }
+    }
+}
+
+impl Default for Styles {
+    fn default() -> Self {
+        let mut custom_category_style = CustomCategoryStyle::default();
+        custom_category_style.insert(
+            String::from("+todo-tui"),
+            TextStyle::default().fg(Color::lightblue()),
+        );
+        Self {
+            active_color: Color(tuiColor::Red),
+            priority_style: TextStyleList::default(),
+            projects_style: TextStyle::default(),
+            contexts_style: TextStyle::default(),
+            hashtags_style: TextStyle::default(),
+            category_style: TextStyle::default(),
+            category_select_style: TextStyle::default().fg(Color::green()),
+            category_remove_style: TextStyle::default().fg(Color::red()),
+            custom_category_style,
+            highlight: TextStyle::default().bg(Color::yellow()),
+        }
+    }
+}
+
+#[derive(ConfMerge, Default, Debug, PartialEq, Eq)]
+#[command(author, version, about, long_about = None)]
+pub struct Config {
+    pub ui_config: UiConfig,
+    pub todo_config: ToDoConfig,
+    pub file_worker_config: FileWorkerConfig,
+    pub widget_base_config: WidgetBaseConfig,
+    pub list_config: ListConfig,
+    pub preview_config: PreviewConfig,
+    pub active_color_config: ActiveColorConfig,
+    pub styles: Styles,
+}
+
+impl Config {
+    pub fn config_folder() -> PathBuf {
+        match var("XDG_CONFIG_HOME") {
+            Ok(config_path) => PathBuf::from(config_path),
+            Err(_) => PathBuf::from(var("HOME").unwrap_or(String::from("~"))).join(".config"),
+        }
+        .join(env!("CARGO_PKG_NAME"))
+    }
+}
+
+impl ConfigDefaults for Config {
+    fn config_path() -> PathBuf {
+        Self::config_folder().join("todotxt-tui.toml")
+    }
+
+    fn help_colors() -> clap::builder::Styles {
+        clap::builder::Styles::styled()
+            .usage(AnsiColor::Green.on_default().bold())
+            .literal(AnsiColor::Cyan.on_default().bold())
+            .header(AnsiColor::Green.on_default().bold())
+            .invalid(AnsiColor::Yellow.on_default())
+            .error(AnsiColor::Red.on_default().bold())
+            .valid(AnsiColor::Green.on_default())
+            .placeholder(AnsiColor::Cyan.on_default())
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use self::parsers::*;
     use super::*;
-    use std::io::Result;
+    use crate::layout::widget::widget_type::WidgetType;
+    use pretty_assertions::assert_eq;
+    use std::{path::PathBuf, time::Duration};
+    use test_log::test;
 
-    #[test]
-    fn test_deserialization() {
-        let deserialized: Config = toml::from_str(
-            r#"
-            active_color = "Green"
-            init_widget = "Done"
-        "#,
-        )
-        .unwrap();
+    pub fn get_test_dir() -> String {
+        var("TODO_TUI_TEST_DIR").unwrap()
+    }
 
-        assert_eq!(deserialized.active_color, Some(Color::Green));
-        assert_eq!(deserialized.init_widget, Some(WidgetType::Done));
-        assert_eq!(deserialized.window_title, None);
-        assert_eq!(deserialized.get_window_title(), "ToDo tui");
+    pub fn get_test_file(name: &str) -> PathBuf {
+        let path = PathBuf::from(get_test_dir()).join(name);
+        log::trace!("Get test file {path:?}");
+        path
     }
 
     #[test]
-    fn test_serialization() {
-        let c = Config::default();
-        let serialized = toml::to_string_pretty(&c).unwrap();
-        println!("{}", serialized);
-        let deserialized: Config = toml::from_str(&serialized).unwrap();
-        assert_eq!(c, deserialized);
+    fn test_deserialization() {
+        let deserialized = Config::from_reader(
+            r#"
+            active_color = "Green"
+            init_widget = "Done"
+        "#
+            .as_bytes(),
+        )
+        .unwrap();
+
+        assert_eq!(*deserialized.styles.active_color, tuiColor::Green);
+        assert_eq!(deserialized.ui_config.init_widget, WidgetType::Done);
+        assert_eq!(
+            deserialized.ui_config.window_title,
+            UiConfig::default().window_title
+        );
+    }
+
+    #[test]
+    fn get_active_style() {
+        {
+            let color = ActiveColorConfig {
+                list_active_color: TextStyle::default().bg(Color::red()),
+                pending_active_color: TextStyle::default().bg(Color::yellow()),
+                ..Default::default()
+            };
+            assert_eq!(
+                color.get_active_style(&ToDoData::Pending),
+                TextStyle::default().bg(Color::yellow())
+            );
+        }
+
+        {
+            let color = ActiveColorConfig {
+                list_active_color: TextStyle::default().bg(Color::red()),
+                ..Default::default()
+            };
+            assert_eq!(
+                color.get_active_style(&ToDoData::Pending),
+                TextStyle::default().bg(Color::red())
+            );
+        }
+
+        {
+            let color = ActiveColorConfig {
+                list_active_color: TextStyle::default().bg(Color::green()).fg(Color::blue()),
+                done_active_color: TextStyle::default()
+                    .fg(Color::black())
+                    .modifier(TextModifier::Bold),
+                ..Default::default()
+            };
+            assert_eq!(
+                color.get_active_style(&ToDoData::Done),
+                TextStyle::default()
+                    .bg(Color::green())
+                    .fg(Color::black())
+                    .modifier(TextModifier::Bold)
+            );
+        }
+    }
+
+    #[test]
+    fn get_active_config_style() {
+        let color = ActiveColorConfig {
+            list_active_color: TextStyle::default().bg(Color::red()),
+            category_active_color: TextStyle::default().fg(Color::white()),
+            ..Default::default()
+        };
+        assert_eq!(
+            color.get_active_config_style(&ToDoCategory::Projects),
+            TextStyle::default().bg(Color::red()).fg(Color::white())
+        );
     }
 
     #[test]
@@ -594,20 +556,24 @@ mod tests {
         todo_path = "path to todo file"
         "#;
 
-        let c = Config::load_from_buffer(s.as_bytes());
-        assert_eq!(c.active_color, Some(Color::Blue));
-        assert_eq!(c.init_widget, None);
-        assert_eq!(c.get_init_widget(), WidgetType::List);
-        assert_eq!(c.window_title, Some(String::from("Title")));
-        assert_eq!(c.todo_path, Some(String::from("path to todo file")));
-        assert_eq!(c.archive_path, None);
+        let default = Config::default();
+        let c = Config::from_reader(s.as_bytes())?;
+        assert_eq!(*c.styles.active_color, tuiColor::Blue);
+        assert_eq!(c.ui_config.init_widget, default.ui_config.init_widget);
+        assert_eq!(c.ui_config.window_title, String::from("Title"));
+        assert_eq!(
+            c.file_worker_config.todo_path,
+            PathBuf::from("path to todo file")
+        );
+        assert_eq!(c.file_worker_config.archive_path, None);
 
         Ok(())
     }
 
     #[test]
-    fn help_can_be_generated() {
-        Config::parse();
+    fn help_can_be_generated() -> Result<()> {
+        Config::from_args(Vec::<&str>::new())?;
+        Ok(())
     }
 
     #[test]
@@ -617,21 +583,222 @@ mod tests {
     }
 
     #[test]
-    fn test_merge() {
-        let mut conf1 = Config::default();
-        let mut conf2 = Config::default();
-        conf1.todo_path = Some("path/to/todo/file".to_string());
-        conf2.archive_path = Some("path/to/archive_path/file".to_string());
+    fn empty_config() -> Result<()> {
+        let empty_config = get_test_file("empty_config.toml");
+        let default = Config::from_file(empty_config)?;
+        assert_eq!(default, Config::default());
 
-        conf1.window_title = Some("Window title".to_string());
-        conf2.window_title = Some("Different title".to_string());
+        Ok(())
+    }
 
-        let new_conf = conf1.merge(conf2);
-        assert_eq!(new_conf.todo_path, Some("path/to/todo/file".to_string()));
-        assert_eq!(
-            new_conf.archive_path,
-            Some("path/to/archive_path/file".to_string())
+    #[test]
+    fn changed_config() -> Result<()> {
+        let testing_config = get_test_file("testing_config.toml");
+        let config = Config::from_file(testing_config)?;
+        let mut expected = Config::default();
+        expected.styles.active_color = Color::blue();
+        expected.ui_config.init_widget = WidgetType::Project;
+        expected.ui_config.window_title = String::from("Window title");
+        expected.ui_config.layout = String::from("Short invalid layout");
+        expected.file_worker_config.todo_path = PathBuf::from("invalid/path/to/todo.txt");
+        expected.file_worker_config.archive_path =
+            Some(PathBuf::from("invalid/path/to/archive.txt"));
+        expected.file_worker_config.file_watcher = false;
+        expected.list_config.list_shift = 0;
+        expected.todo_config.use_done = true;
+        expected.todo_config.pending_sort = TaskSort::Priority;
+        expected.todo_config.done_sort = TaskSort::Reverse;
+        expected.todo_config.delete_final_date = false;
+        expected.todo_config.set_final_date = SetFinalDateType::Never;
+        expected.preview_config.preview_format = String::from("unimportant preview");
+        expected.preview_config.wrap_preview = false;
+        expected.ui_config.window_keybinds = EventHandlerUI::from([
+            (KeyCode::Char('e'), UIEvent::EditMode),
+            (KeyCode::Char('q'), UIEvent::Quit),
+            (KeyCode::Char('S'), UIEvent::Save),
+            (KeyCode::Char('u'), UIEvent::Load),
+            (KeyCode::Char('H'), UIEvent::MoveLeft),
+            (KeyCode::Char('L'), UIEvent::MoveRight),
+            (KeyCode::Char('K'), UIEvent::MoveUp),
+            (KeyCode::Char('J'), UIEvent::MoveDown),
+            (KeyCode::Char('I'), UIEvent::InsertMode),
+            (KeyCode::Char('E'), UIEvent::EditMode),
+            (KeyCode::Char('/'), UIEvent::SearchMode),
+        ]);
+        expected.ui_config.list_refresh_rate = Duration::from_secs(10);
+        expected.active_color_config.list_active_color = TextStyle::default().bg(Color::green());
+        expected.file_worker_config.autosave_duration = Duration::from_secs(100);
+        expected.list_config.list_keybind = EventHandlerUI::from([
+            (KeyCode::Char('g'), UIEvent::ListLast),
+            (KeyCode::Char('j'), UIEvent::ListDown),
+            (KeyCode::Char('k'), UIEvent::ListUp),
+            (KeyCode::Char('G'), UIEvent::ListLast),
+            (KeyCode::Char('h'), UIEvent::CleanSearch),
+        ]);
+        expected.widget_base_config.tasks_keybind = EventHandlerUI::from([
+            (KeyCode::Char('s'), UIEvent::Select),
+            (KeyCode::Char('U'), UIEvent::SwapUpItem),
+            (KeyCode::Char('D'), UIEvent::SwapDownItem),
+            (KeyCode::Char('x'), UIEvent::RemoveItem),
+            (KeyCode::Char('d'), UIEvent::MoveItem),
+            (KeyCode::Enter, UIEvent::Select),
+            (KeyCode::Char('n'), UIEvent::NextSearch),
+            (KeyCode::Char('N'), UIEvent::PrevSearch),
+        ]);
+        expected.widget_base_config.category_keybind = EventHandlerUI::from([
+            (KeyCode::Char('r'), UIEvent::Remove),
+            (KeyCode::Enter, UIEvent::Select),
+            (KeyCode::Backspace, UIEvent::Remove),
+            (KeyCode::Char('n'), UIEvent::NextSearch),
+            (KeyCode::Char('N'), UIEvent::PrevSearch),
+        ]);
+        expected.styles.category_select_style = TextStyle::default().fg(Color::red());
+        expected.styles.category_remove_style = TextStyle::default().fg(Color::green());
+        expected.styles.custom_category_style = CustomCategoryStyle::default();
+        expected.styles.custom_category_style.insert(
+            String::from("+project"),
+            TextStyle::default().fg(Color::green()),
         );
-        assert_eq!(new_conf.window_title, Some("Window title".to_string()));
+
+        // assert_eq!(config, expected);
+        // assert_eq!(config.list_config.list_keybind, expected.list_config.list_keybind);
+
+        assert_eq!(config.ui_config, expected.ui_config);
+        assert_eq!(config.todo_config, expected.todo_config);
+        assert_eq!(config.file_worker_config, expected.file_worker_config);
+        assert_eq!(config.widget_base_config, expected.widget_base_config);
+        assert_eq!(config.list_config, expected.list_config);
+        assert_eq!(config.preview_config, expected.preview_config);
+        assert_eq!(config.active_color_config, expected.active_color_config);
+        assert_eq!(config.styles, expected.styles);
+
+        Ok(())
+    }
+
+    #[test]
+    fn default_values_clap() -> Result<()> {
+        let empty_config = get_test_file("empty_config.toml");
+        let default = Config::from_args(vec![
+            "NAME",
+            "--config-path",
+            empty_config.to_str().unwrap(),
+        ])?;
+        assert_eq!(default, Config::default());
+        Ok(())
+    }
+
+    #[test]
+    fn custom_clap_arguments() -> Result<()> {
+        let testing_config = get_test_file("testing_config.toml");
+        let config = Config::from_args(vec![
+            "NAME",
+            "--config-path",
+            testing_config.to_str().unwrap(),
+            "--active-color",
+            "Green",
+            "--window-title",
+            "New window title",
+            "--layout",
+            "Shorter layout",
+            "--todo-path",
+            "todo.txt",
+            "--archive-path",
+            "archive.txt",
+            "--file-watcher",
+            "true",
+            "--list-shift",
+            "10",
+            "--pending-sort",
+            "reverse",
+            "--done-sort",
+            "priority",
+            "--delete-final-date",
+            "true",
+            "--set-final-date",
+            "override",
+            "--preview-format",
+            "extra important preview",
+            "--wrap-preview",
+            "true",
+            "--list-refresh-rate",
+            "15",
+            "--list-active-color",
+            "yellow ^blue",
+            "--autosave-duration",
+            "150",
+            "--category-select-style",
+            "blue",
+            "--category-remove-style",
+            "yellow",
+        ])?;
+        let mut expected = Config::default();
+        expected.styles.active_color = Color::green();
+        expected.ui_config.init_widget = WidgetType::Project;
+        expected.ui_config.window_title = String::from("New window title");
+        expected.ui_config.layout = String::from("Shorter layout");
+        expected.file_worker_config.todo_path = PathBuf::from("todo.txt");
+        expected.file_worker_config.archive_path = Some(PathBuf::from("archive.txt"));
+        expected.file_worker_config.file_watcher = true;
+        expected.list_config.list_shift = 10;
+        expected.todo_config.use_done = true;
+        expected.todo_config.pending_sort = TaskSort::Reverse;
+        expected.todo_config.done_sort = TaskSort::Priority;
+        expected.todo_config.delete_final_date = true;
+        expected.todo_config.set_final_date = SetFinalDateType::Override;
+        expected.preview_config.preview_format = String::from("extra important preview");
+        expected.preview_config.wrap_preview = true;
+        expected.ui_config.window_keybinds = EventHandlerUI::from([
+            (KeyCode::Char('e'), UIEvent::EditMode),
+            (KeyCode::Char('q'), UIEvent::Quit),
+            (KeyCode::Char('S'), UIEvent::Save),
+            (KeyCode::Char('u'), UIEvent::Load),
+            (KeyCode::Char('H'), UIEvent::MoveLeft),
+            (KeyCode::Char('L'), UIEvent::MoveRight),
+            (KeyCode::Char('K'), UIEvent::MoveUp),
+            (KeyCode::Char('J'), UIEvent::MoveDown),
+            (KeyCode::Char('I'), UIEvent::InsertMode),
+            (KeyCode::Char('E'), UIEvent::EditMode),
+            (KeyCode::Char('/'), UIEvent::SearchMode),
+        ]);
+        expected.ui_config.list_refresh_rate = Duration::from_secs(15);
+        expected.active_color_config.list_active_color =
+            TextStyle::default().bg(Color::blue()).fg(Color::yellow());
+        expected.file_worker_config.autosave_duration = Duration::from_secs(150);
+        expected.list_config.list_keybind = EventHandlerUI::from([
+            (KeyCode::Char('g'), UIEvent::ListLast),
+            (KeyCode::Char('j'), UIEvent::ListDown),
+            (KeyCode::Char('k'), UIEvent::ListUp),
+            (KeyCode::Char('G'), UIEvent::ListLast),
+            (KeyCode::Char('h'), UIEvent::CleanSearch),
+        ]);
+        expected.widget_base_config.tasks_keybind = EventHandlerUI::from([
+            (KeyCode::Char('s'), UIEvent::Select),
+            (KeyCode::Char('U'), UIEvent::SwapUpItem),
+            (KeyCode::Char('D'), UIEvent::SwapDownItem),
+            (KeyCode::Char('x'), UIEvent::RemoveItem),
+            (KeyCode::Char('d'), UIEvent::MoveItem),
+            (KeyCode::Enter, UIEvent::Select),
+            (KeyCode::Char('n'), UIEvent::NextSearch),
+            (KeyCode::Char('N'), UIEvent::PrevSearch),
+        ]);
+        expected.widget_base_config.category_keybind = EventHandlerUI::from([
+            (KeyCode::Char('r'), UIEvent::Remove),
+            (KeyCode::Enter, UIEvent::Select),
+            (KeyCode::Backspace, UIEvent::Remove),
+            (KeyCode::Char('n'), UIEvent::NextSearch),
+            (KeyCode::Char('N'), UIEvent::PrevSearch),
+        ]);
+        expected.styles.category_select_style = TextStyle::default().fg(Color::blue());
+        expected.styles.category_remove_style = TextStyle::default().fg(Color::yellow());
+        let mut custom_styles = CustomCategoryStyle::default();
+        custom_styles.insert(
+            String::from("+project"),
+            TextStyle::default().fg(Color::green()),
+        );
+        expected.styles.custom_category_style = custom_styles;
+
+        assert_eq!(config, expected);
+
+        Ok(())
     }
 }

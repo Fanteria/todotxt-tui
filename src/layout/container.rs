@@ -1,5 +1,5 @@
 use super::{render_trait::Render, widget::widget_type::WidgetType, Layout, Widget};
-use crate::{ToDoError, ToDoRes};
+use crate::{Result, ToDoError};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},
@@ -180,7 +180,7 @@ impl Container {
     /// A result containing either an updated reference to the container with the selected widget
     /// type as the active item, or an error if the widget type is not found within the container.
     #[allow(dead_code)]
-    pub fn select_widget(layout: &mut Layout, widget_type: WidgetType) -> ToDoRes<()> {
+    pub fn select_widget(layout: &mut Layout, widget_type: WidgetType) -> Result<()> {
         let mut index_item = 0;
         let (index_container, _) = layout
             .containers
@@ -235,6 +235,16 @@ impl Container {
             };
             Self::update_chunk(chunks[i], containers, index);
         }
+    }
+
+    pub fn get_widgets_mut(&mut self) -> impl IntoIterator<Item = &mut Widget> {
+        self.items.iter_mut().filter_map(|item| {
+            if let It::Item(w) = item {
+                Some(w)
+            } else {
+                None
+            }
+        })
     }
 }
 
@@ -305,9 +315,9 @@ mod tests {
     }
 
     #[test]
-    fn test_selecting_widget() -> ToDoRes<()> {
+    fn test_selecting_widget() -> Result<()> {
         let mut layout = testing_layout();
-        let mut check = |widget_type| -> ToDoRes<()> {
+        let mut check = |widget_type| -> Result<()> {
             Container::select_widget(&mut layout, widget_type)?;
             check_active(&layout, widget_type);
             Ok(())
@@ -325,7 +335,7 @@ mod tests {
     }
 
     #[test]
-    fn test_next_item() -> ToDoRes<()> {
+    fn test_next_item() -> Result<()> {
         let mut layout = testing_layout();
 
         // Test next widget in child container.
@@ -360,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn test_previous_item() -> ToDoRes<()> {
+    fn test_previous_item() -> Result<()> {
         let mut layout = testing_layout();
 
         // Test previous widget in same container.

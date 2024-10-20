@@ -1,7 +1,7 @@
 use super::LineBlock;
 
 use super::ToDo;
-use crate::{config::Styles, error::ToDoRes};
+use crate::{config::Styles, Result};
 use tui::style::Style;
 
 #[derive(Default, Debug)]
@@ -14,7 +14,7 @@ impl Line {
         parts: &str,
         style: Option<String>,
         styles: &Styles,
-    ) -> ToDoRes<()> {
+    ) -> Result<()> {
         if !parts.is_empty() {
             self.0
                 .push(LineBlock::try_from_styled(parts, style, styles)?);

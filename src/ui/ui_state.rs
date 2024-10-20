@@ -1,13 +1,15 @@
-use std::fs::File;
-use std::io::{Read, Result as ioResult, Write};
-use std::path::Path;
-
+use crate::{
+    layout::widget::widget_type::WidgetType,
+    layout::Layout,
+    todo::{ToDo, ToDoState},
+    {Result, ToDoIoError},
+};
 use serde::{Deserialize, Serialize};
-
-use crate::error::{ToDoIoError, ToDoRes};
-use crate::layout::widget::widget_type::WidgetType;
-use crate::layout::Layout;
-use crate::todo::{ToDo, ToDoState};
+use std::{
+    fs::File,
+    io::{Read, Result as ioResult, Write},
+    path::Path,
+};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct UIState {
@@ -16,6 +18,7 @@ pub struct UIState {
 }
 
 impl UIState {
+    /// Constructs a new `UIState` instance with the specified layout and ToDo state.
     pub fn new(layout: &Layout, todo: &ToDo) -> Self {
         Self {
             active: layout.get_active_widget(),
@@ -23,15 +26,21 @@ impl UIState {
         }
     }
 
+    /// Saves the current state of the UI to a file at the specified path by serializing
+    /// it to TOML format and writing it to a newly created file handle.
     pub fn save(&self, path: &Path) -> ioResult<()> {
         self.serialize(&mut File::create(path)?)
     }
 
+    /// Serializes the current `UIState` to a writer using TOML format for easy
+    /// human-readable serialization and deserialization.
     fn serialize<W: Write>(&self, writer: &mut W) -> ioResult<()> {
         writer.write_all(toml::to_string_pretty(&self).unwrap().as_bytes())
     }
 
-    pub fn load(path: &Path) -> ToDoRes<Self> {
+    /// Loads a `UIState` from the specified file path by opening the file
+    /// and deserializing it from TOML format.
+    pub fn load(path: &Path) -> Result<Self> {
         let file = File::open(path).map_err(|err| ToDoIoError {
             path: path.to_path_buf(),
             err,
@@ -39,6 +48,7 @@ impl UIState {
         Ok(UIState::deserialize(file))
     }
 
+    /// Deserializes a `UIState` from a reader by parsing it with TOML.
     fn deserialize<R: Read>(mut reader: R) -> Self {
         let mut buf = String::default();
         if let Err(e) = reader.read_to_string(&mut buf) {

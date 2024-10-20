@@ -1,10 +1,15 @@
-use crate::{config::Config, todo::ToDo};
+use crate::{
+    config::{FileWorkerConfig, SavePolicy},
+    error::{IOError, Result, ToDoIoError},
+    todo::ToDo,
+    NotifyError,
+};
 use notify::{
     event::{AccessKind, AccessMode, EventKind},
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
 };
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Read, Result as ioResult, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
@@ -22,8 +27,7 @@ pub enum FileWorkerCommands {
 
 /// Manages file operations for the todo list and archive.
 pub struct FileWorker {
-    todo_path: String,
-    archive_path: Option<String>,
+    config: FileWorkerConfig,
     todo: Arc<Mutex<ToDo>>,
 }
 
@@ -39,21 +43,13 @@ impl FileWorker {
     /// # Returns
     ///
     /// A `FileWorker` instance.
-    pub fn new(
-        todo_path: String,
-        archive_path: Option<String>,
-        todo: Arc<Mutex<ToDo>>,
-    ) -> FileWorker {
+    pub fn new(config: FileWorkerConfig, todo: Arc<Mutex<ToDo>>) -> FileWorker {
         log::info!(
-            "Init file worker: file: {}, archive: {:?}",
-            todo_path,
-            archive_path
+            "Init file worker: file: {:?}, archive: {:?}",
+            config.todo_path,
+            config.archive_path
         );
-        FileWorker {
-            todo_path,
-            archive_path,
-            todo,
-        }
+        FileWorker { config, todo }
     }
 
     /// Loads todo list data from the file(s).
@@ -63,13 +59,28 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    pub fn load(&self) -> ioResult<()> {
-        let mut todo = ToDo::new(&Config::default()); // TODO this can be improved
-        Self::load_tasks(File::open(&self.todo_path)?, &mut todo)?;
-        log::info!("Load tasks from file {}", self.todo_path);
-        if let Some(path) = &self.archive_path {
-            log::info!("Load tasks from achive file {}", path);
-            Self::load_tasks(File::open(path)?, &mut todo)?;
+    pub fn load(&self) -> Result<()> {
+        let mut todo = ToDo::default(); // TODO this can be improved
+        Self::load_tasks(
+            File::open(&self.config.todo_path).map_err(|e| ToDoIoError {
+                path: self.config.todo_path.to_path_buf(),
+                err: e,
+            })?,
+            &mut todo,
+        )?;
+        log::info!(
+            "Load tasks from file {}",
+            self.config.todo_path.to_string_lossy()
+        );
+        if let Some(path) = &self.config.archive_path {
+            log::info!("Load tasks from achive file {}", path.to_string_lossy());
+            Self::load_tasks(
+                File::open(path).map_err(|err| ToDoIoError {
+                    path: path.to_path_buf(),
+                    err,
+                })?,
+                &mut todo,
+            )?;
         }
         log::debug!("Loaded pending {}x tasks", todo.pending.len());
         log::debug!("Loaded done {}x tasks", todo.done.len());
@@ -87,9 +98,9 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> ioResult<()> {
+    fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> Result<()> {
         for line in BufReader::new(reader).lines() {
-            let line = line?;
+            let line = line.map_err(IOError)?;
             let line = line.trim();
             if line.is_empty() {
                 continue;
@@ -109,19 +120,27 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn save(&self) -> ioResult<()> {
-        let mut f = File::create(&self.todo_path)?;
+    fn save(&self) -> Result<()> {
+        let mut f = File::create(&self.config.todo_path).map_err(|err| ToDoIoError {
+            path: self.config.todo_path.to_path_buf(),
+            err,
+        })?;
         let todo = self.todo.lock().unwrap();
         log::info!(
             "Saving todo task to {}{}",
-            self.todo_path,
-            self.archive_path
+            self.config.todo_path.to_string_lossy(),
+            self.config
+                .archive_path
                 .as_ref()
-                .map_or(String::from(""), |p| String::from(" and") + &p.clone()),
+                .map_or(String::from(""), |p| String::from(" and")
+                    + &p.to_string_lossy()),
         );
         Self::save_tasks(&mut f, &todo.pending)?;
-        match &self.archive_path {
-            Some(s) => Self::save_tasks(&mut File::create(s)?, &todo.done),
+        match &self.config.archive_path {
+            Some(s) => Self::save_tasks(
+                &mut File::create(s).map_err(|err| ToDoIoError::new(s, err))?,
+                &todo.done,
+            ),
             None => Self::save_tasks(&mut f, &todo.done),
         }
     }
@@ -136,10 +155,12 @@ impl FileWorker {
     /// # Returns
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
-    fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> ioResult<()> {
+    fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> Result<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
-            writer.write_all((task.to_string() + "\n").as_bytes())?;
+            writer
+                .write_all((task.to_string() + "\n").as_bytes())
+                .map_err(IOError)?;
         }
         Ok(())
     }
@@ -157,62 +178,80 @@ impl FileWorker {
     /// # Returns
     ///
     /// A `Sender` that can be used to send commands to the `FileWorker` thread.
-    pub fn run(
-        self,
-        autosave_duration: Duration,
-        handle_changes: bool,
-    ) -> Sender<FileWorkerCommands> {
+    pub fn run(self) -> Result<Sender<FileWorkerCommands>> {
         use FileWorkerCommands::*;
         let (tx, rx) = mpsc::channel::<FileWorkerCommands>();
-        if !autosave_duration.is_zero() {
-            Self::spawn_autosave(tx.clone(), autosave_duration);
+
+        match self.config.save_policy {
+            SavePolicy::AutoSave if !self.config.autosave_duration.is_zero() => {
+                Self::spawn_autosave(tx.clone(), self.config.autosave_duration);
+            }
+            SavePolicy::OnChange => {
+                self.todo.lock().unwrap().get_version_mut().tx = Some(tx.clone());
+            }
+            _ => {}
         }
 
-        if handle_changes {
-            Self::spawn_watcher(tx.clone(), self.todo_path.clone());
-            if let Some(path) = &self.archive_path {
-                Self::spawn_watcher(tx.clone(), path.clone());
+        if self.config.file_watcher {
+            Self::spawn_watcher(tx.clone(), &self.config.todo_path)?;
+            if let Some(path) = &self.config.archive_path {
+                Self::spawn_watcher(tx.clone(), path)?;
             }
         }
 
         thread::spawn(move || {
-            let mut version = self.todo.lock().unwrap().get_version();
-            let mut skip_count: usize = 0;
+            let mut versions = self.todo.lock().unwrap().get_version().get_version_all();
+            let mut save_queue = 0;
             for received in rx {
+                log::debug!("Save queue value: {save_queue}");
                 if let Err(e) = match received {
                     Save => {
-                        let act_version = self.todo.lock().unwrap().get_version();
-                        if version == act_version {
-                            log::debug!("File Worker: Todo list is actual.");
+                        log::trace!("Try to save Todo list.");
+                        if self
+                            .todo
+                            .lock()
+                            .unwrap()
+                            .get_version()
+                            .is_actual_all(versions)
+                        {
+                            log::info!("File Worker: Todo list is actual.");
                             Ok(())
                         } else {
-                            skip_count += 2;
-                            version = act_version;
+                            save_queue += 1;
+                            if self.config.archive_path.is_some() {
+                                save_queue += 1;
+                            }
                             self.save()
                         }
                     }
                     ForceSave => {
-                        skip_count += 2;
-                        self.save()
+                        log::trace!("Force save Todo list.");
+                        save_queue += 1;
+                        if self.config.archive_path.is_some() {
+                            save_queue += 1;
+                        }
+                        let result = self.save();
+                        versions = self.todo.lock().unwrap().get_version().get_version_all();
+                        result
                     }
                     Load => {
-                        if skip_count > 0 {
-                            skip_count -= 1;
-                            log::debug!("Load file 'skip_count': {}", skip_count);
-                            continue;
+                        if save_queue == 0 {
+                            let result = self.load();
+                            versions = self.todo.lock().unwrap().get_version().get_version_all();
+                            log::info!("Todo list updated from file.");
+                            result
+                        } else {
+                            save_queue -= 1;
+                            Ok(())
                         }
-                        let result = self.load();
-                        version = self.todo.lock().unwrap().get_version();
-                        log::info!("Todo list updated from file.");
-                        result
                     }
                     Exit => break,
                 } {
-                    log::error!("File Worker: {}", e.kind());
+                    log::error!("File Worker: {}", e);
                 }
             }
         });
-        tx
+        Ok(tx)
     }
 
     /// Spawns an autosave thread that periodically saves the todo list data.
@@ -222,12 +261,11 @@ impl FileWorker {
     /// * `tx` - A sender for sending `FileWorkerCommands` to the `FileWorker` thread.
     /// * `duration` - The duration between automatic saves of todo data.
     fn spawn_autosave(tx: Sender<FileWorkerCommands>, duration: Duration) {
-        let tx_worker = tx.clone();
         log::trace!("Start autosaver");
         thread::spawn(move || loop {
             thread::sleep(duration);
             log::trace!("Autosave with duration {}", duration.as_secs_f64());
-            if tx_worker.send(FileWorkerCommands::Save).is_err() {
+            if tx.send(FileWorkerCommands::Save).is_err() {
                 log::trace!("Autosave end");
             }
         });
@@ -239,20 +277,23 @@ impl FileWorker {
     ///
     /// * `tx` - A sender for sending `FileWorkerCommands` to the `FileWorker` thread.
     /// * `path` - The path to the file to be watched for changes.
-    fn spawn_watcher(tx: Sender<FileWorkerCommands>, path: String) {
+    fn spawn_watcher(tx: Sender<FileWorkerCommands>, path: &Path) -> Result<()> {
         log::trace!("Start file watcher");
+        let (tx_handle, rx_handle) = std::sync::mpsc::channel();
+        let mut watcher: RecommendedWatcher = Watcher::new(tx_handle, NotifyConfig::default())
+            .map_err(NotifyError)
+            .unwrap();
+        watcher
+            .watch(Path::new(path), RecursiveMode::NonRecursive)
+            .map_err(NotifyError)
+            .unwrap();
+        let path = path.to_path_buf();
         thread::spawn(move || {
-            let (tx_handle, rx_handle) = std::sync::mpsc::channel();
-            let mut watcher: RecommendedWatcher =
-                Watcher::new(tx_handle, NotifyConfig::default()).unwrap();
-            watcher
-                .watch(Path::new(&path), RecursiveMode::NonRecursive)
-                .unwrap();
             for res in rx_handle {
                 match res {
                     Ok(event) => match event.kind {
                         EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
-                            log::trace!("File {} changed", path);
+                            log::trace!("File {} changed", path.to_string_lossy());
                             if tx.send(FileWorkerCommands::Load).is_err() {
                                 break;
                             };
@@ -262,7 +303,9 @@ impl FileWorker {
                     Err(error) => log::error!("Error: {error:?}"),
                 }
             }
+            drop(watcher);
         });
+        Ok(())
     }
 }
 
@@ -280,7 +323,7 @@ mod tests {
         "#;
 
     #[test]
-    fn test_load_tasks() -> ioResult<()> {
+    fn test_load_tasks() -> Result<()> {
         let mut todo = ToDo::default();
         FileWorker::load_tasks(TESTING_STRING.as_bytes(), &mut todo)?;
         assert_eq!(todo.pending.len(), 4);
@@ -316,7 +359,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_tasks() -> ioResult<()> {
+    fn test_write_tasks() -> Result<()> {
         let mut todo = ToDo::default();
         FileWorker::load_tasks(TESTING_STRING.as_bytes(), &mut todo)?;
         let get_expected = |line: fn(&String) -> bool| {
@@ -329,7 +372,7 @@ mod tests {
                 .join("\n")
                 + "\n"
         };
-        let pretty_assert = |tasks, expected: &str, msg: &str| -> ioResult<()> {
+        let pretty_assert = |tasks, expected: &str, msg: &str| -> Result<()> {
             let mut buf: Vec<u8> = Vec::new();
             FileWorker::save_tasks(&mut buf, tasks)?;
             assert_eq!(

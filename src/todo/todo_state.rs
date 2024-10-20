@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use todo_txt::Task;
 
-use crate::config::ToDoConfig;
+use crate::config::{TaskSort, ToDoConfig};
 
-use super::{task_list::TaskSort, ToDo};
+use super::ToDo;
 
 /// Enum to represent the state of ToDo data (pending or done).
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ impl ToDoData {
     ///
     /// * `data` - The type of ToDo data to retrieve (Pending or Done).
     pub fn get_data_mut<'a>(&self, todo: &'a mut ToDo) -> &'a mut Vec<Task> {
-        todo.version += 1;
+        todo.version.update(self);
         match self {
             Self::Pending => &mut todo.pending,
             Self::Done => &mut todo.done,
