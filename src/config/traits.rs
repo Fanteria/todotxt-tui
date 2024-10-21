@@ -7,12 +7,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{Result, ToDoIoError};
+use crate::{Result, ToDoError};
 
 pub trait Conf: Sized + Default {
     fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         Self::from_reader(
-            File::open(path.as_ref()).map_err(|e| ToDoIoError::new(path.as_ref(), e))?,
+            File::open(path.as_ref()).map_err(|e| ToDoError::io_operation_failed(path, e))?,
         )
     }
 

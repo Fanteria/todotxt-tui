@@ -1,6 +1,7 @@
 use crate::ToDoError;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
+use tui::widgets::BorderType;
 use std::fmt::Display;
 use std::str::FromStr;
 use tui::style::Modifier;
@@ -82,6 +83,36 @@ impl From<TextModifier> for Modifier {
             Bold => Modifier::BOLD,
             Italic => Modifier::ITALIC,
             Underlined => Modifier::UNDERLINED,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, ValueEnum, Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum WidgetBorderType {
+    Plain,
+    #[default]
+    Rounded,
+    Double,
+    Thick,
+}
+
+impl Display for WidgetBorderType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&super::parsers::enum_debug_display_parser(&format!(
+            "{:?}",
+            self
+        )))?;
+        Ok(())
+    }
+}
+
+impl From<WidgetBorderType> for BorderType {
+    fn from(value: WidgetBorderType) -> Self {
+        match value {
+            WidgetBorderType::Plain => Self::Plain,
+            WidgetBorderType::Rounded => Self::Rounded,
+            WidgetBorderType::Double => Self::Double,
+            WidgetBorderType::Thick => Self::Thick,
         }
     }
 }

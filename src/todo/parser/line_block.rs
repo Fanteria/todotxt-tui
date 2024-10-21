@@ -130,29 +130,32 @@ mod tests {
     #[test]
     fn parse_variables_error() {
         assert_eq!(
-            LineBlock::parse_variables("string with $ empty variable"),
-            Err(ToDoError::EmptyVariableName(String::from(
-                "string with $ empty variable"
-            )))
+            LineBlock::parse_variables("string with $ empty variable")
+                .unwrap_err()
+                .to_string(),
+            ToDoError::EmptyVariableName(String::from("string with $ empty variable")).to_string()
         );
 
         assert_eq!(
-            LineBlock::parse_variables("string with empty variable on end $"),
-            Err(ToDoError::EmptyVariableName(String::from(
-                "string with empty variable on end $"
-            )))
+            LineBlock::parse_variables("string with empty variable on end $")
+                .unwrap_err()
+                .to_string(),
+            ToDoError::EmptyVariableName(String::from("string with empty variable on end $"))
+                .to_string()
         );
 
         assert_eq!(
-            LineBlock::parse_variables("invalid escape \\"),
-            Err(ToDoError::ParseBlockEscapeOnEnd(String::from(
-                "invalid escape \\"
-            )))
+            LineBlock::parse_variables("invalid escape \\")
+                .unwrap_err()
+                .to_string(),
+            ToDoError::ParseBlockEscapeOnEnd(String::from("invalid escape \\")).to_string()
         );
 
         assert_eq!(
-            LineBlock::parse_variables("variable block not closed ${variable "),
-            Err(ToDoError::ParseVariableNotClosed(String::from("variable ")))
+            LineBlock::parse_variables("variable block not closed ${variable ")
+                .unwrap_err()
+                .to_string(),
+            ToDoError::ParseVariableNotClosed(String::from("variable ")).to_string()
         );
     }
 }

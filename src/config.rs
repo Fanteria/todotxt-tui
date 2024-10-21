@@ -9,7 +9,7 @@ mod traits;
 pub use self::{
     colors::Color,
     keycode::KeyCodeDef,
-    options::{SavePolicy, SetFinalDateType, TaskSort, TextModifier},
+    options::{SavePolicy, SetFinalDateType, TaskSort, TextModifier, WidgetBorderType},
     styles::{CustomCategoryStyle, StylesValue},
     text_style::{TextStyle, TextStyleList},
     traits::{Conf, ConfMerge, ConfigDefaults},
@@ -42,7 +42,8 @@ pub struct FileWorkerConfig {
     /// when changes are detected.
     #[arg(short = 'f')]
     pub file_watcher: bool,
-
+    /// The save policy for how and when the `todo.txt` and optionally `archive.txt` files
+    /// should be saved.
     pub save_policy: SavePolicy,
 }
 
@@ -276,6 +277,8 @@ pub struct WidgetBaseConfig {
     /// Keybindings configured for interacting with categories.
     #[arg(short = 'C')]
     pub category_keybind: EventHandlerUI,
+    /// The type of border style to use for the UI widgets.
+    pub border_type: WidgetBorderType,
 }
 
 impl Default for WidgetBaseConfig {
@@ -296,6 +299,7 @@ impl Default for WidgetBaseConfig {
                 (KeyCode::Char('n'), UIEvent::NextSearch),
                 (KeyCode::Char('N'), UIEvent::PrevSearch),
             ]),
+            border_type: WidgetBorderType::default(),
         }
     }
 }
@@ -326,7 +330,8 @@ pub struct Styles {
     /// Note: Custom styles defined here will override all other category-specific styles,
     /// including `category_style`, `category_select_style`, and `category_remove_style`.
     custom_category_style: CustomCategoryStyle,
-    /// TODO comment
+    /// Specifies the text style used to highlight elements that match a search
+    /// within lists.
     pub highlight: TextStyle,
 }
 

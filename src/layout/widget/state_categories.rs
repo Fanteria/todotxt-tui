@@ -118,7 +118,7 @@ impl State for StateCategories {
         let todo = self.base.data();
         let data = todo.get_categories(self.category);
         let (first, last) = self.base.range();
-        let list = List::new(data.slice(first, last, self.base.to_search.as_deref()))
+        let list = List::new(data.get_view(first..last, self.base.to_search.as_deref()))
             .block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)

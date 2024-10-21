@@ -121,18 +121,18 @@ mod tests {
     fn read_block_error() {
         let mut iter = "not closed block".chars().peekable();
         assert_eq!(
-            Parser::read_block(&mut iter, ']'),
-            Err(ToDoError::ParseBlockNotClosed(
+            Parser::read_block(&mut iter, ']').unwrap_err().to_string(),
+            ToDoError::ParseBlockNotClosed(
                 "not closed block".to_string()
-            ))
+            ).to_string()
         );
 
         let mut iter = "not closed block \\".chars().peekable();
         assert_eq!(
-            Parser::read_block(&mut iter, ']'),
-            Err(ToDoError::ParseBlockEscapeOnEnd(
+            Parser::read_block(&mut iter, ']').unwrap_err().to_string(),
+            ToDoError::ParseBlockEscapeOnEnd(
                 "not closed block \\".to_string()
-            ))
+            ).to_string()
         );
     }
 
@@ -246,10 +246,10 @@ mod tests {
     #[test]
     fn parse_error() {
         assert_eq!(
-            Parser::parse("escape on end of line \\", &Styles::default()),
-            Err(ToDoError::ParseBlockEscapeOnEnd(
-                "escape on end of line \\".to_string()
-            ))
+            Parser::parse("escape on end of line \\", &Styles::default())
+                .unwrap_err()
+                .to_string(),
+            ToDoError::ParseBlockEscapeOnEnd("escape on end of line \\".to_string()).to_string()
         );
     }
 

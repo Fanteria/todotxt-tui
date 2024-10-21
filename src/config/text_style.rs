@@ -362,20 +362,20 @@ mod tests {
     #[test]
     fn from_str_err() {
         assert_eq!(
-            TextStyle::from_str("invalid_color").unwrap_err(),
-            ToDoError::ParseTextStyle("invalid_color".to_string())
+            TextStyle::from_str("invalid_color").unwrap_err().to_string(),
+            ToDoError::ParseTextStyle("invalid_color".to_string()).to_string()
         );
         assert_eq!(
-            TextStyle::from_str("^bg_invalid_color").unwrap_err(),
-            ToDoError::ParseTextStyle("^bg_invalid_color".to_string())
+            TextStyle::from_str("^bg_invalid_color").unwrap_err().to_string(),
+            ToDoError::ParseTextStyle("^bg_invalid_color".to_string()).to_string()
         );
         assert_eq!(
-            TextStyle::from_str("invalid_modifier").unwrap_err(),
-            ToDoError::ParseTextStyle("invalid_modifier".to_string())
+            TextStyle::from_str("invalid_modifier").unwrap_err().to_string(),
+            ToDoError::ParseTextStyle("invalid_modifier".to_string()).to_string()
         );
         assert_eq!(
-            TextStyle::from_str("unknown_style").unwrap_err(),
-            ToDoError::ParseTextStyle("unknown_style".to_string())
+            TextStyle::from_str("unknown_style").unwrap_err().to_string(),
+            ToDoError::ParseTextStyle("unknown_style".to_string()).to_string()
         );
     }
 

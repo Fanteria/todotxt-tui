@@ -1,6 +1,8 @@
 use crate::config::{Styles, TaskSort};
 use std::convert::From;
+use std::ops::Bound;
 use std::ops::Index;
+use std::ops::RangeBounds;
 use todo_txt::Task;
 use tui::text::Line;
 use tui::text::Span;
@@ -17,7 +19,7 @@ pub struct TaskList<'a> {
     pub styles: &'a Styles,
 }
 
-pub struct TaskSlice<'a> {
+pub struct TaskView<'a> {
     pub vec: &'a [Item<'a>],
     pub styles: &'a Styles,
     pub to_search: Option<&'a str>,
@@ -46,30 +48,37 @@ impl<'a> TaskList<'a> {
         Some(self.vec.get(index)?.0)
     }
 
-    /// Slices the task list from `first` (inclusive) to `last` (exclusive).
+    /// Slices the task list based on the provided range of indexes and returns
+    /// a view of the tasks.
     ///
     /// # Arguments
     ///
-    /// * `first` - The index of the first task to include in the slice.
-    /// * `last` - The index of the first task to exclude from the slice.
+    /// * `range` - A range of indexes specifying the start and end points of the slice.
+    /// * `to_search` - An optional search string used to highlight tasks.
     ///
     /// # Returns
     ///
-    /// A `TaskSlice` containing the sliced tasks.
-    // TODO this function is disgusting use ranges... and solve to_search some move inteligent way
-    pub fn slice(&'a self, first: usize, last: usize, to_search: Option<&'a str>) -> TaskSlice {
-        if last > self.vec.len() {
-            TaskSlice {
-                vec: &self.vec[first..],
-                styles: self.styles,
-                to_search,
-            }
-        } else {
-            TaskSlice {
-                vec: &self.vec[first..last],
-                styles: self.styles,
-                to_search,
-            }
+    /// A `TaskView` containing the sliced tasks and relevant styling, limited
+    /// to the specified range.
+    pub fn get_view(
+        &'a self,
+        range: impl RangeBounds<usize>,
+        to_search: Option<&'a str>,
+    ) -> TaskView {
+        let start = match range.start_bound() {
+            Bound::Included(&n) => n,
+            Bound::Excluded(&n) => n + 1,
+            Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            Bound::Included(&n) => std::cmp::min(n + 1, self.vec.len()),
+            Bound::Excluded(&n) => std::cmp::min(n, self.vec.len()),
+            Bound::Unbounded => self.vec.len(),
+        };
+        TaskView {
+            vec: &self.vec[start..end],
+            styles: self.styles,
+            to_search,
         }
     }
 
@@ -160,8 +169,8 @@ impl<'a> Index<usize> for TaskList<'a> {
     }
 }
 
-impl<'a> From<TaskSlice<'a>> for Vec<ListItem<'a>> {
-    fn from(val: TaskSlice<'a>) -> Self {
+impl<'a> From<TaskView<'a>> for Vec<ListItem<'a>> {
+    fn from(val: TaskView<'a>) -> Self {
         val.vec
             .iter()
             .map(|(_, task)| {
@@ -204,13 +213,13 @@ mod tests {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
         };
-        let slice = tasklist.slice(1, 3, None);
+        let slice = tasklist.get_view(1..3, None);
 
         assert_eq!(slice.vec.len(), 2);
         assert_eq!(slice.vec[0], (1, &task2));
         assert_eq!(slice.vec[1], (2, &task3));
 
-        let slice = tasklist.slice(1, 100_000, None);
+        let slice = tasklist.get_view(1..100_000, None);
         assert_eq!(slice.vec.len(), 3);
         assert_eq!(slice.vec[0], (1, &task2));
         assert_eq!(slice.vec[1], (2, &task3));

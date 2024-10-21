@@ -1,5 +1,5 @@
 use super::{widget_type::WidgetType, RCToDo};
-use crate::{config::Config, todo::ToDo, ui::EventHandlerUI};
+use crate::{config::{Config, WidgetBorderType}, todo::ToDo, ui::EventHandlerUI};
 use std::sync::MutexGuard;
 use tui::{prelude::Rect, style::Color};
 
@@ -11,6 +11,7 @@ pub struct WidgetBase {
     pub chunk: Rect,
     pub data: RCToDo,
     pub event_handler: EventHandlerUI,
+    pub border_type: WidgetBorderType,
 }
 
 impl WidgetBase {
@@ -40,6 +41,7 @@ impl WidgetBase {
             chunk: Rect::default(),
             data,
             event_handler,
+            border_type: config.widget_base_config.border_type,
         }
     }
 

@@ -1,8 +1,7 @@
 use crate::{
-    layout::widget::widget_type::WidgetType,
-    layout::Layout,
+    layout::{widget::widget_type::WidgetType, Layout},
     todo::{ToDo, ToDoState},
-    {Result, ToDoIoError},
+    Result, ToDoError,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -41,10 +40,8 @@ impl UIState {
     /// Loads a `UIState` from the specified file path by opening the file
     /// and deserializing it from TOML format.
     pub fn load(path: &Path) -> Result<Self> {
-        let file = File::open(path).map_err(|err| ToDoIoError {
-            path: path.to_path_buf(),
-            err,
-        })?;
+        let file = File::open(path)
+            .map_err(|err| ToDoError::io_operation_failed(path, err))?;
         Ok(UIState::deserialize(file))
     }
 

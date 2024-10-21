@@ -7,11 +7,11 @@ pub use ui_event::*;
 pub use ui_state::*;
 
 use crate::{
-    config::{Config, UiConfig},
+    config::{Config, UiConfig, WidgetBorderType},
     file_worker::{FileWorker, FileWorkerCommands},
     layout::{Layout, Render},
     todo::{autocomplete, ToDo},
-    IOError, Result,
+    Result,
 };
 use crossterm::{
     self,
@@ -31,8 +31,7 @@ use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout as tuiLayout, Rect},
     style::{Color, Style},
-    widgets::Paragraph,
-    widgets::{Block, BorderType, Borders},
+    widgets::{Block, Borders, Paragraph},
     Terminal,
 };
 use tui_input::{backend::crossterm::EventHandler, Input};
@@ -57,6 +56,7 @@ pub struct UI {
     quit: bool,
     active_color: Color,
     config: UiConfig,
+    border_type: WidgetBorderType,
 }
 
 impl UI {
@@ -87,6 +87,7 @@ impl UI {
             quit: false,
             active_color: *config.styles.active_color,
             config: config.ui_config.clone(),
+            border_type: config.widget_base_config.border_type,
         }
     }
 
@@ -147,31 +148,28 @@ impl UI {
     pub fn run(&mut self) -> Result<()> {
         fn run_ui(this: &mut UI) -> Result<()> {
             // setup terminal
-            enable_raw_mode().map_err(IOError)?;
+            enable_raw_mode()?;
             let mut stdout = io::stdout();
-            execute!(stdout, EnterAlternateScreen, EnableMouseCapture).map_err(IOError)?;
+            execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
 
             let mut backend = CrosstermBackend::new(stdout);
-            backend
-                .execute(SetTitle(this.config.window_title.clone()))
-                .map_err(IOError)?;
+            backend.execute(SetTitle(this.config.window_title.clone()))?;
 
-            let mut terminal = Terminal::new(backend).map_err(IOError)?;
-            terminal.hide_cursor().map_err(IOError)?;
-            this.update_chunk(terminal.size().map_err(IOError)?);
+            let mut terminal = Terminal::new(backend)?;
+            terminal.hide_cursor()?;
+            this.update_chunk(terminal.size()?);
 
             this.draw(&mut terminal)?;
             this.main_loop(&mut terminal)?;
 
             // restore terminal
-            disable_raw_mode().map_err(IOError)?;
+            disable_raw_mode()?;
             execute!(
                 terminal.backend_mut(),
                 LeaveAlternateScreen,
                 DisableMouseCapture
-            )
-            .map_err(IOError)?;
-            terminal.show_cursor().map_err(IOError)?;
+            )?;
+            terminal.show_cursor()?;
 
             Ok(())
         }
@@ -196,7 +194,7 @@ impl UI {
     fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
         let mut versions = self.data.lock().unwrap().get_version().get_version_all();
         loop {
-            if event::poll(self.config.list_refresh_rate).map_err(IOError)? {
+            if event::poll(self.config.list_refresh_rate)? {
                 if self.process_event()? {
                     break;
                 }
@@ -229,30 +227,28 @@ impl UI {
         let mut block = Block::default()
             .borders(Borders::ALL)
             .title("Input")
-            .border_type(BorderType::Rounded); // TODO add this to config????
+            .border_type(self.border_type.into());
         if self.mode == Mode::Input || self.mode == Mode::Edit || self.mode == Mode::Search {
             block = block.border_style(Style::default().fg(self.active_color));
         }
-        terminal
-            .draw(|f| {
-                f.render_widget(
-                    Paragraph::new(self.tinput.value()).block(block),
-                    self.input_chunk,
-                );
-                self.layout.render(f);
+        terminal.draw(|f| {
+            f.render_widget(
+                Paragraph::new(self.tinput.value()).block(block),
+                self.input_chunk,
+            );
+            self.layout.render(f);
 
-                if self.mode == Mode::Input || self.mode == Mode::Edit {
-                    let width = self.input_chunk.width.max(3) - 3;
-                    let scroll = self.tinput.visual_scroll(width as usize);
-                    f.set_cursor(
-                        self.input_chunk.x
-                            + (self.tinput.visual_cursor().max(scroll) - scroll) as u16
-                            + 1,
-                        self.input_chunk.y + 1,
-                    );
-                }
-            })
-            .map_err(IOError)?;
+            if self.mode == Mode::Input || self.mode == Mode::Edit {
+                let width = self.input_chunk.width.max(3) - 3;
+                let scroll = self.tinput.visual_scroll(width as usize);
+                f.set_cursor(
+                    self.input_chunk.x
+                        + (self.tinput.visual_cursor().max(scroll) - scroll) as u16
+                        + 1,
+                    self.input_chunk.y + 1,
+                );
+            }
+        })?;
         Ok(())
     }
 
@@ -262,7 +258,7 @@ impl UI {
     ///
     /// An `Result` indicating whether the application should exit.
     fn process_event(&mut self) -> Result<bool> {
-        self.handle_event_window(read().map_err(IOError)?);
+        self.handle_event_window(read()?);
         Ok(self.quit)
     }
 

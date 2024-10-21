@@ -1,8 +1,8 @@
 use crate::{
     config::{FileWorkerConfig, SavePolicy},
-    error::{IOError, Result, ToDoIoError},
+    error::Result,
     todo::ToDo,
-    NotifyError,
+    ToDoError,
 };
 use notify::{
     event::{AccessKind, AccessMode, EventKind},
@@ -62,10 +62,8 @@ impl FileWorker {
     pub fn load(&self) -> Result<()> {
         let mut todo = ToDo::default(); // TODO this can be improved
         Self::load_tasks(
-            File::open(&self.config.todo_path).map_err(|e| ToDoIoError {
-                path: self.config.todo_path.to_path_buf(),
-                err: e,
-            })?,
+            File::open(&self.config.todo_path)
+                .map_err(|e| ToDoError::io_operation_failed(&self.config.todo_path, e))?,
             &mut todo,
         )?;
         log::info!(
@@ -75,10 +73,7 @@ impl FileWorker {
         if let Some(path) = &self.config.archive_path {
             log::info!("Load tasks from achive file {}", path.to_string_lossy());
             Self::load_tasks(
-                File::open(path).map_err(|err| ToDoIoError {
-                    path: path.to_path_buf(),
-                    err,
-                })?,
+                File::open(path).map_err(|e| ToDoError::io_operation_failed(path, e))?,
                 &mut todo,
             )?;
         }
@@ -100,7 +95,7 @@ impl FileWorker {
     /// An `ioResult` indicating success or an error if file operations fail.
     fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> Result<()> {
         for line in BufReader::new(reader).lines() {
-            let line = line.map_err(IOError)?;
+            let line = line?;
             let line = line.trim();
             if line.is_empty() {
                 continue;
@@ -121,10 +116,8 @@ impl FileWorker {
     ///
     /// An `ioResult` indicating success or an error if file operations fail.
     fn save(&self) -> Result<()> {
-        let mut f = File::create(&self.config.todo_path).map_err(|err| ToDoIoError {
-            path: self.config.todo_path.to_path_buf(),
-            err,
-        })?;
+        let mut f = File::create(&self.config.todo_path)
+            .map_err(|e| ToDoError::io_operation_failed(&self.config.todo_path, e))?;
         let todo = self.todo.lock().unwrap();
         log::info!(
             "Saving todo task to {}{}",
@@ -138,7 +131,7 @@ impl FileWorker {
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.config.archive_path {
             Some(s) => Self::save_tasks(
-                &mut File::create(s).map_err(|err| ToDoIoError::new(s, err))?,
+                &mut File::create(s).map_err(|err| ToDoError::io_operation_failed(s, err))?,
                 &todo.done,
             ),
             None => Self::save_tasks(&mut f, &todo.done),
@@ -158,9 +151,7 @@ impl FileWorker {
     fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> Result<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
-            writer
-                .write_all((task.to_string() + "\n").as_bytes())
-                .map_err(IOError)?;
+            writer.write_all((task.to_string() + "\n").as_bytes())?;
         }
         Ok(())
     }
@@ -280,13 +271,8 @@ impl FileWorker {
     fn spawn_watcher(tx: Sender<FileWorkerCommands>, path: &Path) -> Result<()> {
         log::trace!("Start file watcher");
         let (tx_handle, rx_handle) = std::sync::mpsc::channel();
-        let mut watcher: RecommendedWatcher = Watcher::new(tx_handle, NotifyConfig::default())
-            .map_err(NotifyError)
-            .unwrap();
-        watcher
-            .watch(Path::new(path), RecursiveMode::NonRecursive)
-            .map_err(NotifyError)
-            .unwrap();
+        let mut watcher: RecommendedWatcher = Watcher::new(tx_handle, NotifyConfig::default())?;
+        watcher.watch(Path::new(path), RecursiveMode::NonRecursive)?;
         let path = path.to_path_buf();
         thread::spawn(move || {
             for res in rx_handle {
