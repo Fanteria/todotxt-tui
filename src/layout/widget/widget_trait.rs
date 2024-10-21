@@ -62,11 +62,11 @@ pub trait State {
     fn update_chunk_event(&mut self) {}
 
     /// Handles the search by processing the given search string.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `to_search` - A `String` representing the search input.
-    /// 
+    ///
     #[allow(unused_variables)]
     fn search_event(&mut self, to_search: String) {}
 

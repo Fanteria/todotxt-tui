@@ -40,8 +40,7 @@ impl UIState {
     /// Loads a `UIState` from the specified file path by opening the file
     /// and deserializing it from TOML format.
     pub fn load(path: &Path) -> Result<Self> {
-        let file = File::open(path)
-            .map_err(|err| ToDoError::io_operation_failed(path, err))?;
+        let file = File::open(path).map_err(|err| ToDoError::io_operation_failed(path, err))?;
         Ok(UIState::deserialize(file))
     }
 

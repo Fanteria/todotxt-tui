@@ -122,17 +122,13 @@ mod tests {
         let mut iter = "not closed block".chars().peekable();
         assert_eq!(
             Parser::read_block(&mut iter, ']').unwrap_err().to_string(),
-            ToDoError::ParseBlockNotClosed(
-                "not closed block".to_string()
-            ).to_string()
+            ToDoError::ParseBlockNotClosed("not closed block".to_string()).to_string()
         );
 
         let mut iter = "not closed block \\".chars().peekable();
         assert_eq!(
             Parser::read_block(&mut iter, ']').unwrap_err().to_string(),
-            ToDoError::ParseBlockEscapeOnEnd(
-                "not closed block \\".to_string()
-            ).to_string()
+            ToDoError::ParseBlockEscapeOnEnd("not closed block \\".to_string()).to_string()
         );
     }
 

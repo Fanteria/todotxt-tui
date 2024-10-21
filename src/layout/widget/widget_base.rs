@@ -1,5 +1,9 @@
 use super::{widget_type::WidgetType, RCToDo};
-use crate::{config::{Config, WidgetBorderType}, todo::ToDo, ui::EventHandlerUI};
+use crate::{
+    config::{Config, WidgetBorderType},
+    todo::ToDo,
+    ui::EventHandlerUI,
+};
 use std::sync::MutexGuard;
 use tui::{prelude::Rect, style::Color};
 

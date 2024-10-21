@@ -1,10 +1,10 @@
 use crate::ToDoError;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use tui::widgets::BorderType;
 use std::fmt::Display;
 use std::str::FromStr;
 use tui::style::Modifier;
+use tui::widgets::BorderType;
 
 #[derive(Serialize, Deserialize, ValueEnum, Clone, Debug, PartialEq, Eq, Default)]
 pub enum SetFinalDateType {

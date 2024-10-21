@@ -119,7 +119,11 @@ impl<'a> CategoryList<'a> {
     ///
     /// A `CategoryView` containing the sliced categories and relevant styling,
     /// limited to the specified range.
-    pub fn get_view(&'a self, range: impl RangeBounds<usize>, to_search: Option<&'a str>) -> CategoryView {
+    pub fn get_view(
+        &'a self,
+        range: impl RangeBounds<usize>,
+        to_search: Option<&'a str>,
+    ) -> CategoryView {
         let start = match range.start_bound() {
             Bound::Included(&n) => n,
             Bound::Excluded(&n) => n + 1,
