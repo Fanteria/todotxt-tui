@@ -153,7 +153,7 @@ impl State for StateList {
         let data = self.base.data();
         let filtered = data.get_filtered_and_sorted(self.data_type);
         let (first, last) = self.base.range();
-        let filtered = filtered.slice(first, last, self.base.to_search.as_deref());
+        let filtered = filtered.get_view(first..last, self.base.to_search.as_deref());
         let list = List::new(filtered).block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)

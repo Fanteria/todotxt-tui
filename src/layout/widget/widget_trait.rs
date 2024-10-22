@@ -6,7 +6,7 @@ use tui::{
     backend::Backend,
     prelude::Rect,
     style::Style,
-    widgets::{Block, BorderType, Borders},
+    widgets::{Block, Borders},
     Frame,
 };
 
@@ -43,7 +43,7 @@ pub trait State {
         let mut block = Block::default()
             .borders(Borders::ALL)
             .title(base.title.clone())
-            .border_type(BorderType::Rounded); // TODO add this to config???
+            .border_type(base.border_type.into());
         if base.focus {
             block = block.border_style(Style::default().fg(base.active_color));
         }
@@ -61,9 +61,16 @@ pub trait State {
     /// Called when the widget's rendering area (chunk) is updated.
     fn update_chunk_event(&mut self) {}
 
-    // TODO comment
-    fn search_event(&mut self, _: String) {}
+    /// Handles the search by processing the given search string.
+    ///
+    /// # Arguments
+    ///
+    /// * `to_search` - A `String` representing the search input.
+    ///
+    #[allow(unused_variables)]
+    fn search_event(&mut self, to_search: String) {}
 
+    /// Clears the current search state, resetting any active search data.
     fn clear_search(&mut self) {}
 
     /// Retrieves an internal UI event based on a key code.

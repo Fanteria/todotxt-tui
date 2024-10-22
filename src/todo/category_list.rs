@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::ops::{Bound, RangeBounds};
 
 use super::{FilterState, ToDo, ToDoCategory};
 use crate::config::Styles;
@@ -26,7 +27,7 @@ pub struct CategoryList<'a> {
 ///
 /// This struct holds a reference to an array slice of categories and a reference to styles
 /// that apply to the category slice.
-pub struct CategorySlice<'a> {
+pub struct CategoryView<'a> {
     vec: &'a [CategoryState<'a>],
     styles: &'a Styles,
     to_search: Option<&'a str>,
@@ -106,26 +107,43 @@ impl<'a> CategoryList<'a> {
         self.vec[index].name
     }
 
-    // TODO this is ugly as hell
-    pub fn slice(&'a self, first: usize, last: usize, to_search: Option<&'a str>) -> CategorySlice {
-        if last > self.vec.len() {
-            CategorySlice {
-                vec: &self.vec[first..],
-                styles: self.styles,
-                to_search,
-            }
-        } else {
-            CategorySlice {
-                vec: &self.vec[first..last],
-                styles: self.styles,
-                to_search,
-            }
+    /// Slices the category list based on the provided range of indexes and returns
+    /// a view of the categories.
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - A range of indexes specifying the start and end points of the slice.
+    /// * `to_search` - An optional search string used to highlight categories.
+    ///
+    /// # Returns
+    ///
+    /// A `CategoryView` containing the sliced categories and relevant styling,
+    /// limited to the specified range.
+    pub fn get_view(
+        &'a self,
+        range: impl RangeBounds<usize>,
+        to_search: Option<&'a str>,
+    ) -> CategoryView {
+        let start = match range.start_bound() {
+            Bound::Included(&n) => n,
+            Bound::Excluded(&n) => n + 1,
+            Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            Bound::Included(&n) => std::cmp::min(n + 1, self.vec.len()),
+            Bound::Excluded(&n) => std::cmp::min(n, self.vec.len()),
+            Bound::Unbounded => self.vec.len(),
+        };
+        CategoryView {
+            vec: &self.vec[start..end],
+            styles: self.styles,
+            to_search,
         }
     }
 }
 
-impl<'a> From<CategorySlice<'a>> for Vec<ListItem<'a>> {
-    fn from(val: CategorySlice<'a>) -> Self {
+impl<'a> From<CategoryView<'a>> for Vec<ListItem<'a>> {
+    fn from(val: CategoryView<'a>) -> Self {
         val.vec
             .iter()
             .map(|s| {
@@ -258,7 +276,7 @@ mod tests {
             styles: &styles,
         };
 
-        let items = Vec::<ListItem>::from(categories.slice(0, 10000, None));
+        let items = Vec::<ListItem>::from(categories.get_view(0..10000, None));
         assert_eq!(items.len(), 4);
         assert_eq!(items[0], ListItem::new(first.clone()));
         assert_eq!(items[1], ListItem::new(second.clone()));

@@ -9,7 +9,7 @@ pub fn from_reader() -> TokenStream {
                 R: std::io::Read
             {
                 let mut buf = String::default();
-                reader.read_to_string(&mut buf).map_err(|e| crate::error::IOError(e))?;
+                reader.read_to_string(&mut buf)?;
                 Ok(toml::from_str(buf.as_str())?)
             }
     }

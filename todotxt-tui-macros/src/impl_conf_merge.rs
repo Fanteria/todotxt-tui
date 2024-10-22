@@ -119,14 +119,14 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                     Some(config_path) => config_path.to_owned(),
                     None => Self::config_path(),
                 };
-                let file = std::fs::File::open(&path).map_err(|e| crate::ToDoIoError::new(path, e))?;
+                let file = std::fs::File::open(&path).map_err(|e| crate::ToDoError::io_operation_failed(path, e))?;
                 let from_matches = #name_conf::from_arg_matches(&matches).unwrap();
                 if let Some(path) = &from_matches.export_autocomplete {
                     clap_complete::generate(
                         clap_complete::shells::Bash,
                         &mut #name_conf::command(),
                         env!("CARGO_PKG_NAME"),
-                        &mut std::fs::File::create(path).map_err(|e| crate::ToDoIoError::new(path, e))?,
+                        &mut std::fs::File::create(path).map_err(|e| crate::ToDoError::io_operation_failed(path, e))?,
                     );
                     std::process::exit(0);
                 } else if let Some(path) = &from_matches.export_config {
@@ -143,18 +143,17 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                     conf.ui_config.save_state_path = None;
                     conf.file_worker_config.archive_path = None;
 
-                    let mut output = std::fs::File::create(path).map_err(|e| crate::ToDoIoError::new(path, e))?;
-                    write!(output, "{}", toml::to_string_pretty(&conf)?).map_err(|e| crate::IOError(e))?;
+                    let mut output = std::fs::File::create(path).map_err(|e| crate::ToDoError::io_operation_failed(path, e))?;
+                    write!(output, "{}", toml::to_string_pretty(&conf)?)?;
                     std::process::exit(0);
                 } else if let Some(path) = &from_matches.export_default_config {
                     use std::io::Write;
                     let mut default: #name_conf = Self::default().into();
-                    let mut output = std::fs::File::create(path).map_err(|e| crate::ToDoIoError::new(path, e))?;
+                    let mut output = std::fs::File::create(path).map_err(|e| crate::ToDoError::io_operation_failed(path, e))?;
                     // TODO ugly hack
                     default.ui_config.save_state_path = None;
                     default.file_worker_config.archive_path = None;
-                    write!(output, "{}", toml::to_string_pretty(&default)?)
-                        .map_err(|e| crate::IOError(e))?;
+                    write!(output, "{}", toml::to_string_pretty(&default)?)?;
                     std::process::exit(0);
                 }
 
