@@ -3,6 +3,10 @@ name = "todotxt-tui-macros"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+keywords = ["tui", "todolist", "ratatui", "macro"]
+categories = ["command-line-utilities"]
+description = "Todo.txt TUI uses Rust macros to provide a customizable terminal-based app for managing tasks in the todo.txt format, making configuration simple and flexible."
+repository = "https://github.com/Fanteria/todotxt-tui"
 
 [lib]
 proc-macro = true
