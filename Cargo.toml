@@ -11,7 +11,7 @@ description = "Todo.txt TUI is a highly customizable terminal-based application 
 repository = "https://github.com/Fanteria/todotxt-tui"
 
 [dependencies]
-macros = { version = "0.1.0", path = "macros/" }
+macros = { version = "0.1.0", path = "todotxt-tui-macros/" }
 chrono = "0.4"
 clap = { version = "4.4", features = ["derive", "wrap_help", "env"] }
 clap_complete = "4.4"
