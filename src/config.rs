@@ -23,8 +23,8 @@ use crate::{
 };
 use clap::{builder::styling::AnsiColor, FromArgMatches};
 use crossterm::event::KeyCode;
-use todotxt_tui_macros::{Conf, ConfMerge};
 use std::{env::var, path::PathBuf, str::FromStr, time::Duration};
+use todotxt_tui_macros::{Conf, ConfMerge};
 use tui::style::Color as tuiColor;
 use tui::style::Style;
 
