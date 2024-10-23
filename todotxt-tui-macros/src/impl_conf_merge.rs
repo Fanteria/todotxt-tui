@@ -147,13 +147,7 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                     write!(output, "{}", toml::to_string_pretty(&conf)?)?;
                     std::process::exit(0);
                 } else if let Some(path) = &from_matches.export_default_config {
-                    use std::io::Write;
-                    let mut default: #name_conf = Self::default().into();
-                    let mut output = std::fs::File::create(path).map_err(|e| crate::ToDoError::io_operation_failed(path, e))?;
-                    // TODO ugly hack
-                    default.ui_config.save_state_path = None;
-                    default.file_worker_config.archive_path = None;
-                    write!(output, "{}", toml::to_string_pretty(&default)?)?;
+                    Self::export_default(path)?;
                     std::process::exit(0);
                 }
 
@@ -162,6 +156,14 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                     #name_conf::from_reader(file)?,
                 );
                 Ok(#name_conf::merge(from_reader, from_matches))
+            }
+
+            fn default_toml() -> Result<String> {
+                let mut default: #name_conf = Self::default().into();
+                // TODO ugly hack
+                default.ui_config.save_state_path = None;
+                default.file_worker_config.archive_path = None;
+                Ok(toml::to_string_pretty(&default)?)
             }
         }
 

@@ -5,10 +5,11 @@ use log4rs::{
     encode::pattern::PatternEncoder,
     Config as LogConfig,
 };
-use std::{env, error::Error, path::PathBuf, process::exit};
+use std::{env, error::Error, io::stdin, path::PathBuf, process::exit};
 use todotxt_tui::{
     config::{Conf, ConfMerge, Config},
     ui::UI,
+    ToDoError,
 };
 
 /// Initializes the logging system.
@@ -35,11 +36,45 @@ fn log_init() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn ask_to_create_config(err: ToDoError) -> ToDoError {
+    fn ask() -> bool {
+        let mut s = String::new();
+        println!("Do you want to initialize it with default configuration? [y/N]");
+        stdin()
+            .read_line(&mut s)
+            .expect("Did not enter a correct string");
+        match s.trim().to_lowercase().as_str() {
+            "y" | "yes" => true,
+            "n" | "no" | "" => false,
+            _ => {
+                println!("You must say y or n");
+                ask()
+            }
+        }
+    }
+
+    if let ToDoError::IOoperationFailed(file, error) = &err {
+        if std::io::ErrorKind::NotFound == error.kind() {
+            println!("Configuration file: {} does not exists.", file.display());
+            if ask() {
+                if let Err(e) = Config::export_default(file) {
+                    return e;
+                }
+                println!("Configuration exported, please update todo_path.");
+                exit(0);
+            } else {
+                exit(1);
+            }
+        }
+    }
+    err
+}
+
 fn main() {
     let run = || -> Result<(), Box<dyn Error>> {
         log_init()?;
         log::trace!("===== START LOGGING =====");
-        let config = Config::new()?;
+        let config = Config::new().map_err(ask_to_create_config)?;
         let mut ui = UI::build(&config)?;
         log::trace!("===== STARTING UI =====");
         ui.run()?;

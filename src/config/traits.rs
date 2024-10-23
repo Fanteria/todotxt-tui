@@ -3,7 +3,7 @@ use std::{
     env,
     ffi::OsString,
     fs::File,
-    io::Read,
+    io::{Read, Write},
     path::{Path, PathBuf},
 };
 
@@ -43,6 +43,15 @@ pub trait ConfMerge: Sized + ConfigDefaults + Conf {
     where
         Iter: IntoIterator<Item = T>,
         T: Into<OsString> + Clone;
+
+    fn export_default(path: impl AsRef<Path>) -> Result<()> {
+        let mut output = std::fs::File::create(path.as_ref())
+            .map_err(|e| crate::ToDoError::io_operation_failed(path, e))?;
+        write!(output, "{}", Self::default_toml()?)?;
+        Ok(())
+    }
+
+    fn default_toml() -> Result<String>;
 }
 
 pub trait ConfigDefaults {
