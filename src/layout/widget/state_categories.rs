@@ -5,7 +5,7 @@ use crate::{
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
-use tui::{backend::Backend, widgets::List, Frame};
+use tui::{widgets::List, Frame};
 
 /// Represents the state for a widget that displays categories.
 pub struct StateCategories {
@@ -114,11 +114,11 @@ impl State for StateCategories {
         true
     }
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>) {
+    fn render(&self, f: &mut Frame) {
         let todo = self.base.data();
         let data = todo.get_categories(self.category);
         let (first, last) = self.base.range();
-        let list = List::new(data.get_view(first..last, self.base.to_search.as_deref()))
+        let list = List::from(data.get_view(first..last, self.base.to_search.as_deref()))
             .block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)

@@ -1,7 +1,6 @@
 use super::{render_trait::Render, widget::widget_type::WidgetType, Layout, Widget};
 use crate::{Result, ToDoError};
 use tui::{
-    backend::Backend,
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},
     Frame,
 };
@@ -42,7 +41,7 @@ impl Container {
     }
 
     pub fn set_direction(&mut self, direction: Direction) {
-        self.direction = direction.clone();
+        self.direction = direction;
         self.layout = self.layout.clone().direction(direction);
     }
 
@@ -216,7 +215,7 @@ impl Container {
         Some(self.actual()?.widget_type())
     }
 
-    pub fn render<B: Backend>(&self, f: &mut Frame<B>, containers: &Vec<Self>) {
+    pub fn render(&self, f: &mut Frame, containers: &Vec<Self>) {
         self.items.iter().for_each(|cont| match cont {
             It::Cont(index) => containers[*index].render(f, containers),
             It::Item(widget) => widget.render(f),
@@ -413,9 +412,9 @@ mod tests {
         };
         assert_eq!(0, count_widgets(0));
         assert_eq!(1, count_widgets(1));
-        check_chunk(1, 0, Rect::new(0, 0, 10, 20));
+        check_chunk(1, 0, Rect::new(0, 0, 10, 6));
         assert_eq!(2, count_widgets(2));
-        check_chunk(2, 0, Rect::new(10, 0, 10, 10));
-        check_chunk(2, 1, Rect::new(10, 10, 10, 10));
+        check_chunk(2, 0, Rect::new(10, 0, 10, 3));
+        check_chunk(2, 1, Rect::new(10, 3, 10, 3));
     }
 }

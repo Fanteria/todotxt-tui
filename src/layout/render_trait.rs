@@ -1,4 +1,4 @@
-use tui::{backend::Backend, prelude::Rect, Frame};
+use tui::{prelude::Rect, Frame};
 
 /// A trait for rendering UI components.
 ///
@@ -15,7 +15,7 @@ pub trait Render {
     /// # Parameters
     ///
     /// - `f`: A mutable reference to a TUI frame where the component should be rendered.
-    fn render<B: Backend>(&self, f: &mut Frame<B>);
+    fn render(&self, f: &mut Frame);
 
     /// Focus the UI component.
     ///

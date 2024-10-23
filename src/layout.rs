@@ -14,7 +14,6 @@ pub use render_trait::Render;
 
 use std::str::FromStr;
 use tui::{
-    backend::Backend,
     layout::{Constraint, Direction, Rect},
     Frame,
 };
@@ -432,7 +431,7 @@ impl Layout {
 }
 
 impl Render for Layout {
-    fn render<B: Backend>(&self, f: &mut Frame<B>) {
+    fn render(&self, f: &mut Frame) {
         self.containers[0].render(f, &self.containers);
     }
 

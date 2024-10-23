@@ -1,7 +1,6 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
 use crate::{config::Config, todo::Parser, ui::UIEvent, Result};
 use tui::{
-    backend::Backend,
     text::{Line, Span},
     widgets::{Paragraph, Wrap},
     Frame,
@@ -39,7 +38,7 @@ impl State for StatePreview {
         false
     }
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>) {
+    fn render(&self, f: &mut Frame) {
         let lines = self.parser.fill(&self.base.data());
         let mut paragraph = Paragraph::new(
             lines

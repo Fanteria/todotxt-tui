@@ -29,7 +29,7 @@ use std::{
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout as tuiLayout, Rect},
+    layout::{Constraint, Direction, Layout as tuiLayout, Position, Rect},
     style::{Color, Style},
     widgets::{Block, Borders, Paragraph},
     Terminal,
@@ -157,7 +157,8 @@ impl UI {
 
             let mut terminal = Terminal::new(backend)?;
             terminal.hide_cursor()?;
-            this.update_chunk(terminal.size()?);
+            let size = terminal.size()?;
+            this.update_chunk(Rect::new(0, 0, size.width, size.height));
 
             this.draw(&mut terminal)?;
             this.main_loop(&mut terminal)?;
@@ -241,12 +242,12 @@ impl UI {
             if self.mode == Mode::Input || self.mode == Mode::Edit {
                 let width = self.input_chunk.width.max(3) - 3;
                 let scroll = self.tinput.visual_scroll(width as usize);
-                f.set_cursor(
-                    self.input_chunk.x
+                f.set_cursor_position(Position {
+                    x: self.input_chunk.x
                         + (self.tinput.visual_cursor().max(scroll) - scroll) as u16
                         + 1,
-                    self.input_chunk.y + 1,
-                );
+                    y: self.input_chunk.y + 1,
+                });
             }
         })?;
         Ok(())

@@ -5,7 +5,7 @@ use crate::{
     ui::{HandleEvent, UIEvent},
 };
 use crossterm::event::KeyCode;
-use tui::{backend::Backend, style::Style, widgets::List, Frame};
+use tui::{style::Style, widgets::List, Frame};
 
 /// Represents the state for a list widget that displays tasks.
 pub struct StateList {
@@ -149,12 +149,12 @@ impl State for StateList {
         true
     }
 
-    fn render<B: Backend>(&self, f: &mut Frame<B>) {
+    fn render(&self, f: &mut Frame) {
         let data = self.base.data();
         let filtered = data.get_filtered_and_sorted(self.data_type);
         let (first, last) = self.base.range();
-        let filtered = filtered.get_view(first..last, self.base.to_search.as_deref());
-        let list = List::new(filtered).block(self.get_block());
+        let list = List::from(filtered.get_view(first..last, self.base.to_search.as_deref()))
+            .block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {

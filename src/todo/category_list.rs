@@ -5,7 +5,7 @@ use super::{FilterState, ToDo, ToDoCategory};
 use crate::config::Styles;
 use crate::todo::search::Search;
 use tui::text::Line;
-use tui::widgets::ListItem;
+use tui::widgets::{List, ListItem};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CategoryState<'a> {
@@ -142,24 +142,21 @@ impl<'a> CategoryList<'a> {
     }
 }
 
-impl<'a> From<CategoryView<'a>> for Vec<ListItem<'a>> {
-    fn from(val: CategoryView<'a>) -> Self {
-        val.vec
-            .iter()
-            .map(|s| {
-                use FilterState::*;
-                ListItem::new(Line::from(Search::highlight(
-                    s.name.as_str(),
-                    val.to_search,
-                    val.styles,
-                    match s.state {
-                        Some(Select) => val.styles.category_select_style.get_style(),
-                        Some(Remove) => val.styles.category_remove_style.get_style(),
-                        None => tui::style::Style::default(),
-                    },
-                )))
-            })
-            .collect()
+impl<'a> From<CategoryView<'a>> for List<'a> {
+    fn from(value: CategoryView<'a>) -> Self {
+        List::new(value.vec.iter().map(|s| {
+            use FilterState::*;
+            ListItem::new(Line::from(Search::highlight(
+                s.name.as_str(),
+                value.to_search,
+                value.styles,
+                match s.state {
+                    Some(Select) => value.styles.category_select_style.get_style(),
+                    Some(Remove) => value.styles.category_remove_style.get_style(),
+                    None => tui::style::Style::default(),
+                },
+            )))
+        }))
     }
 }
 
@@ -168,7 +165,6 @@ mod tests {
     use std::{error::Error, str::FromStr};
 
     use todo_txt::Task;
-    use tui::text::Span;
 
     use crate::config::Config;
 
@@ -276,18 +272,37 @@ mod tests {
             styles: &styles,
         };
 
-        let items = Vec::<ListItem>::from(categories.get_view(0..10000, None));
-        assert_eq!(items.len(), 4);
-        assert_eq!(items[0], ListItem::new(first.clone()));
-        assert_eq!(items[1], ListItem::new(second.clone()));
+        let items = categories.get_view(0..10000, None);
+        assert_eq!(items.vec.len(), 4);
+
         assert_eq!(
-            items[2],
-            ListItem::new(Span::styled(
-                third.clone(),
-                styles.category_select_style.get_style()
-            ))
+            items.vec[0],
+            CategoryState {
+                name: &first,
+                state: None
+            }
         );
-        assert_eq!(items[3], ListItem::new(third2.clone()));
+        assert_eq!(
+            items.vec[1],
+            CategoryState {
+                name: &second,
+                state: None
+            }
+        );
+        assert_eq!(
+            items.vec[2],
+            CategoryState {
+                name: &third,
+                state: Some(FilterState::Select)
+            }
+        );
+        assert_eq!(
+            items.vec[3],
+            CategoryState {
+                name: &third2,
+                state: None
+            }
+        );
     }
 
     #[test]

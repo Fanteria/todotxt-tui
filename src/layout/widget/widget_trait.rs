@@ -3,7 +3,6 @@ use super::widget_base::WidgetBase;
 use crate::ui::{HandleEvent, UIEvent};
 use crossterm::event::KeyCode;
 use tui::{
-    backend::Backend,
     prelude::Rect,
     style::Style,
     widgets::{Block, Borders},
@@ -29,7 +28,7 @@ pub trait State {
     /// # Parameters
     ///
     /// - `f`: A mutable reference to the TUI frame used for rendering.
-    fn render<B: Backend>(&self, f: &mut Frame<B>);
+    fn render(&self, f: &mut Frame);
 
     /// Retrieves a reference to the widget's base.
     fn get_base(&self) -> &WidgetBase;
@@ -111,7 +110,7 @@ impl<S: State> HandleEvent for S {
 }
 
 impl<S: State> Render for S {
-    fn render<B: Backend>(&self, f: &mut Frame<B>) {
+    fn render(&self, f: &mut Frame) {
         State::render(self, f);
     }
 
