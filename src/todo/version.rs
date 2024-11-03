@@ -32,7 +32,6 @@ impl Version {
         if let Some(tx) = &self.tx {
             if let Err(e) = tx.send(FileWorkerCommands::Save) {
                 log::error!("Error while send signal to save todo list from update all: {e}");
-                // TODO show something on screen
             }
         }
     }
@@ -47,7 +46,6 @@ impl Version {
         if let Some(tx) = &self.tx {
             if let Err(e) = tx.send(FileWorkerCommands::Save) {
                 log::error!("Error while send signal to save todo list from update: {e}");
-                // TODO show something on screen
             }
         }
     }

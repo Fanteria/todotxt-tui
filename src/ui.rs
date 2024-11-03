@@ -1,8 +1,10 @@
 mod handle_event_trait;
+mod popup;
 mod ui_event;
 mod ui_state;
 
 pub use handle_event_trait::HandleEvent;
+use popup::Popup;
 pub use ui_event::*;
 pub use ui_state::*;
 
@@ -22,9 +24,10 @@ use crossterm::{
     },
     ExecutableCommand,
 };
-use core::panic;
 use std::{
-    io::{self, stdout}, panic::{set_hook, take_hook}, sync::{mpsc::Sender, Arc, Mutex}
+    io,
+    panic::{set_hook, take_hook},
+    sync::{mpsc::Sender, Arc, Mutex},
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -56,6 +59,7 @@ pub struct UI {
     active_color: Color,
     config: UiConfig,
     border_type: WidgetBorderType,
+    popup: Popup,
 }
 
 impl UI {
@@ -87,6 +91,7 @@ impl UI {
             active_color: *config.styles.active_color,
             config: config.ui_config.clone(),
             border_type: config.widget_base_config.border_type,
+            popup: Popup::new(config.widget_base_config.border_type),
         }
     }
 
@@ -231,7 +236,7 @@ impl UI {
     /// # Returns
     ///
     /// An `Result` indicating the success of drawing.
-    fn draw<B: Backend>(&self, terminal: &mut Terminal<B>) -> Result<()> {
+    fn draw<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
         let mut block = Block::default()
             .borders(Borders::ALL)
             .title("Input")
@@ -256,6 +261,8 @@ impl UI {
                     y: self.input_chunk.y + 1,
                 });
             }
+
+            self.popup.render_popup(f);
         })?;
         Ok(())
     }
@@ -307,7 +314,7 @@ impl UI {
                     KeyCode::Enter => {
                         if let Err(e) = self.data.lock().unwrap().new_task(self.tinput.value()) {
                             log::error!("Error while adding new task: {e}");
-                            // TODO show something on screen
+                            self.popup.add_message(format!("Failed add task: {e}"));
                         }
                         self.tinput.reset();
                         self.mode = Mode::Normal;
@@ -333,7 +340,7 @@ impl UI {
                         if let Err(e) = self.data.lock().unwrap().update_active(self.tinput.value())
                         {
                             log::error!("Error while updating existing task: {e}");
-                            // TODO show something on screen
+                            self.popup.add_message(format!("Failed update task: {e}"));
                         }
                         self.tinput.reset();
                         self.mode = Mode::Normal;
@@ -417,13 +424,15 @@ impl HandleEvent for UI {
             Save => {
                 if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
                     log::error!("Error while send signal to save todo list: {e}");
-                    // TODO show something on screen
+                    self.popup
+                        .add_message(format!("Cannot save todo list: {e}"));
                 }
             }
             Load => {
                 if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
                     log::error!("Error while send signal to load todo list: {e}");
-                    // TODO show something on screen
+                    self.popup
+                        .add_message(format!("Cannot load todo list: {e}"));
                 }
             }
             EditMode => {
