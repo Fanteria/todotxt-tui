@@ -22,10 +22,9 @@ use crossterm::{
     },
     ExecutableCommand,
 };
+use core::panic;
 use std::{
-    io,
-    sync::mpsc::Sender,
-    sync::{Arc, Mutex},
+    io::{self, stdout}, panic::{set_hook, take_hook}, sync::{mpsc::Sender, Arc, Mutex}
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -146,6 +145,12 @@ impl UI {
     ///
     /// An `Result` indicating the success of running the user interface.
     pub fn run(&mut self) -> Result<()> {
+        fn restore_tui() -> io::Result<()> {
+            disable_raw_mode()?;
+            execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+            Ok(())
+        }
+
         fn run_ui(this: &mut UI) -> Result<()> {
             // setup terminal
             enable_raw_mode()?;
@@ -164,16 +169,18 @@ impl UI {
             this.main_loop(&mut terminal)?;
 
             // restore terminal
-            disable_raw_mode()?;
-            execute!(
-                terminal.backend_mut(),
-                LeaveAlternateScreen,
-                DisableMouseCapture
-            )?;
+            restore_tui()?;
             terminal.show_cursor()?;
 
             Ok(())
         }
+
+        // Setup panic hook.
+        let orig_hook = take_hook();
+        set_hook(Box::new(move |panic_info| {
+            let _ = restore_tui();
+            orig_hook(panic_info);
+        }));
 
         if let Err(e) = run_ui(self) {
             self.tx.send(FileWorkerCommands::Exit).unwrap();
