@@ -24,5 +24,14 @@ jobs:
         run: cargo clippy --all-targets --all-features
       - name: Build
         run: cargo build
-      - name: Run tests
-        run: cargo test
+      - name: Install llvm-tools and cargo-llvm-cov
+        run: |
+          rustup component add llvm-tools-preview
+          cargo install cargo-llvm-cov
+      - name: Run tests with coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage
+          path: lcov.info
