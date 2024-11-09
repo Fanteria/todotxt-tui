@@ -7,44 +7,20 @@ use crate::{
 };
 use container::Container;
 use crossterm::event::KeyEvent;
-use std::{fmt::Debug, sync::Arc, sync::Mutex};
-use widget::{widget_type::WidgetType, Widget};
-
-pub use render_trait::Render;
-
-use std::str::FromStr;
+use std::{fmt::Debug, str::FromStr, sync::Arc, sync::Mutex};
 use tui::{
     layout::{Constraint, Direction, Rect},
     Frame,
 };
+use widget::{widget_type::WidgetType, Widget};
+
+pub use render_trait::Render;
 
 // Define separators
 const ITEM_SEPARATOR: char = ',';
 const ARG_SEPARATOR: char = ':';
 const START_CONTAINER: char = '[';
 const END_CONTAINER: char = ']';
-
-const LEFT: Site = Site {
-    direction: Direction::Horizontal,
-    function: Container::previous_item,
-};
-const RIGHT: Site = Site {
-    direction: Direction::Horizontal,
-    function: Container::next_item,
-};
-const UP: Site = Site {
-    direction: Direction::Vertical,
-    function: Container::previous_item,
-};
-const DOWN: Site = Site {
-    direction: Direction::Vertical,
-    function: Container::next_item,
-};
-
-struct Site {
-    direction: Direction,
-    function: fn(&mut Container) -> bool,
-}
 
 struct Holder {
     container: usize,    // container
@@ -313,8 +289,8 @@ impl Layout {
 
     /// This method moves the focus to the container or widget to the `Site`
     /// of the currently focused element within the layout.
-    fn move_focus(&mut self, site: &Site) -> bool {
-        let ret = self.change_focus(&site.direction, &site.function);
+    fn move_focus(&mut self, direction: Direction, function: fn(&mut Container) -> bool) -> bool {
+        let ret = self.change_focus(&direction, &function);
         Container::actualize_layout(self);
         log::debug!(
             "Moved: {ret}, act widget: {}, container: {}, position: {}",
@@ -322,28 +298,27 @@ impl Layout {
             self.act,
             self.act().get_index(),
         );
-        log::error!("Select widget act {}, {:#?}", self.act, self.containers); // TODO remove
         ret
     }
 
     /// Move the focus to the left.
     pub fn left(&mut self) -> bool {
-        self.move_focus(&LEFT)
+        self.move_focus(Direction::Horizontal, Container::previous_item)
     }
 
     /// Move the focus to the right.
     pub fn right(&mut self) -> bool {
-        self.move_focus(&RIGHT)
+        self.move_focus(Direction::Horizontal, Container::next_item)
     }
 
     /// Move the focus upwards.
     pub fn up(&mut self) -> bool {
-        self.move_focus(&UP)
+        self.move_focus(Direction::Vertical, Container::previous_item)
     }
 
     /// Move the focus downwards.
     pub fn down(&mut self) -> bool {
-        self.move_focus(&DOWN)
+        self.move_focus(Direction::Vertical, Container::next_item)
     }
 
     /// Handle a key event.
@@ -423,7 +398,6 @@ impl Layout {
     pub fn select_widget(&mut self, widget_type: WidgetType) {
         log::debug!("Select widget {widget_type}");
         self.find_widget(|w| w.widget_type() == widget_type, |_| {});
-        log::error!("Select widget act {}, {:#?}", self.act, self.containers); // TODO remove
     }
 
     pub fn search(&mut self, to_search: String) {

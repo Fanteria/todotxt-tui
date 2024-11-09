@@ -1,11 +1,9 @@
+use crate::config::HookPaths;
+use crate::{Result, ToDoError};
 use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
-
 use std::process::Command;
-
-use crate::config::HookPaths;
-use crate::{Result, ToDoError};
 
 pub enum HookTypes {
     PreNew,

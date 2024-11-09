@@ -7,7 +7,7 @@ use crate::config::{TaskSort, ToDoConfig};
 use super::ToDo;
 
 /// Enum to represent the state of ToDo data (pending or done).
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Debug)]
 pub enum ToDoData {
     Pending,
     Done,
@@ -79,7 +79,7 @@ pub enum FilterState {
     Remove,
 }
 
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize, Debug)]
 pub struct ToDoState {
     pub active: Option<(ToDoData, usize)>,
     pub project_filters: BTreeMap<String, FilterState>,

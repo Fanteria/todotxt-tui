@@ -10,7 +10,7 @@ use std::{
     path::Path,
 };
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct UIState {
     pub active: WidgetType,
     pub todo_state: ToDoState,

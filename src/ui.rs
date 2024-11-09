@@ -112,11 +112,12 @@ impl UI {
             config.styles.clone(),
         );
 
+        let mut init_widget = config.ui_config.init_widget;
         if let Some(path) = &config.ui_config.save_state_path {
             match UIState::load(path) {
-                Ok(state) => {
-                    let (_active, todo_state) = (state.active, state.todo_state);
+                Ok(UIState { active, todo_state }) => {
                     todo.update_state(todo_state);
+                    init_widget = active;
                 }
                 Err(e) => log::error!("Cannot load state: {e}"),
             }
@@ -130,7 +131,7 @@ impl UI {
 
         let mut layout = Layout::from_str(&config.ui_config.layout, todo.clone(), config)?;
 
-        layout.select_widget(config.ui_config.init_widget);
+        layout.select_widget(init_widget);
 
         Ok(UI::new(layout, todo, tx.clone(), config))
     }

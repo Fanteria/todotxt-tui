@@ -1,5 +1,4 @@
 use super::{render_trait::Render, widget::widget_type::WidgetType, Layout, Widget};
-use crate::{Result, ToDoError};
 use tui::{
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},
     Frame,
