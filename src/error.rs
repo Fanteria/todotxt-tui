@@ -1,7 +1,8 @@
 use std::{
     env::VarError,
     path::{Path, PathBuf},
-    result::Result as stdResult, string::FromUtf8Error,
+    result::Result as stdResult,
+    string::FromUtf8Error,
 };
 
 /// Define a custom result type for ToDo related operations.

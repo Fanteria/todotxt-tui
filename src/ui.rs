@@ -25,7 +25,9 @@ use crossterm::{
     ExecutableCommand,
 };
 use std::{
-    io, panic::{set_hook, take_hook}, sync::{mpsc::Sender, Arc, Mutex}
+    io,
+    panic::{set_hook, take_hook},
+    sync::{mpsc::Sender, Arc, Mutex},
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
