@@ -86,7 +86,6 @@ pub struct Layout {
 }
 
 impl Layout {
-
     /// Create a new `Layout` from a template string.
     ///
     /// This function parses a template string and creates a new `Layout` instance based on the
@@ -331,7 +330,6 @@ impl Layout {
     pub fn left(&mut self) -> bool {
         self.move_focus(&LEFT)
     }
-
 
     /// Move the focus to the right.
     pub fn right(&mut self) -> bool {

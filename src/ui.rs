@@ -117,7 +117,7 @@ impl UI {
                 Ok(state) => {
                     let (_active, todo_state) = (state.active, state.todo_state);
                     todo.update_state(todo_state);
-                },
+                }
                 Err(e) => log::error!("Cannot load state: {e}"),
             }
         }
