@@ -419,6 +419,18 @@ impl Default for Styles {
     }
 }
 
+#[derive(Conf, Clone, Debug, PartialEq, Eq, Default)]
+pub struct HookPaths {
+    pub pre_new_task: Option<PathBuf>,
+    pub post_new_task: Option<PathBuf>,
+    pub pre_remove_task: Option<PathBuf>,
+    pub post_remove_task: Option<PathBuf>,
+    pub pre_move_task: Option<PathBuf>,
+    pub post_move_task: Option<PathBuf>,
+    pub pre_update_task: Option<PathBuf>,
+    pub post_update_task: Option<PathBuf>,
+}
+
 #[derive(ConfMerge, Default, Debug, PartialEq, Eq)]
 #[command(author, version, about, long_about = None)]
 pub struct Config {
@@ -430,6 +442,7 @@ pub struct Config {
     pub preview_config: PreviewConfig,
     pub active_color_config: ActiveColorConfig,
     pub styles: Styles,
+    pub hook_paths: HookPaths,
 }
 
 impl Config {

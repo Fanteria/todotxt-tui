@@ -142,6 +142,14 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                     // TODO ugly hack
                     conf.ui_config.save_state_path = None;
                     conf.file_worker_config.archive_path = None;
+                    conf.hook_paths.pre_new_task = None;
+                    conf.hook_paths.post_new_task = None;
+                    conf.hook_paths.pre_remove_task = None;
+                    conf.hook_paths.post_remove_task = None;
+                    conf.hook_paths.pre_move_task = None;
+                    conf.hook_paths.post_move_task = None;
+                    conf.hook_paths.pre_update_task = None;
+                    conf.hook_paths.post_update_task = None;
 
                     let mut output = std::fs::File::create(path).map_err(|e| crate::ToDoError::io_operation_failed(path, e))?;
                     write!(output, "{}", toml::to_string_pretty(&conf)?)?;
@@ -163,6 +171,14 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                 // TODO ugly hack
                 default.ui_config.save_state_path = None;
                 default.file_worker_config.archive_path = None;
+                default.hook_paths.pre_new_task = None;
+                default.hook_paths.post_new_task = None;
+                default.hook_paths.pre_remove_task = None;
+                default.hook_paths.post_remove_task = None;
+                default.hook_paths.pre_move_task = None;
+                default.hook_paths.post_move_task = None;
+                default.hook_paths.pre_update_task = None;
+                default.hook_paths.post_update_task = None;
                 Ok(toml::to_string_pretty(&default)?)
             }
         }

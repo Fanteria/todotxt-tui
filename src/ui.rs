@@ -25,9 +25,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use std::{
-    io,
-    panic::{set_hook, take_hook},
-    sync::{mpsc::Sender, Arc, Mutex},
+    io, panic::{set_hook, take_hook}, sync::{mpsc::Sender, Arc, Mutex}
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -106,7 +104,11 @@ impl UI {
     /// * On success, returns an `Ok(UI)` containing the newly built UI.
     /// * On failure, returns an `Err(Result<(), ErrorKind>)`.
     pub fn build(config: &Config) -> Result<UI> {
-        let mut todo = ToDo::new(config.todo_config.clone(), config.styles.clone());
+        let mut todo = ToDo::new(
+            config.todo_config.clone(),
+            config.hook_paths.clone(),
+            config.styles.clone(),
+        );
 
         if let Some(path) = &config.ui_config.save_state_path {
             let state = UIState::load(path)?;
