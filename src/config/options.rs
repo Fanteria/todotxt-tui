@@ -1,10 +1,8 @@
 use crate::ToDoError;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::str::FromStr;
-use tui::style::Modifier;
-use tui::widgets::BorderType;
+use std::{fmt::Display, str::FromStr};
+use tui::{style::Modifier, widgets::BorderType};
 
 #[derive(Serialize, Deserialize, ValueEnum, Clone, Debug, PartialEq, Eq, Default)]
 pub enum SetFinalDateType {
@@ -141,5 +139,27 @@ mod tests {
 
         let underline = TextModifier::Underlined;
         assert_eq!(Modifier::from(underline), Modifier::UNDERLINED);
+    }
+
+    #[test]
+    fn widget_border_type_display() {
+        assert_eq!(format!("{}", WidgetBorderType::Plain), "plain");
+        assert_eq!(format!("{}", WidgetBorderType::Rounded), "rounded");
+        assert_eq!(format!("{}", WidgetBorderType::Double), "double");
+        assert_eq!(format!("{}", WidgetBorderType::Thick), "thick");
+    }
+
+    #[test]
+    fn widget_border_type_into_border_type() {
+        assert_eq!(BorderType::from(WidgetBorderType::Plain), BorderType::Plain);
+        assert_eq!(
+            BorderType::from(WidgetBorderType::Rounded),
+            BorderType::Rounded
+        );
+        assert_eq!(
+            BorderType::from(WidgetBorderType::Double),
+            BorderType::Double
+        );
+        assert_eq!(BorderType::from(WidgetBorderType::Thick), BorderType::Thick);
     }
 }

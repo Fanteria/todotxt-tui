@@ -1,13 +1,13 @@
 use crate::config::{Styles, TaskSort};
-use std::convert::From;
-use std::ops::Bound;
-use std::ops::Index;
-use std::ops::RangeBounds;
+use std::{
+    convert::From,
+    ops::{Bound, Index, RangeBounds},
+};
 use todo_txt::Task;
-use tui::text::Line;
-use tui::text::Span;
-use tui::widgets::List;
-use tui::widgets::ListItem;
+use tui::{
+    text::{Line, Span},
+    widgets::{List, ListItem},
+};
 
 use super::search::Search;
 

@@ -12,8 +12,10 @@ pub use self::{
     todo_state::*,
 };
 
-use crate::config::{HookPaths, SetFinalDateType, Styles, ToDoConfig};
-use crate::Result;
+use crate::{
+    config::{HookPaths, SetFinalDateType, Styles, ToDoConfig},
+    Result,
+};
 use chrono::{NaiveDate, Utc};
 use hooks::{HookTypes, Hooks};
 use std::str::FromStr;

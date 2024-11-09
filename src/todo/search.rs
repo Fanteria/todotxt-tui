@@ -1,8 +1,6 @@
-use std::{borrow::Cow, ops::Deref};
-
-use tui::text::Span;
-
 use crate::config::Styles;
+use std::{borrow::Cow, ops::Deref};
+use tui::text::Span;
 
 pub struct Search;
 

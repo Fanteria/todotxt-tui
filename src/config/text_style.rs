@@ -1,5 +1,4 @@
-use super::colors::Color;
-use super::TextModifier;
+use super::{colors::Color, TextModifier};
 use crate::ToDoError;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -63,7 +62,6 @@ impl TextStyle {
     /// # Returns
     ///
     /// A new `TextStyle` with the specified text modifier.
-    #[allow(dead_code)]
     pub fn modifier(mut self, modifier: TextModifier) -> Self {
         self.modifier = Some(modifier);
         self
@@ -75,7 +73,6 @@ impl TextStyle {
     ///
     /// `true` if the text style has any styling properties (background color, foreground color, or modifier),
     /// `false` otherwise.
-    #[allow(dead_code)]
     pub fn is_some(&self) -> bool {
         self.bg.is_some() || self.fg.is_some() || self.modifier.is_some()
     }

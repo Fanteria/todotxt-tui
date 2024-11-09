@@ -1,11 +1,13 @@
-use std::collections::BTreeSet;
-use std::ops::{Bound, RangeBounds};
-
 use super::{FilterState, ToDo, ToDoCategory};
-use crate::config::Styles;
-use crate::todo::search::Search;
-use tui::text::Line;
-use tui::widgets::{List, ListItem};
+use crate::{config::Styles, todo::search::Search};
+use std::{
+    collections::BTreeSet,
+    ops::{Bound, RangeBounds},
+};
+use tui::{
+    text::Line,
+    widgets::{List, ListItem},
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CategoryState<'a> {

@@ -1,3 +1,4 @@
+use crate::{Result, ToDoError};
 use clap::builder::Styles;
 use std::{
     env,
@@ -6,8 +7,6 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
-
-use crate::{Result, ToDoError};
 
 pub trait Conf: Sized + Default {
     fn from_file(path: impl AsRef<Path>) -> Result<Self> {

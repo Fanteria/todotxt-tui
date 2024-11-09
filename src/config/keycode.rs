@@ -1,6 +1,4 @@
-use crossterm::event::KeyCode;
-use crossterm::event::MediaKeyCode;
-use crossterm::event::ModifierKeyCode;
+use crossterm::event::{KeyCode, MediaKeyCode, ModifierKeyCode};
 use serde::{Deserialize, Serialize};
 
 /// Serialization and deserialization support for the TUI keycode type.

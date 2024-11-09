@@ -44,7 +44,6 @@ impl Container {
         self.layout = self.layout.clone().direction(direction);
     }
 
-    #[allow(dead_code)]
     pub fn get_direction(&self) -> &Direction {
         &self.direction
     }
@@ -90,7 +89,6 @@ impl Container {
     ///
     /// A result containing a reference to the active `Widget` or a `None`
     /// if the active item is not a widget.
-    #[allow(dead_code)]
     pub fn actual(&self) -> Option<&Widget> {
         self.get_widget(self.act_index)
     }
@@ -236,7 +234,7 @@ impl Default for Container {
 mod tests {
     use super::super::Layout;
     use super::*;
-    use crate::{config::Config, layout::widget::State, todo::ToDo};
+    use crate::{config::Config, layout::widget::State, todo::ToDo, Result};
     use std::sync::{Arc, Mutex};
     use tui::layout::Direction::*;
     use WidgetType::*;
@@ -278,90 +276,90 @@ mod tests {
         }
     }
 
-    // fn check_active(layout: &Layout, widget_type: WidgetType) {
-    //     match layout.act().get_active_type() {
-    //         Some(active) if active == widget_type => {}
-    //         Some(active) => panic!("Active widget must be {:?} not {:?}.", widget_type, active),
-    //         None => panic!("Active item is not widget"),
-    //     }
-    // }
+    fn check_active(layout: &Layout, widget_type: WidgetType) {
+        match layout.act().get_active_type() {
+            Some(active) if active == widget_type => {}
+            Some(active) => panic!("Active widget must be {:?} not {:?}.", widget_type, active),
+            None => panic!("Active item is not widget"),
+        }
+    }
 
-    // #[test]
-    // fn test_selecting_widget() -> Result<()> {
-    //     let mut layout = testing_layout();
-    //     let mut check = |widget_type| -> Result<()> {
-    //         Container::select_widget(&mut layout, widget_type)?;
-    //         check_active(&layout, widget_type);
-    //         Ok(())
-    //     };
-    //
-    //     check(List)?;
-    //     check(Done)?;
-    //     check(Project)?;
-    //     assert!(
-    //         check(Context).is_err(),
-    //         "Widget with type Context is not in container."
-    //     );
-    //
-    //     Ok(())
-    // }
+    #[test]
+    fn test_selecting_widget() -> Result<()> {
+        let mut layout = testing_layout();
+        let mut check = |widget_type| -> Result<()> {
+            layout.select_widget(widget_type);
+            check_active(&layout, widget_type);
+            Ok(())
+        };
 
-    // #[test]
-    // fn test_next_item() -> Result<()> {
-    //     let mut layout = testing_layout();
-    //
-    //     // Test next widget in child container.
-    //     Container::select_widget(&mut layout, List)?;
-    //     assert!(layout.act_mut().next_item());
-    //     Container::actualize_layout(&mut layout);
-    //     check_active(&layout, Done);
-    //
-    //     // Test next widget in same container.
-    //     Container::select_widget(&mut layout, Done)?;
-    //     assert!(layout.act_mut().next_item());
-    //     Container::actualize_layout(&mut layout);
-    //     check_active(&layout, Project);
-    //
-    //     // Test next in container have not default value
-    //     Container::select_widget(&mut layout, List)?;
-    //     assert!(layout.act_mut().next_item());
-    //     Container::actualize_layout(&mut layout);
-    //     check_active(&layout, Project);
-    //
-    //     // Test return value if there is no next item
-    //     assert!(!layout.act_mut().next_item());
-    //     Container::actualize_layout(&mut layout);
-    //     assert!(!layout.act_mut().next_item());
-    //     Container::actualize_layout(&mut layout);
-    //     assert!(!layout.act_mut().next_item());
-    //     Container::actualize_layout(&mut layout);
-    //     assert_eq!(layout.act().act_index, 1);
-    //     check_active(&layout, Project);
-    //
-    //     Ok(())
-    // }
+        check(List)?;
+        check(Done)?;
+        check(Project)?;
 
-    // #[test]
-    // fn test_previous_item() -> Result<()> {
-    //     let mut layout = testing_layout();
-    //
-    //     // Test previous widget in same container.
-    //     Container::select_widget(&mut layout, Project)?;
-    //     assert!(layout.act_mut().previous_item());
-    //     Container::actualize_layout(&mut layout);
-    //
-    //     // Test return value if there is no previous item
-    //     assert!(!layout.act_mut().previous_item());
-    //     Container::actualize_layout(&mut layout);
-    //     assert!(!layout.act_mut().previous_item());
-    //     Container::actualize_layout(&mut layout);
-    //     assert!(!layout.act_mut().previous_item());
-    //     Container::actualize_layout(&mut layout);
-    //     assert_eq!(layout.act().act_index, 0);
-    //     check_active(&layout, Done);
-    //
-    //     Ok(())
-    // }
+        // If Context is not find it is not set.
+        layout.select_widget(Context);
+        check_active(&layout, Project);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_next_item() -> Result<()> {
+        let mut layout = testing_layout();
+
+        // Test next widget in child container.
+        layout.select_widget(List);
+        assert!(layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        check_active(&layout, Done);
+
+        // Test next widget in same container.
+        layout.select_widget(Done);
+        assert!(layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        check_active(&layout, Project);
+
+        // Test next in container have not default value
+        layout.select_widget(List);
+        assert!(layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        check_active(&layout, Project);
+
+        // Test return value if there is no next item
+        assert!(!layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        assert!(!layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        assert!(!layout.act_mut().next_item());
+        Container::actualize_layout(&mut layout);
+        assert_eq!(layout.act().act_index, 1);
+        check_active(&layout, Project);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_previous_item() -> Result<()> {
+        let mut layout = testing_layout();
+
+        // Test previous widget in same container.
+        layout.select_widget(Project);
+        assert!(layout.act_mut().previous_item());
+        Container::actualize_layout(&mut layout);
+
+        // Test return value if there is no previous item
+        assert!(!layout.act_mut().previous_item());
+        Container::actualize_layout(&mut layout);
+        assert!(!layout.act_mut().previous_item());
+        Container::actualize_layout(&mut layout);
+        assert!(!layout.act_mut().previous_item());
+        Container::actualize_layout(&mut layout);
+        assert_eq!(layout.act().act_index, 0);
+        check_active(&layout, Done);
+
+        Ok(())
+    }
 
     #[test]
     fn test_update_chunk() {

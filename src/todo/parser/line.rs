@@ -1,6 +1,4 @@
-use super::LineBlock;
-
-use super::ToDo;
+use super::{LineBlock, ToDo};
 use crate::{config::Styles, Result};
 use tui::style::Style;
 

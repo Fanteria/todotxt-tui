@@ -1,8 +1,6 @@
-use std::sync::mpsc::Sender;
-
-use crate::file_worker::FileWorkerCommands;
-
 use super::ToDoData;
+use crate::file_worker::FileWorkerCommands;
+use std::sync::mpsc::Sender;
 
 type VersionNum = usize;
 

@@ -1,5 +1,4 @@
-use super::ToDo;
-use super::ToDoData;
+use super::{ToDo, ToDoData};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Parts {

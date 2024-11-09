@@ -1,6 +1,5 @@
-use crossterm::event::KeyCode;
-
 use super::UIEvent;
+use crossterm::event::KeyCode;
 
 /// Trait for handling UI events.
 pub trait HandleEvent {

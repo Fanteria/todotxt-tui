@@ -1,10 +1,9 @@
+use crate::config::WidgetBorderType;
 use tui::{
     layout::{Constraint, Flex, Layout, Rect},
     widgets::{Block, Clear, Paragraph},
     Frame,
 };
-
-use crate::config::WidgetBorderType;
 
 pub struct Popup {
     border_type: WidgetBorderType,

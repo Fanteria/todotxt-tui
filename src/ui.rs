@@ -6,7 +6,7 @@ mod ui_state;
 pub use handle_event_trait::HandleEvent;
 use popup::Popup;
 pub use ui_event::*;
-pub use ui_state::*;
+pub use ui_state::UIState;
 
 use crate::{
     config::{Config, UiConfig, WidgetBorderType},

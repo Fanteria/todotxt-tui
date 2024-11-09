@@ -1,6 +1,8 @@
 use super::{RCToDo, WidgetBase, WidgetType};
-use crate::config::{Config, ListConfig};
-use crate::ui::{HandleEvent, UIEvent};
+use crate::{
+    config::{Config, ListConfig},
+    ui::{HandleEvent, UIEvent},
+};
 use crossterm::event::KeyCode;
 use std::ops::{Deref, DerefMut};
 use tui::widgets::ListState;

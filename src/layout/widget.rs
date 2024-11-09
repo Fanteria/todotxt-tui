@@ -17,12 +17,15 @@ use crossterm::event::KeyCode;
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
-use std::fmt::Debug;
-use std::sync::{Arc, Mutex};
+use std::{
+    fmt::Debug,
+    sync::{Arc, Mutex},
+};
 use tui::{widgets::Block, Frame};
 use widget_base::WidgetBase;
-pub use widget_trait::State;
 use widget_type::WidgetType;
+
+pub use widget_trait::State;
 
 /// Alias for the shared mutable reference to a ToDo instance.
 pub type RCToDo = Arc<Mutex<ToDo>>;

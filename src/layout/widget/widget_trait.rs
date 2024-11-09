@@ -1,5 +1,4 @@
-use super::super::Render;
-use super::widget_base::WidgetBase;
+use super::{super::Render, widget_base::WidgetBase};
 use crate::ui::{HandleEvent, UIEvent};
 use crossterm::event::KeyCode;
 use tui::{
