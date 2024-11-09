@@ -113,9 +113,13 @@ impl UI {
         );
 
         if let Some(path) = &config.ui_config.save_state_path {
-            let state = UIState::load(path)?;
-            let (_active, todo_state) = (state.active, state.todo_state);
-            todo.update_state(todo_state);
+            match UIState::load(path) {
+                Ok(state) => {
+                    let (_active, todo_state) = (state.active, state.todo_state);
+                    todo.update_state(todo_state);
+                },
+                Err(e) => log::error!("Cannot load state: {e}"),
+            }
         }
 
         let todo = Arc::new(Mutex::new(todo));
@@ -124,7 +128,9 @@ impl UI {
         file_worker.load()?;
         let tx = file_worker.run()?;
 
-        let layout = Layout::from_str(&config.ui_config.layout, todo.clone(), config)?;
+        let mut layout = Layout::from_str(&config.ui_config.layout, todo.clone(), config)?;
+
+        layout.select_widget(config.ui_config.init_widget);
 
         Ok(UI::new(layout, todo, tx.clone(), config))
     }
@@ -404,7 +410,7 @@ impl HandleEvent for UI {
                     if let Err(e) =
                         UIState::new(&self.layout, &self.data.lock().unwrap()).save(path)
                     {
-                        log::error!("Error while saveing UI state: {}", e);
+                        log::error!("Error while saving UI state: {}", e);
                     }
                 }
                 self.quit = true;

@@ -86,60 +86,6 @@ pub struct Layout {
 }
 
 impl Layout {
-    /// Parse and convert a string value to a `Constraint`.
-    ///
-    /// # Parameters
-    ///
-    /// - `value`: A string slice representing the layout constraint.
-    ///
-    /// # Returns
-    ///
-    /// Returns a `Result` containing the converted `Constraint` or an error if parsing fails.
-    fn value_from_string(value: Option<&str>) -> Result<Constraint> {
-        Ok(match value {
-            Some(value) => match value.find('%') {
-                Some(i) if i + 1 < value.len() => {
-                    return Err(ToDoError::ParseUnknownValue(value.to_string()))
-                }
-                Some(i) => Constraint::Percentage(value[..i].parse()?),
-                None => Constraint::Length(value.parse()?),
-            },
-            None => Constraint::Percentage(50),
-        })
-    }
-
-    fn process_item(
-        item: &str,
-        container: &mut Container,
-        data: Arc<Mutex<ToDo>>,
-        config: &Config,
-    ) -> Result<Option<Constraint>> {
-        log::trace!("Process item: {item}");
-        let s = item.to_lowercase();
-        let x: Vec<&str> = s.splitn(2, ARG_SEPARATOR).map(|s| s.trim()).collect();
-        let x = (x[0], if x.len() > 1 { Some(x[1]) } else { None });
-        match x.0 {
-            "direction" => {
-                match x.1 {
-                    None | Some("vertical") => container.set_direction(Direction::Vertical),
-                    Some("horizontal") => container.set_direction(Direction::Horizontal),
-                    Some(direction) => {
-                        return Err(ToDoError::ParseInvalidDirection(direction.to_owned()))
-                    }
-                }
-                Ok(None)
-            }
-            "size" => Ok(Some(Self::value_from_string(x.1)?)),
-            _ => {
-                container.add_widget(Widget::new(
-                    WidgetType::from_str(x.0)?,
-                    data.clone(),
-                    config,
-                )?);
-                Ok(Some(Self::value_from_string(x.1)?))
-            }
-        }
-    }
 
     /// Create a new `Layout` from a template string.
     ///
@@ -157,6 +103,61 @@ impl Layout {
     /// A `Result<Self>` result containing the created `Layout` if successful, or an error if
     /// parsing fails.
     pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>, config: &Config) -> Result<Self> {
+        /// Parse and convert a string value to a `Constraint`.
+        ///
+        /// # Parameters
+        ///
+        /// - `value`: A string slice representing the layout constraint.
+        ///
+        /// # Returns
+        ///
+        /// Returns a `Result` containing the converted `Constraint` or an error if parsing fails.
+        fn value_from_string(value: Option<&str>) -> Result<Constraint> {
+            Ok(match value {
+                Some(value) => match value.find('%') {
+                    Some(i) if i + 1 < value.len() => {
+                        return Err(ToDoError::ParseUnknownValue(value.to_string()))
+                    }
+                    Some(i) => Constraint::Percentage(value[..i].parse()?),
+                    None => Constraint::Length(value.parse()?),
+                },
+                None => Constraint::Percentage(50),
+            })
+        }
+
+        fn process_item(
+            item: &str,
+            container: &mut Container,
+            data: Arc<Mutex<ToDo>>,
+            config: &Config,
+        ) -> Result<Option<Constraint>> {
+            log::trace!("Process item: {item}");
+            let s = item.to_lowercase();
+            let x: Vec<&str> = s.splitn(2, ARG_SEPARATOR).map(|s| s.trim()).collect();
+            let x = (x[0], if x.len() > 1 { Some(x[1]) } else { None });
+            match x.0 {
+                "direction" => {
+                    match x.1 {
+                        None | Some("vertical") => container.set_direction(Direction::Vertical),
+                        Some("horizontal") => container.set_direction(Direction::Horizontal),
+                        Some(direction) => {
+                            return Err(ToDoError::ParseInvalidDirection(direction.to_owned()))
+                        }
+                    }
+                    Ok(None)
+                }
+                "size" => Ok(Some(value_from_string(x.1)?)),
+                _ => {
+                    container.add_widget(Widget::new(
+                        WidgetType::from_str(x.0)?,
+                        data.clone(),
+                        config,
+                    )?);
+                    Ok(Some(value_from_string(x.1)?))
+                }
+            }
+        }
+
         // Find first '[' and move start of template to it (start of first container)
         let index = match template.find('[') {
             Some(i) => i,
@@ -220,7 +221,7 @@ impl Layout {
                     // Skip leading ITEM_SEPARATOR
                     if !string.is_empty() {
                         if let Some(constrain) =
-                            Self::process_item(&string, layout.act_mut(), data.clone(), config)?
+                            process_item(&string, layout.act_mut(), data.clone(), config)?
                         {
                             constraints_stack.last_mut().unwrap().push(constrain);
                         }
@@ -322,6 +323,7 @@ impl Layout {
             self.act,
             self.act().get_index(),
         );
+        log::error!("Select widget act {}, {:#?}", self.act, self.containers); // TODO remove
         ret
     }
 
@@ -329,6 +331,7 @@ impl Layout {
     pub fn left(&mut self) -> bool {
         self.move_focus(&LEFT)
     }
+
 
     /// Move the focus to the right.
     pub fn right(&mut self) -> bool {
@@ -354,21 +357,21 @@ impl Layout {
     ///
     /// - `event`: A reference to the `KeyEvent` to be handled.
     pub fn handle_key(&mut self, event: &KeyEvent) -> bool {
-        match self.act_mut().actual_mut() {
-            Some(widget) => widget.handle_key(&event.code),
-            None => panic!("Actual is not widget"),
-        }
+        self.act_mut()
+            .actual_mut()
+            .expect("Actual is not widget")
+            .handle_key(&event.code)
     }
 
     pub fn get_active_widget(&self) -> WidgetType {
-        match self.act().get_active_type() {
-            Some(widget_type) => widget_type,
-            None => panic!("Actual is not widget"),
-        }
+        self.act().get_active_type().expect("Actual is not widget")
     }
 
-    pub fn click(&mut self, column: u16, row: u16) {
-        log::debug!("Click on column {column}, row {row}");
+    fn find_widget(
+        &mut self,
+        find_functor: impl Fn(&&mut Widget) -> bool,
+        process_widget: impl Fn(&mut Widget),
+    ) {
         let cont_act_index = self.act().get_index();
         let indexes = match self
             .containers
@@ -381,14 +384,10 @@ impl Layout {
                     .enumerate()
                     .map(move |(widget_index, widget)| (layout_index, widget_index, widget))
             })
-            .find(|(_, _, w)| {
-                let chunk = &w.get_base().chunk;
-                let x = chunk.x < column && column < chunk.x + chunk.width;
-                let y = chunk.y < row && row < chunk.y + chunk.height;
-                x && y
-            }) {
+            .find(|(_, _, w)| find_functor(w))
+        {
             Some((layout_index, cont_index, widget)) => {
-                widget.click(column.into(), row.into());
+                process_widget(widget);
                 if self.act == layout_index && cont_act_index == cont_index {
                     None
                 } else if widget.focus() {
@@ -397,10 +396,7 @@ impl Layout {
                     None
                 }
             }
-            None => {
-                log::error!("There is no chunk laying on column {column}, row {row}");
-                None
-            }
+            None => None,
         };
 
         if let Some((layout_index, cont_index)) = indexes {
@@ -409,12 +405,31 @@ impl Layout {
             }
             self.act = layout_index;
             self.act_mut().set_index(cont_index);
-            Container::actualize_layout(self);
+            Container::actualize_parents(self);
         }
     }
 
+    pub fn click(&mut self, column: u16, row: u16) {
+        log::debug!("Click on column {column}, row {row}");
+        self.find_widget(
+            |w| {
+                let chunk = &w.get_base().chunk;
+                let x = chunk.x < column && column < chunk.x + chunk.width;
+                let y = chunk.y < row && row < chunk.y + chunk.height;
+                x && y
+            },
+            |w| w.click(column.into(), row.into()),
+        );
+    }
+
+    pub fn select_widget(&mut self, widget_type: WidgetType) {
+        log::debug!("Select widget {widget_type}");
+        self.find_widget(|w| w.widget_type() == widget_type, |_| {});
+        log::error!("Select widget act {}, {:#?}", self.act, self.containers); // TODO remove
+    }
+
     pub fn search(&mut self, to_search: String) {
-        log::debug!("search to_search={to_search}");
+        log::trace!("search to_search={to_search}");
         match self.act_mut().actual_mut() {
             Some(w) => w.search_event(to_search),
             None => panic!("Actual to search is not a widget"),
@@ -422,7 +437,7 @@ impl Layout {
     }
 
     pub fn clean_search(&mut self) {
-        log::debug!("clean_search");
+        log::trace!("clean_search");
         match self.act_mut().actual_mut() {
             Some(w) => w.clear_search(),
             None => panic!("Actual to search is not a widget"),
