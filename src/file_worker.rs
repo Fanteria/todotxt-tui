@@ -8,13 +8,18 @@ use notify::{
     event::{AccessKind, AccessMode, EventKind},
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
 };
-use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
-use std::path::Path;
-use std::str::FromStr;
-use std::sync::mpsc::Sender;
-use std::sync::{mpsc, Arc, Mutex};
-use std::{thread, time::Duration};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader, BufWriter, Read, Write},
+    path::Path,
+    str::FromStr,
+    sync::{
+        mpsc::{self, Sender},
+        Arc, Mutex,
+    },
+    thread,
+    time::Duration,
+};
 use todo_txt::Task;
 
 /// Commands that can be sent to the `FileWorker` for various file-related operations.

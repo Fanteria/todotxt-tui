@@ -1,12 +1,13 @@
 use crate::config::{Styles, TaskSort};
-use std::convert::From;
-use std::ops::Bound;
-use std::ops::Index;
-use std::ops::RangeBounds;
+use std::{
+    convert::From,
+    ops::{Bound, Index, RangeBounds},
+};
 use todo_txt::Task;
-use tui::text::Line;
-use tui::text::Span;
-use tui::widgets::ListItem;
+use tui::{
+    text::{Line, Span},
+    widgets::{List, ListItem},
+};
 
 use super::search::Search;
 
@@ -169,18 +170,15 @@ impl<'a> Index<usize> for TaskList<'a> {
     }
 }
 
-impl<'a> From<TaskView<'a>> for Vec<ListItem<'a>> {
+impl<'a> From<TaskView<'a>> for List<'a> {
     fn from(val: TaskView<'a>) -> Self {
-        val.vec
-            .iter()
-            .map(|(_, task)| {
-                ListItem::new(Line::from(TaskList::parse_task_string(
-                    task,
-                    val.styles,
-                    val.to_search,
-                )))
-            })
-            .collect::<Vec<ListItem<'a>>>()
+        List::new(val.vec.iter().map(|(_, task)| {
+            ListItem::new(Line::from(TaskList::parse_task_string(
+                task,
+                val.styles,
+                val.to_search,
+            )))
+        }))
     }
 }
 

@@ -1,10 +1,8 @@
 use crate::ToDoError;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::str::FromStr;
-use tui::style::Modifier;
-use tui::widgets::BorderType;
+use std::{fmt::Display, str::FromStr};
+use tui::{style::Modifier, widgets::BorderType};
 
 #[derive(Serialize, Deserialize, ValueEnum, Clone, Debug, PartialEq, Eq, Default)]
 pub enum SetFinalDateType {
@@ -123,6 +121,25 @@ mod tests {
     use crate::Result;
 
     #[test]
+    fn set_final_date_type_display() {
+        assert_eq!(format!("{}", SetFinalDateType::Override), "override");
+        assert_eq!(format!("{}", SetFinalDateType::OnlyMissing), "only-missing");
+        assert_eq!(format!("{}", SetFinalDateType::Never), "never");
+    }
+
+    #[test]
+    fn task_sort_display() {
+        assert_eq!(format!("{}", TaskSort::None), "none");
+        assert_eq!(format!("{}", TaskSort::Reverse), "reverse");
+        assert_eq!(format!("{}", TaskSort::Priority), "priority");
+        assert_eq!(format!("{}", TaskSort::Alphanumeric), "alphanumeric");
+        assert_eq!(
+            format!("{}", TaskSort::AlphanumericReverse),
+            "alphanumeric-reverse"
+        );
+    }
+
+    #[test]
     fn fom_str_text_modifier() -> Result<()> {
         assert_eq!(TextModifier::from_str("bold")?, TextModifier::Bold);
         assert_eq!(TextModifier::from_str("iTALic")?, TextModifier::Italic);
@@ -141,5 +158,27 @@ mod tests {
 
         let underline = TextModifier::Underlined;
         assert_eq!(Modifier::from(underline), Modifier::UNDERLINED);
+    }
+
+    #[test]
+    fn widget_border_type_display() {
+        assert_eq!(format!("{}", WidgetBorderType::Plain), "plain");
+        assert_eq!(format!("{}", WidgetBorderType::Rounded), "rounded");
+        assert_eq!(format!("{}", WidgetBorderType::Double), "double");
+        assert_eq!(format!("{}", WidgetBorderType::Thick), "thick");
+    }
+
+    #[test]
+    fn widget_border_type_into_border_type() {
+        assert_eq!(BorderType::from(WidgetBorderType::Plain), BorderType::Plain);
+        assert_eq!(
+            BorderType::from(WidgetBorderType::Rounded),
+            BorderType::Rounded
+        );
+        assert_eq!(
+            BorderType::from(WidgetBorderType::Double),
+            BorderType::Double
+        );
+        assert_eq!(BorderType::from(WidgetBorderType::Thick), BorderType::Thick);
     }
 }

@@ -122,7 +122,7 @@ pub fn impl_conf(ast: &syn::DeriveInput) -> TokenStream {
                     #field_name: additional.#field_name.unwrap_or(source.#field_name),
                 }),
             },
-            _ => panic!("TODO"),
+            _ => panic!("Unexpected type, cannot expand macro."),
         }
         fields_from_trait.push(quote! {
             #field_name: Some(value.#field_name),

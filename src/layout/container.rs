@@ -1,7 +1,5 @@
 use super::{render_trait::Render, widget::widget_type::WidgetType, Layout, Widget};
-use crate::{Result, ToDoError};
 use tui::{
-    backend::Backend,
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},
     Frame,
 };
@@ -42,11 +40,10 @@ impl Container {
     }
 
     pub fn set_direction(&mut self, direction: Direction) {
-        self.direction = direction.clone();
+        self.direction = direction;
         self.layout = self.layout.clone().direction(direction);
     }
 
-    #[allow(dead_code)]
     pub fn get_direction(&self) -> &Direction {
         &self.direction
     }
@@ -92,7 +89,6 @@ impl Container {
     ///
     /// A result containing a reference to the active `Widget` or a `None`
     /// if the active item is not a widget.
-    #[allow(dead_code)]
     pub fn actual(&self) -> Option<&Widget> {
         self.get_widget(self.act_index)
     }
@@ -107,24 +103,42 @@ impl Container {
         self.get_widget_mut(self.act_index)
     }
 
-    pub fn find_actual(layout: &Layout) -> usize {
-        if let It::Cont(mut index) = layout.act().items[layout.act().act_index] {
-            while let It::Cont(cont) =
-                &layout.containers[index].items[layout.containers[index].act_index]
-            {
-                index = *cont;
-            }
-            index
-        } else {
-            layout.act
-        }
-    }
-
     // If layouts actual item points to container whose actual points to container,
     // actualize it and change actual layouts actual to container that really points
     // to widget.
     pub fn actualize_layout(layout: &mut Layout) {
-        layout.act = Self::find_actual(layout);
+        fn find_actual(layout: &Layout) -> usize {
+            if let It::Cont(mut index) = layout.act().items[layout.act().act_index] {
+                while let It::Cont(cont) =
+                    &layout.containers[index].items[layout.containers[index].act_index]
+                {
+                    index = *cont;
+                }
+                index
+            } else {
+                layout.act
+            }
+        }
+        layout.act = find_actual(layout);
+    }
+
+    pub fn actualize_parents(layout: &mut Layout) {
+        let mut child_index = layout.act;
+        while let Some(parent) = layout.containers[child_index].parent {
+            let cont = &layout.containers[parent];
+            layout.containers[parent].act_index = cont
+                .items
+                .iter()
+                .position(|w| {
+                    if let It::Cont(cont) = w {
+                        std::ptr::eq(&layout.containers[*cont], &layout.containers[child_index])
+                    } else {
+                        false
+                    }
+                })
+                .expect("Child should be in parent container.");
+            child_index = parent;
+        }
     }
 
     /// Attempts to select the next item within the container.
@@ -168,55 +182,11 @@ impl Container {
         }
     }
 
-    /// Finds and selects a specific widget type within the container.
-    ///
-    /// # Parameters
-    ///
-    /// - `container`: A reference-counted (Rc) reference to the container to search within.
-    /// - `widget_type`: The `WidgetType` enum variant representing the target widget type.
-    ///
-    /// # Returns
-    ///
-    /// A result containing either an updated reference to the container with the selected widget
-    /// type as the active item, or an error if the widget type is not found within the container.
-    #[allow(dead_code)]
-    pub fn select_widget(layout: &mut Layout, widget_type: WidgetType) -> Result<()> {
-        let mut index_item = 0;
-        let (index_container, _) = layout
-            .containers
-            .iter()
-            .enumerate()
-            .find(|(_i_cont, cont)| {
-                cont.items
-                    .iter()
-                    .enumerate()
-                    .any(|(i_item, item)| match item {
-                        It::Item(item) if item.widget_type() == widget_type => {
-                            index_item = i_item;
-                            true
-                        }
-                        _ => false,
-                    })
-            })
-            .ok_or(ToDoError::WidgetDoesNotExist)?;
-        layout.containers[index_container].act_index = index_item;
-        layout.act = index_container;
-
-        // Reproduce path back to root.
-        let mut index_container = index_container;
-        while let Some(index_parent) = layout.containers[index_container].parent {
-            layout.containers[index_parent].act_index = index_container;
-            index_container = index_parent;
-        }
-
-        Ok(())
-    }
-
     pub fn get_active_type(&self) -> Option<WidgetType> {
         Some(self.actual()?.widget_type())
     }
 
-    pub fn render<B: Backend>(&self, f: &mut Frame<B>, containers: &Vec<Self>) {
+    pub fn render(&self, f: &mut Frame, containers: &Vec<Self>) {
         self.items.iter().for_each(|cont| match cont {
             It::Cont(index) => containers[*index].render(f, containers),
             It::Item(widget) => widget.render(f),
@@ -264,7 +234,7 @@ impl Default for Container {
 mod tests {
     use super::super::Layout;
     use super::*;
-    use crate::{config::Config, layout::widget::State, todo::ToDo};
+    use crate::{config::Config, layout::widget::State, todo::ToDo, Result};
     use std::sync::{Arc, Mutex};
     use tui::layout::Direction::*;
     use WidgetType::*;
@@ -318,7 +288,7 @@ mod tests {
     fn test_selecting_widget() -> Result<()> {
         let mut layout = testing_layout();
         let mut check = |widget_type| -> Result<()> {
-            Container::select_widget(&mut layout, widget_type)?;
+            layout.select_widget(widget_type);
             check_active(&layout, widget_type);
             Ok(())
         };
@@ -326,10 +296,10 @@ mod tests {
         check(List)?;
         check(Done)?;
         check(Project)?;
-        assert!(
-            check(Context).is_err(),
-            "Widget with type Context is not in container."
-        );
+
+        // If Context is not find it is not set.
+        layout.select_widget(Context);
+        check_active(&layout, Project);
 
         Ok(())
     }
@@ -339,19 +309,19 @@ mod tests {
         let mut layout = testing_layout();
 
         // Test next widget in child container.
-        Container::select_widget(&mut layout, List)?;
+        layout.select_widget(List);
         assert!(layout.act_mut().next_item());
         Container::actualize_layout(&mut layout);
         check_active(&layout, Done);
 
         // Test next widget in same container.
-        Container::select_widget(&mut layout, Done)?;
+        layout.select_widget(Done);
         assert!(layout.act_mut().next_item());
         Container::actualize_layout(&mut layout);
         check_active(&layout, Project);
 
         // Test next in container have not default value
-        Container::select_widget(&mut layout, List)?;
+        layout.select_widget(List);
         assert!(layout.act_mut().next_item());
         Container::actualize_layout(&mut layout);
         check_active(&layout, Project);
@@ -374,7 +344,7 @@ mod tests {
         let mut layout = testing_layout();
 
         // Test previous widget in same container.
-        Container::select_widget(&mut layout, Project)?;
+        layout.select_widget(Project);
         assert!(layout.act_mut().previous_item());
         Container::actualize_layout(&mut layout);
 
@@ -413,9 +383,9 @@ mod tests {
         };
         assert_eq!(0, count_widgets(0));
         assert_eq!(1, count_widgets(1));
-        check_chunk(1, 0, Rect::new(0, 0, 10, 20));
+        check_chunk(1, 0, Rect::new(0, 0, 10, 6));
         assert_eq!(2, count_widgets(2));
-        check_chunk(2, 0, Rect::new(10, 0, 10, 10));
-        check_chunk(2, 1, Rect::new(10, 10, 10, 10));
+        check_chunk(2, 0, Rect::new(10, 0, 10, 3));
+        check_chunk(2, 1, Rect::new(10, 3, 10, 3));
     }
 }

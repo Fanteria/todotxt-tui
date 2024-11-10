@@ -1,8 +1,7 @@
+use crate::{Result, ToDoError};
 use crossterm::event::KeyCode;
 use serde::{de, Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, ops::Deref, str::FromStr};
-
-use crate::{Result, ToDoError};
 
 #[derive(Clone, PartialEq, Eq, Copy, Debug, Hash)]
 pub struct KeyCodeA(KeyCode);

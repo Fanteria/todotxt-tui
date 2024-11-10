@@ -1,10 +1,11 @@
-use super::Styles;
-use super::TextStyle;
-use crate::Result;
-use crate::ToDoError;
+use super::{Styles, TextStyle};
+use crate::{Result, ToDoError};
 use serde::{Deserialize, Serialize};
-use std::ops::{Deref, DerefMut};
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+    str::FromStr,
+};
 use todo_txt::Task;
 use tui::style::Style;
 

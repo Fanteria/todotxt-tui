@@ -1,8 +1,6 @@
-use std::sync::mpsc::Sender;
-
-use crate::file_worker::FileWorkerCommands;
-
 use super::ToDoData;
+use crate::file_worker::FileWorkerCommands;
+use std::sync::mpsc::Sender;
 
 type VersionNum = usize;
 
@@ -32,7 +30,6 @@ impl Version {
         if let Some(tx) = &self.tx {
             if let Err(e) = tx.send(FileWorkerCommands::Save) {
                 log::error!("Error while send signal to save todo list from update all: {e}");
-                // TODO show something on screen
             }
         }
     }
@@ -47,7 +44,6 @@ impl Version {
         if let Some(tx) = &self.tx {
             if let Err(e) = tx.send(FileWorkerCommands::Save) {
                 log::error!("Error while send signal to save todo list from update: {e}");
-                // TODO show something on screen
             }
         }
     }
@@ -73,5 +69,38 @@ impl Version {
 
     pub fn get_version_all(&self) -> Versions {
         self.versions
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn behaviour() {
+        let mut v = Version {
+            versions: Versions::default(),
+            tx: None,
+        };
+
+        v.update(&ToDoData::Pending);
+        assert_eq!(v.get_version(&ToDoData::Pending), 1);
+        assert_eq!(v.get_version(&ToDoData::Done), 0);
+
+        v.update_all();
+        assert_eq!(v.get_version(&ToDoData::Pending), 2);
+        assert_eq!(v.get_version(&ToDoData::Done), 1);
+
+        v.update_all();
+        assert_eq!(v.get_version(&ToDoData::Pending), 3);
+        assert_eq!(v.get_version(&ToDoData::Done), 2);
+
+        let mut new_v = Version {
+            versions: v.get_version_all(),
+            tx: None,
+        };
+        v.update_all();
+        new_v.update_all();
+        v.is_actual_all(new_v.get_version_all());
     }
 }

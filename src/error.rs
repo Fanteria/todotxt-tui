@@ -2,6 +2,7 @@ use std::{
     env::VarError,
     path::{Path, PathBuf},
     result::Result as stdResult,
+    string::FromUtf8Error,
 };
 
 /// Define a custom result type for ToDo related operations.
@@ -64,6 +65,14 @@ pub enum ToDoError {
     CustomCategoryStyleParseFailed(&'static str),
     #[error("Notify {0}")]
     NotifyError(#[from] notify::Error),
+    #[error("Todo txt parsing failed {0}")]
+    Todotxt(#[from] todo_txt::Error),
+    #[error("Failed to run hook {0:?}, stderr: {1}")]
+    HookCommandFailed(PathBuf, String),
+    #[error("Failed to parse hook stderr {0}")]
+    HookFailedToParseError(#[source] FromUtf8Error),
+    #[error("Failed to parse hook stdout {0}")]
+    HookFailedToParseStdout(#[source] FromUtf8Error),
 }
 
 impl ToDoError {

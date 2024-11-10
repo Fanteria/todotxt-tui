@@ -25,8 +25,7 @@ use clap::{builder::styling::AnsiColor, FromArgMatches};
 use crossterm::event::KeyCode;
 use std::{env::var, path::PathBuf, str::FromStr, time::Duration};
 use todotxt_tui_macros::{Conf, ConfMerge};
-use tui::style::Color as tuiColor;
-use tui::style::Style;
+use tui::style::{Color as tuiColor, Style};
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct FileWorkerConfig {
@@ -222,7 +221,7 @@ pub struct UiConfig {
     pub list_refresh_rate: Duration,
     /// Path to save the application's state (currently unused).
     #[arg(short = 'S')]
-    pub save_state_path: Option<PathBuf>, // TODO at now unused
+    pub save_state_path: Option<PathBuf>,
     /// The layout configuration for the user interface.
     /// This can be customized using a layout string.
     #[arg(short = 'l')]
@@ -419,6 +418,34 @@ impl Default for Styles {
     }
 }
 
+#[derive(Conf, Clone, Debug, PartialEq, Eq, Default)]
+pub struct HookPaths {
+    /// Path to the script executed before creating a new task.
+    /// If none, no action is taken before a new task is created.
+    pub pre_new_task: Option<PathBuf>,
+    /// Path to the script executed after creating a new task.
+    /// If none, no action is taken after a new task is created.
+    pub post_new_task: Option<PathBuf>,
+    /// Path to the script executed before removing a task.
+    /// If none, no action is taken before a task is removed.
+    pub pre_remove_task: Option<PathBuf>,
+    /// Path to the script executed after removing a task.
+    /// If none, no action is taken after a task is removed.
+    pub post_remove_task: Option<PathBuf>,
+    /// Path to the script executed before moving a task.
+    /// If none, no action is taken before a task is moved.
+    pub pre_move_task: Option<PathBuf>,
+    /// Path to the script executed after moving a task.
+    /// If none, no action is taken after a task is moved.
+    pub post_move_task: Option<PathBuf>,
+    /// Path to the script executed before updating a task.
+    /// If none, no action is taken before a task is updated.
+    pub pre_update_task: Option<PathBuf>,
+    /// Path to the script executed after updating a task.
+    /// If none, no action is taken after a task is updated.
+    pub post_update_task: Option<PathBuf>,
+}
+
 #[derive(ConfMerge, Default, Debug, PartialEq, Eq)]
 #[command(author, version, about, long_about = None)]
 pub struct Config {
@@ -430,6 +457,7 @@ pub struct Config {
     pub preview_config: PreviewConfig,
     pub active_color_config: ActiveColorConfig,
     pub styles: Styles,
+    pub hook_paths: HookPaths,
 }
 
 impl Config {
@@ -804,6 +832,13 @@ mod tests {
 
         assert_eq!(config, expected);
 
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn export_default_is_possible() -> Result<()> {
+        Config::export_default(PathBuf::from("/dev/null"))?;
         Ok(())
     }
 }

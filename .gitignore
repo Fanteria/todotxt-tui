@@ -25,3 +25,4 @@ log.log
 lcov.info
 .todo-tui.log
 .debug-config.lua
+state.toml

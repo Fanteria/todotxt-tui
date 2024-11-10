@@ -1,5 +1,6 @@
 pub mod autocomplete;
 pub mod category_list;
+mod hooks;
 pub mod parser;
 pub mod search;
 pub mod task_list;
@@ -11,13 +12,18 @@ pub use self::{
     todo_state::*,
 };
 
-use crate::config::{SetFinalDateType, Styles, ToDoConfig};
+use crate::{
+    config::{HookPaths, SetFinalDateType, Styles, ToDoConfig},
+    Result,
+};
 use chrono::{NaiveDate, Utc};
+use hooks::{HookTypes, Hooks};
 use std::str::FromStr;
 use todo_txt::Task;
 use version::Version;
 
 /// Struct to manage ToDo tasks and theirs state.
+#[derive(Default)]
 pub struct ToDo {
     pub pending: Vec<Task>,
     pub done: Vec<Task>,
@@ -25,6 +31,7 @@ pub struct ToDo {
     state: ToDoState,
     config: ToDoConfig,
     styles: Styles,
+    hooks: Hooks,
 }
 
 impl ToDo {
@@ -33,7 +40,7 @@ impl ToDo {
     /// # Arguments
     ///
     /// * `use_done` - A boolean indicating whether to include done tasks in the ToDo data.
-    pub fn new(config: ToDoConfig, styles: Styles) -> Self {
+    pub fn new(config: ToDoConfig, hook_paths: HookPaths, styles: Styles) -> Self {
         Self {
             pending: Vec::new(),
             done: Vec::new(),
@@ -41,6 +48,7 @@ impl ToDo {
             state: ToDoState::default(),
             config,
             styles,
+            hooks: Hooks::new(hook_paths),
         }
     }
 
@@ -150,11 +158,16 @@ impl ToDo {
             task.finished = !task.finished;
             to.push(task)
         };
-        use ToDoData::*;
+        self.hooks.run_lazy(HookTypes::PreMove, || {
+            data.get_data(self)[index].to_string()
+        });
         match data {
-            Pending => move_task_logic(&mut self.pending, &mut self.done),
-            Done => move_task_logic(&mut self.done, &mut self.pending),
+            ToDoData::Pending => move_task_logic(&mut self.pending, &mut self.done),
+            ToDoData::Done => move_task_logic(&mut self.done, &mut self.pending),
         };
+        self.hooks.run_lazy(HookTypes::PostMove, || {
+            data.get_data(self)[index].to_string()
+        });
         self.fix_active(index)
     }
 
@@ -211,10 +224,13 @@ impl ToDo {
     /// # Returns
     ///
     /// A `Result` indicating success or an error if the task string cannot be parsed.
-    pub fn new_task(&mut self, task: &str) -> Result<(), todo_txt::Error> {
-        let task = task.replace("due:today ", &format!("due:{}", Self::get_actual_date()));
-        let task = task.replace("due: ", &format!("due:{}", Self::get_actual_date()));
-        let mut task = Task::from_str(&task)?;
+    pub fn new_task(&mut self, task: &str) -> Result<()> {
+        let task_str = task.replace("due:today ", &format!("due:{}", Self::get_actual_date()));
+        let mut task_str = task_str.replace("due: ", &format!("due:{}", Self::get_actual_date()));
+        if let Some(new_task) = self.hooks.run(HookTypes::PreNew, &task_str) {
+            task_str = new_task;
+        }
+        let mut task = Task::from_str(&task_str)?;
         if task.create_date.is_none() {
             task.create_date = Some(Self::get_actual_date());
         }
@@ -225,6 +241,7 @@ impl ToDo {
             self.pending.push(task);
             self.version.update(&ToDoData::Pending);
         }
+        self.hooks.run(HookTypes::PostNew, &task_str);
         Ok(())
     }
 
@@ -237,7 +254,13 @@ impl ToDo {
     pub fn remove_task(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
         if let Some(index) = index {
+            self.hooks.run_lazy(HookTypes::PreRemove, || {
+                data.get_data(self)[index].to_string()
+            });
             data.get_data_mut(self).remove(index);
+            self.hooks.run_lazy(HookTypes::PostRemove, || {
+                data.get_data(self)[index].to_string()
+            });
             self.fix_active(index);
         } else {
             log::warn!("Layout::get_actual_index is None");
@@ -278,8 +301,7 @@ impl ToDo {
     /// * `data` - The type of ToDo data where the task is located.
     /// * `index` - The index of the task to be set as active in the specified data.
     pub fn set_active(&mut self, data: ToDoData, index: usize) {
-        let index = self.get_actual_index(data, index);
-        if let Some(index) = index {
+        if let Some(index) = self.get_actual_index(data, index) {
             self.state.active = Some((data, index));
         } else {
             log::warn!("Layout::get_actual_index is None");
@@ -314,9 +336,14 @@ impl ToDo {
     /// # Returns
     ///
     /// A `Result` indicating success or an error if the updated task string cannot be parsed.
-    pub fn update_active(&mut self, task: &str) -> Result<(), todo_txt::Error> {
+    pub fn update_active(&mut self, task: &str) -> Result<()> {
         if let Some((data, index)) = self.state.active {
-            data.get_data_mut(self)[index] = Task::from_str(task)?;
+            let mut task = task.to_string();
+            if let Some(new_task) = self.hooks.run(HookTypes::PreUpdate, &task) {
+                task = new_task;
+            }
+            data.get_data_mut(self)[index] = Task::from_str(&task)?;
+            self.hooks.run(HookTypes::PostUpdate, &task);
         }
         Ok(())
     }
@@ -384,17 +411,10 @@ impl ToDo {
     }
 }
 
-impl Default for ToDo {
-    fn default() -> Self {
-        ToDo::new(ToDoConfig::default(), Styles::default())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::naive::NaiveDate;
-    use std::error::Error;
     use todo_txt::Priority;
 
     fn example_todo() -> ToDo {
@@ -477,20 +497,28 @@ mod tests {
     }
 
     #[test]
-    fn test_filtering() -> Result<(), Box<dyn Error>> {
+    fn test_filtering() -> Result<()> {
         let mut todo = ToDo::default();
-        todo.add_task(Task::from_str("task 1").unwrap());
-        todo.add_task(Task::from_str("task 2 +project1").unwrap());
-        todo.add_task(Task::from_str("task 3 +project1 +project2").unwrap());
-        todo.add_task(Task::from_str("task 4 +project1 +project3").unwrap());
-        todo.add_task(Task::from_str("task 5 +project1 +project2 +project3").unwrap());
-        todo.add_task(Task::from_str("task 6 +project3 @context2 #hashtag2 #hashtag1").unwrap());
-        todo.add_task(Task::from_str("task 7 +project2 @context1 #hashtag1 #hashtag2").unwrap());
-        todo.add_task(Task::from_str("task 8 +project2 @context2").unwrap());
-        todo.add_task(Task::from_str("task 9 +projects3 @context3").unwrap());
-        todo.add_task(Task::from_str("task 10 +project2 @context3 #hashtag1 #hashtag2").unwrap());
-        todo.add_task(Task::from_str("task 11 +project3 @context3 #hashtag2 #hashtag3").unwrap());
-        todo.add_task(Task::from_str("task 12 +project3 @context2 #hashtag2").unwrap());
+        todo.add_task(Task::from_str("task 1")?);
+        todo.add_task(Task::from_str("task 2 +project1")?);
+        todo.add_task(Task::from_str("task 3 +project1 +project2")?);
+        todo.add_task(Task::from_str("task 4 +project1 +project3")?);
+        todo.add_task(Task::from_str("task 5 +project1 +project2 +project3")?);
+        todo.add_task(Task::from_str(
+            "task 6 +project3 @context2 #hashtag2 #hashtag1",
+        )?);
+        todo.add_task(Task::from_str(
+            "task 7 +project2 @context1 #hashtag1 #hashtag2",
+        )?);
+        todo.add_task(Task::from_str("task 8 +project2 @context2")?);
+        todo.add_task(Task::from_str("task 9 +projects3 @context3")?);
+        todo.add_task(Task::from_str(
+            "task 10 +project2 @context3 #hashtag1 #hashtag2",
+        )?);
+        todo.add_task(Task::from_str(
+            "task 11 +project3 @context3 #hashtag2 #hashtag3",
+        )?);
+        todo.add_task(Task::from_str("task 12 +project3 @context2 #hashtag2")?);
 
         let filtered = todo.get_filtered_and_sorted(ToDoData::Pending);
         assert_eq!(filtered.len(), 12);
@@ -666,7 +694,7 @@ mod tests {
     }
 
     #[test]
-    fn new_task() -> Result<(), todo_txt::Error> {
+    fn new_task() -> Result<()> {
         let mut todo = ToDo::default();
         todo.new_task("Some pending task")?;
         assert_eq!(todo.pending.len(), 1);
@@ -679,7 +707,7 @@ mod tests {
     }
 
     #[test]
-    fn update_active() -> Result<(), todo_txt::Error> {
+    fn update_active() -> Result<()> {
         let mut todo = example_todo();
         todo.state.active = Some((ToDoData::Pending, 0));
         todo.update_active("New subject")?;
