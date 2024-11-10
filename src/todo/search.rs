@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn find() {
-        let v = vec![
+        let v = [
             "line with A letter",
             "line with B letter",
             "line with C letter",
