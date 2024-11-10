@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use todo_txt::Task;
 
 /// Enum to represent the state of ToDo data (pending or done).
-#[derive(Clone, Copy, Serialize, Deserialize, Debug)]
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum ToDoData {
     Pending,
     Done,
@@ -77,7 +77,7 @@ pub enum FilterState {
     Remove,
 }
 
-#[derive(Default, Clone, Serialize, Deserialize, Debug)]
+#[derive(Default, Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct ToDoState {
     pub active: Option<(ToDoData, usize)>,
     pub project_filters: BTreeMap<String, FilterState>,

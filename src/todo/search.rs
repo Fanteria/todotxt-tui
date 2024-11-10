@@ -30,12 +30,12 @@ impl Search {
         None
     }
 
-    pub fn highlight<'x>(
-        subject: &'x str,
+    pub fn highlight<'a>(
+        subject: &'a str,
         to_search: Option<&str>,
-        styles: &'x Styles,
+        styles: &'a Styles,
         style: tui::prelude::Style,
-    ) -> Vec<Span<'x>> {
+    ) -> Vec<Span<'a>> {
         match to_search {
             Some(to_search) => {
                 let mut visitor = SearchVisitor::new(subject, to_search);
@@ -166,5 +166,39 @@ mod tests {
         assert_eq!(it.next(), Some((Some("ers "), Some("T"))));
         assert_eq!(it.next(), None);
         assert_eq!(it.remaining(), ".");
+    }
+
+    #[test]
+    fn find() {
+        let v = vec![
+            "line with A letter",
+            "line with B letter",
+            "line with C letter",
+            "line with D letter",
+        ];
+        assert_eq!(
+            *Search::find(v.iter(), "B", |s| s).unwrap(),
+            "line with B letter"
+        );
+        assert_eq!(Search::find(v.iter(), "E", |s| s), None);
+    }
+
+    #[test]
+    fn highlight() {
+        let styles = Styles::default();
+        let vec = Search::highlight(
+            "this is contain three occurrence of 'is'",
+            Some("is"),
+            &styles,
+            tui::prelude::Style::default(),
+        );
+        assert_eq!(vec.len(), 7);
+        assert_eq!(vec[0].to_string(), "th");
+        assert_eq!(vec[1].to_string(), "is");
+        assert_eq!(vec[2].to_string(), " ");
+        assert_eq!(vec[3].to_string(), "is");
+        assert_eq!(vec[4].to_string(), " contain three occurrence of '");
+        assert_eq!(vec[5].to_string(), "is");
+        assert_eq!(vec[6].to_string(), "'");
     }
 }

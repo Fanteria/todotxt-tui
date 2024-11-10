@@ -834,4 +834,11 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    #[cfg(unix)]
+    fn export_default_is_possible() -> Result<()> {
+        Config::export_default(PathBuf::from("/dev/null"))?;
+        Ok(())
+    }
 }

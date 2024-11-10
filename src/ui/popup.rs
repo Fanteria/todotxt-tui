@@ -47,3 +47,36 @@ impl Popup {
         self.message = Some(message);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn popup() {
+        let mut popup = Popup::new(WidgetBorderType::Plain);
+        popup.add_message(String::from("popup message"));
+    }
+
+    #[test]
+    fn centering() {
+        assert_eq!(
+            Popup::center_popup_area(
+                Rect {
+                    x: 0,
+                    y: 0,
+                    width: 100,
+                    height: 100,
+                },
+                50,
+                50
+            ),
+            Rect {
+                x: 25,
+                y: 25,
+                width: 50,
+                height: 50
+            }
+        );
+    }
+}

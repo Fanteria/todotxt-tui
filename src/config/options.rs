@@ -121,6 +121,25 @@ mod tests {
     use crate::Result;
 
     #[test]
+    fn set_final_date_type_display() {
+        assert_eq!(format!("{}", SetFinalDateType::Override), "override");
+        assert_eq!(format!("{}", SetFinalDateType::OnlyMissing), "only-missing");
+        assert_eq!(format!("{}", SetFinalDateType::Never), "never");
+    }
+
+    #[test]
+    fn task_sort_display() {
+        assert_eq!(format!("{}", TaskSort::None), "none");
+        assert_eq!(format!("{}", TaskSort::Reverse), "reverse");
+        assert_eq!(format!("{}", TaskSort::Priority), "priority");
+        assert_eq!(format!("{}", TaskSort::Alphanumeric), "alphanumeric");
+        assert_eq!(
+            format!("{}", TaskSort::AlphanumericReverse),
+            "alphanumeric-reverse"
+        );
+    }
+
+    #[test]
     fn fom_str_text_modifier() -> Result<()> {
         assert_eq!(TextModifier::from_str("bold")?, TextModifier::Bold);
         assert_eq!(TextModifier::from_str("iTALic")?, TextModifier::Italic);

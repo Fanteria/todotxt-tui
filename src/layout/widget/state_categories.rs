@@ -168,3 +168,77 @@ impl State for StateCategories {
         self.base.click(column, row);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        str::FromStr,
+        sync::{Arc, Mutex},
+    };
+
+    use super::*;
+    use crate::{config::Config, layout::widget::widget_type::WidgetType, todo::ToDo};
+
+    #[test]
+    fn handle_event_state() {
+        let config = Config::default();
+        let mut todo = ToDo::default();
+        todo.add_task(todo_txt::Task::from_str("Task +project1").unwrap());
+        todo.add_task(todo_txt::Task::from_str("Task +project1").unwrap());
+        todo.add_task(todo_txt::Task::from_str("Task +project2").unwrap());
+        todo.add_task(todo_txt::Task::from_str("Task +project3").unwrap());
+
+        let mut c = StateCategories::new(
+            WidgetList::new(&WidgetType::Project, Arc::new(Mutex::new(todo)), &config),
+            ToDoCategory::Projects,
+            &config.active_color_config,
+        );
+
+        c.base.len = {
+            let todo = c.base.data();
+            todo.get_categories(c.category).len()
+        };
+        c.base.set_size(20);
+        c.search_event(String::from("proj"));
+        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert_eq!(c.base.index(), 1);
+        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert_eq!(c.base.act(), 2);
+        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert_eq!(c.base.act(), 2);
+        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert_eq!(c.base.act(), 2);
+
+        assert!(c.handle_event_state(UIEvent::PrevSearch));
+        assert_eq!(c.base.act(), 1);
+        assert!(c.handle_event_state(UIEvent::PrevSearch));
+        assert_eq!(c.base.act(), 0);
+        assert!(c.handle_event_state(UIEvent::PrevSearch));
+        assert_eq!(c.base.act(), 0);
+
+        c.clear_search();
+        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert_eq!(c.base.act(), 0);
+
+        assert!(c.handle_event_state(UIEvent::Select));
+        {
+            let todo = c.base.data();
+            assert_eq!(
+                todo.get_state().get_category(c.category)["project1"],
+                FilterState::Select
+            );
+        }
+
+        assert!(c.handle_event_state(UIEvent::Remove));
+        {
+            let todo = c.base.data();
+            assert_eq!(
+                todo.get_state().get_category(c.category)["project1"],
+                FilterState::Remove
+            );
+        }
+
+        // Do nothing on unknown event
+        assert!(!c.handle_event_state(UIEvent::Quit));
+    }
+}

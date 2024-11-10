@@ -377,6 +377,7 @@ impl UI {
                     KeyCode::Enter => {
                         self.mode = Mode::Normal;
                         self.layout.focus();
+                        self.tinput.reset();
                     }
                     KeyCode::Esc => {
                         self.tinput.reset();
@@ -470,23 +471,24 @@ impl HandleEvent for UI {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Conf;
+    use crate::{config::Conf, layout::widget::widget_type::WidgetType};
     use crossterm::event::{KeyEvent, KeyModifiers};
     use std::env;
-    use std::error::Error;
     use test_log::test;
 
     fn default_ui() -> Result<UI> {
         let config = Config::from_reader(
             format!(
                 r#"
-            todo_path = "{}todo.txt"
+            todo_path = "{}test_behaviour_todo.txt"
+            save_state_path = "/this/path/does/not/exists"
+            save_policy = "ManualOnly"
 
             [list_keybind]
             E = "EditMode"
             Enter = "Select"
             I = "InsertMode"
-            L = "Load"
+            u = "Load"
             S = "Save"
             j = "ListDown"
             q = "Quit"
@@ -499,7 +501,39 @@ mod tests {
     }
 
     #[test]
-    fn test_behaviour() -> std::result::Result<(), Box<dyn Error>> {
+    fn test_moves() -> Result<()> {
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('J'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('K'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('J'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Context);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('H'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_behaviour() -> Result<()> {
         let mut ui = default_ui()?;
         ui.update_chunk(Rect::new(0, 0, 20, 20));
 
@@ -508,38 +542,175 @@ mod tests {
 
         let event = Event::Key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
         ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('S'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
 
         let event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
         ui.handle_event_window(event);
-        // assert!(ui.data.lock().unwrap().get_active().is_some());
+        assert!(ui.data.lock().unwrap().get_active().is_some());
 
-        // let event = Event::Key(KeyEvent::new(KeyCode::Char('I'), KeyModifiers::NONE));
-        // ui.handle_event_window(event);
-        // assert_eq!(ui.mode, Mode::Input);
-        //
-        // let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
-        // ui.handle_event_window(event);
-        // assert_eq!(ui.mode, Mode::Normal);
-        //
-        // let event = Event::Key(KeyEvent::new(KeyCode::Char('E'), KeyModifiers::NONE));
-        // ui.handle_event_window(event);
-        // assert_eq!(ui.mode, Mode::Edit);
-        //
-        // let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
-        // ui.handle_event_window(event);
-        // assert_eq!(ui.mode, Mode::Normal);
-        //
-        // assert!(!ui.quit);
-        // let event = Event::Key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE));
-        // ui.handle_event_window(event);
-        // assert!(ui.quit);
-        // ui.quit = false;
-        //
-        // let event = Event::Key(KeyEvent::new(KeyCode::Char('S'), KeyModifiers::NONE));
-        // ui.handle_event_window(event);
-        //
-        // let event = Event::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::NONE));
-        // ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('I'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Input);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Normal);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('E'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Edit);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Normal);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Search);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Normal);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Search);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Search);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Normal);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('I'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Input);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "a");
+        assert_eq!(ui.mode, Mode::Input);
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "ab");
+        assert_eq!(ui.mode, Mode::Input);
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "abc");
+        assert_eq!(ui.mode, Mode::Input);
+        let event = Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "abc");
+        assert_eq!(ui.mode, Mode::Input);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "");
+        assert_eq!(ui.mode, Mode::Normal);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('E'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Edit);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "Second task ");
+        assert_eq!(ui.mode, Mode::Edit);
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('+'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "Second task +");
+        assert_eq!(ui.mode, Mode::Edit);
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "Second task +a");
+        assert_eq!(ui.mode, Mode::Edit);
+        let event = Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "Second task +abcdef ");
+        assert_eq!(ui.mode, Mode::Edit);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.tinput.to_string(), "");
+        assert_eq!(ui.mode, Mode::Normal);
+
+        // Remove items added in this test
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+
+        // Quit TUI.
+        assert!(!ui.quit);
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert!(ui.quit);
+        ui.quit = false;
+
+        Ok(())
+    }
+
+    #[test]
+    fn search_contexts() -> Result<()> {
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('J'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Context);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Search);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Search);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Search);
+
+        let event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Normal);
+
+        // clean search
+        let event = Event::Key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE));
+        ui.handle_event_window(event);
+        assert_eq!(ui.mode, Mode::Normal);
 
         Ok(())
     }

@@ -301,8 +301,7 @@ impl ToDo {
     /// * `data` - The type of ToDo data where the task is located.
     /// * `index` - The index of the task to be set as active in the specified data.
     pub fn set_active(&mut self, data: ToDoData, index: usize) {
-        let index = self.get_actual_index(data, index);
-        if let Some(index) = index {
+        if let Some(index) = self.get_actual_index(data, index) {
             self.state.active = Some((data, index));
         } else {
             log::warn!("Layout::get_actual_index is None");

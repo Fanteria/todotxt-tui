@@ -7,7 +7,7 @@ use log4rs::{
 };
 use std::{env, error::Error, io::stdin, path::PathBuf, process::exit};
 use todotxt_tui::{
-    config::{Conf, ConfMerge, Config},
+    config::{ConfMerge, Config},
     ui::UI,
     ToDoError,
 };
@@ -18,7 +18,13 @@ use todotxt_tui::{
 /// If it is not set, the default path `config_folder/log4rs.yaml` is used.
 fn log_init() -> Result<(), Box<dyn Error>> {
     let config_folder = Config::config_folder();
-    let log_file = match env::var(format!("{}LOGCONFIG", Config::env_prefix())) {
+    let log_file = match env::var(format!(
+        "{}LOGCONFIG",
+        format_args!(
+            "{}_",
+            env!("CARGO_PKG_NAME").to_uppercase().replace('-', "_")
+        )
+    )) {
         Ok(log_file) => PathBuf::from(log_file),
         Err(_) => config_folder.join("log4rs.yaml"),
     };
@@ -74,7 +80,7 @@ fn main() {
     let run = || -> Result<(), Box<dyn Error>> {
         log_init()?;
         log::trace!("===== START LOGGING =====");
-        let config = Config::new().map_err(ask_to_create_config)?;
+        let config = Config::from_args(env::args()).map_err(ask_to_create_config)?;
         let mut ui = UI::build(&config)?;
         log::trace!("===== STARTING UI =====");
         ui.run()?;
