@@ -49,7 +49,7 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          binary_name="testing-rust-release"
+          binary_name="todotxt-tui"
           dirname="$binary_name-${{ env.VERSION }}-${{ matrix.target }}"
           mkdir -p "$dirname"
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
