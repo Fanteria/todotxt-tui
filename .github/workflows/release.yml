@@ -28,6 +28,7 @@ jobs:
             os: windows-latest
             target: x86_64-pc-windows-gnu
 
+    continue-on-error: true
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
@@ -35,6 +36,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: Get the release version from the tag
@@ -42,30 +44,31 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: build
-          args: --verbose --release --target ${{ matrix.target }}
+        run: cargo build --verbose --release --target ${{ matrix.target }}
 
       - name: Build archive
         shell: bash
         run: |
-          binary_name="todotui-txt"
+          binary_name="testing-rust-release"
           dirname="$binary_name-${{ env.VERSION }}-${{ matrix.target }}"
-          mkdir "$dirname"
+          mkdir -p "$dirname"
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv "target/${{ matrix.target }}/release/$binary_name.exe" "$dirname"
-          else
-            mv "target/${{ matrix.target }}/release/$binary_name" "$dirname"
-          fi
-
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
             7z a "$dirname.zip" "$dirname"
             echo "ASSET=$dirname.zip" >> $GITHUB_ENV
           else
+            mv "target/${{ matrix.target }}/release/$binary_name" "$dirname"
             tar -czf "$dirname.tar.gz" "$dirname"
             echo "ASSET=$dirname.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Generate checksum
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            certutil -hashfile ${{ env.ASSET }} > "${{ env.ASSET }}.sha256"
+          else
+            shasum -a 256 "${{ env.ASSET }}" > "${{ env.ASSET }}.sha256"
           fi
 
       - name: Upload the binaries
@@ -73,3 +76,5 @@ jobs:
         with:
           files: |
             ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+
