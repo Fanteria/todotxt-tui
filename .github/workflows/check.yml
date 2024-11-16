@@ -12,10 +12,12 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Setup checkout
+      - name: Clone repository
         uses: actions/checkout@v4
-      - name: Setup toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
       - name: Run tests
         run: cargo test --verbose
 
@@ -23,11 +25,12 @@ jobs:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
-      - name: Setup checkout
+      - name: Clone repository
         uses: actions/checkout@v4
-      - name: Setup toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with: 
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
           components: rustfmt
       - name: Formatting
         run: cargo fmt --all -- --check
@@ -36,11 +39,13 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - name: Setup checkout
+      - name: Clone repository
         uses: actions/checkout@v4
-      - name: Setup toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with: 
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
           components: clippy
       - name: Clippy
         run: cargo clippy --all-targets --all-features
+
