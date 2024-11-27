@@ -85,10 +85,7 @@ impl<'a, 'b> Iterator for SearchMatches<'a, 'b> {
 
     fn next(&mut self) -> Option<usize> {
         self.act = match self.act {
-            Some(i) => match self.subject[i + 1..].find(self.to_search.deref()) {
-                Some(index) => Some(i + 1 + index),
-                None => return None,
-            },
+            Some(i) => Some(i + 1 + self.subject.get(i + 1..)?.find(self.to_search.deref())?),
             None => self.subject.find(self.to_search.deref()),
         };
         self.act
