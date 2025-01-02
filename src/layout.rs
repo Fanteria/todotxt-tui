@@ -27,18 +27,23 @@ struct Holder {
     widgets: Vec<usize>, // widget
 }
 impl Holder {
+    /// Create a new `Holder` instance.
     fn new(l: &Layout) -> Holder {
         Holder {
             container: l.act,
             widgets: l.containers.iter().map(|c| c.get_index()).collect(),
         }
     }
+
+    /// Unfocus the current widget.
     fn unfocus(&self, l: &mut Layout) {
         match l.containers[self.container].get_widget_mut(self.widgets[self.container]) {
             Some(widget) if widget.get_base().focus => widget.unfocus(),
             _ => {}
         }
     }
+
+    /// Set the old layout back.
     fn set_old_back(&self, l: &mut Layout) {
         l.act = self.container;
         l.containers
@@ -78,15 +83,7 @@ impl Layout {
     /// A `Result<Self>` result containing the created `Layout` if successful, or an error if
     /// parsing fails.
     pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>, config: &Config) -> Result<Self> {
-        /// Parse and convert a string value to a `Constraint`.
-        ///
-        /// # Parameters
-        ///
-        /// - `value`: A string slice representing the layout constraint.
-        ///
-        /// # Returns
-        ///
-        /// Returns a `Result` containing the converted `Constraint` or an error if parsing fails.
+        /// Parse a value from a string.
         fn value_from_string(value: Option<&str>) -> Result<Constraint> {
             Ok(match value {
                 Some(value) => match value.find('%') {
@@ -100,6 +97,7 @@ impl Layout {
             })
         }
 
+        /// Process an item in the layout template.
         fn process_item(
             item: &str,
             container: &mut Container,
@@ -211,14 +209,17 @@ impl Layout {
         Err(ToDoError::ParseNotEnd)
     }
 
+    /// Get the active container.
     fn act(&self) -> &Container {
         &self.containers[self.act]
     }
 
+    /// Get a mutable reference to the active container.
     fn act_mut(&mut self) -> &mut Container {
         &mut self.containers[self.act]
     }
 
+    /// Walk in the layout and call the function `f` on each container.
     fn walk_in_container(&mut self, f: &impl Fn(&mut Container) -> bool) -> bool {
         if f(self.act_mut()) {
             Container::actualize_layout(self);
@@ -336,10 +337,12 @@ impl Layout {
             .handle_key(&event.code)
     }
 
+    /// Handle a custom event.
     pub fn get_active_widget(&self) -> WidgetType {
         self.act().get_active_type().expect("Actual is not widget")
     }
 
+    /// Find a widget in the layout.
     fn find_widget(
         &mut self,
         find_functor: impl Fn(&&mut Widget) -> bool,
@@ -382,6 +385,7 @@ impl Layout {
         }
     }
 
+    /// Handle click event.
     pub fn click(&mut self, column: u16, row: u16) {
         log::debug!("Click on column {column}, row {row}");
         self.find_widget(
@@ -395,11 +399,13 @@ impl Layout {
         );
     }
 
+    /// Select widget with type.
     pub fn select_widget(&mut self, widget_type: WidgetType) {
         log::debug!("Select widget {widget_type}");
         self.find_widget(|w| w.widget_type() == widget_type, |_| {});
     }
 
+    /// Handle search event in the active widget.
     pub fn search(&mut self, to_search: String) {
         log::trace!("search to_search={to_search}");
         match self.act_mut().actual_mut() {
@@ -408,6 +414,7 @@ impl Layout {
         }
     }
 
+    /// Clear search in the active widget.
     pub fn clean_search(&mut self) {
         log::trace!("clean_search");
         match self.act_mut().actual_mut() {

@@ -6,6 +6,7 @@ use std::{
     process::Command,
 };
 
+/// Possible hooks that can be executed.
 pub enum HookTypes {
     PreNew,
     PostNew,
@@ -32,17 +33,20 @@ impl Display for HookTypes {
     }
 }
 
+/// Hooks that can be executed before or after a task is created, removed, moved, or updated.
 #[derive(Default)]
 pub struct Hooks {
     paths: HookPaths,
 }
 
 impl Hooks {
+    /// Creates a new `Hooks` instance with the specified paths to the hook scripts.
     pub fn new(paths: HookPaths) -> Self {
         log::debug!("Hooks: {paths:#?}");
         Self { paths }
     }
 
+    /// Run hook for the specified task.
     fn run_command(path: &Path, task: &str) -> Result<String> {
         let mut cmd = Command::new("bash");
         let path = fs::canonicalize(path)?;
@@ -60,6 +64,7 @@ impl Hooks {
         String::from_utf8(output.stdout).map_err(ToDoError::HookFailedToParseStdout)
     }
 
+    /// Function to run a command with a name.
     fn run_command_with_name(path: &Path, task: &str, name: &str) -> Option<String> {
         log::info!("{name} hook: {path:?} {task}");
         match Self::run_command(path, task) {
@@ -74,6 +79,7 @@ impl Hooks {
         }
     }
 
+    /// Get the path to the specified hook type.
     fn get_path(&self, hook_type: &HookTypes) -> Option<&PathBuf> {
         match hook_type {
             HookTypes::PreNew => self.paths.pre_new_task.as_ref(),
@@ -87,6 +93,7 @@ impl Hooks {
         }
     }
 
+    /// Run the hook for the specified task.
     pub fn run(&self, hook_type: HookTypes, task: impl AsRef<str>) -> Option<String> {
         Self::run_command_with_name(
             self.get_path(&hook_type)?,
@@ -95,6 +102,7 @@ impl Hooks {
         )
     }
 
+    /// Run the task with lazy conversion to string.
     pub fn run_lazy(&self, hook_type: HookTypes, task: impl Fn() -> String) -> Option<String> {
         Self::run_command_with_name(
             self.get_path(&hook_type)?,

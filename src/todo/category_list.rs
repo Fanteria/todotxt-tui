@@ -9,6 +9,7 @@ use tui::{
     widgets::{List, ListItem},
 };
 
+/// Represents the state of a category, where the `String` value represents the name of the category.
 #[derive(Debug, PartialEq, Eq)]
 pub struct CategoryState<'a> {
     pub name: &'a String,
@@ -67,10 +68,6 @@ impl<'a> CategoryList<'a> {
 
     /// Returns a vector of references to categories that start with the specified pattern.
     ///
-    /// # Arguments
-    ///
-    /// * `pattern` - The pattern to match the categories with.
-    ///
     /// # Returns
     ///
     /// A vector of references to the matching categories.
@@ -94,14 +91,6 @@ impl<'a> CategoryList<'a> {
 
     /// Gets the name of the category at the specified index.
     ///
-    /// # Arguments
-    ///
-    /// * `index` - The index of the category to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// A reference to the name of the category.
-    ///
     /// # Panics
     ///
     /// Panics if the index is out of bounds.
@@ -111,16 +100,6 @@ impl<'a> CategoryList<'a> {
 
     /// Slices the category list based on the provided range of indexes and returns
     /// a view of the categories.
-    ///
-    /// # Arguments
-    ///
-    /// * `range` - A range of indexes specifying the start and end points of the slice.
-    /// * `to_search` - An optional search string used to highlight categories.
-    ///
-    /// # Returns
-    ///
-    /// A `CategoryView` containing the sliced categories and relevant styling,
-    /// limited to the specified range.
     pub fn get_view(
         &'a self,
         range: impl RangeBounds<usize>,

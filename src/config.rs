@@ -461,6 +461,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Retrieves the path to the configuration folder for the application.
     pub fn config_folder() -> PathBuf {
         match var("XDG_CONFIG_HOME") {
             Ok(config_path) => PathBuf::from(config_path),
@@ -471,10 +472,12 @@ impl Config {
 }
 
 impl ConfigDefaults for Config {
+    /// Retrieves the default configuration file for the application.
     fn config_path() -> PathBuf {
         Self::config_folder().join("todotxt-tui.toml")
     }
 
+    /// Default `--help` colors for the application.
     fn help_colors() -> clap::builder::Styles {
         clap::builder::Styles::styled()
             .usage(AnsiColor::Green.on_default().bold())

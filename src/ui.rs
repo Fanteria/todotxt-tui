@@ -96,15 +96,6 @@ impl UI {
     }
 
     /// Builds a new `UI` instance using the provided configuration.
-    ///
-    /// # Arguments
-    ///
-    /// * `config`: A reference to a `Config` struct containing all necessary settings for building the UI.
-    ///
-    /// # Returns
-    ///
-    /// * On success, returns an `Ok(UI)` containing the newly built UI.
-    /// * On failure, returns an `Err(Result<(), ErrorKind>)`.
     pub fn build(config: &Config) -> Result<UI> {
         let mut todo = ToDo::new(
             config.todo_config.clone(),
@@ -140,10 +131,6 @@ impl UI {
     ///
     /// This method recalculates the position and size of the input chunk based on the dimensions
     /// of the main chunk, ensuring proper rendering of the input field.
-    ///
-    /// # Arguments
-    ///
-    /// * `main_chunk` - The main chunk's dimensions, typically representing the entire terminal window.
     fn update_chunk(&mut self, main_chunk: Rect) {
         let layout = tuiLayout::default()
             .direction(Direction::Vertical)
@@ -156,10 +143,6 @@ impl UI {
     /// Runs the user interface, handling setup and cleanup of terminal interactions.
     ///
     /// This method enables raw mode, sets up the terminal, and enters the main event loop.
-    ///
-    /// # Returns
-    ///
-    /// An `Result` indicating the success of running the user interface.
     pub fn run(&mut self) -> Result<()> {
         fn restore_tui() -> io::Result<()> {
             disable_raw_mode()?;
@@ -207,14 +190,6 @@ impl UI {
     }
 
     /// Handles the main event loop of the UI.
-    ///
-    /// # Arguments
-    ///
-    /// * `terminal` - The TUI Terminal.
-    ///
-    /// # Returns
-    ///
-    /// An `Result` indicating the success of the main loop.
     fn main_loop<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
         let mut versions = self.data.lock().unwrap().get_version().get_version_all();
         loop {
@@ -239,14 +214,6 @@ impl UI {
     }
 
     /// Draws the UI on the terminal.
-    ///
-    /// # Arguments
-    ///
-    /// * `terminal` - The TUI Terminal.
-    ///
-    /// # Returns
-    ///
-    /// An `Result` indicating the success of drawing.
     fn draw<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
         let mut block = Block::default()
             .borders(Borders::ALL)
@@ -279,10 +246,6 @@ impl UI {
     }
 
     /// Handles various user events.
-    ///
-    /// # Returns
-    ///
-    /// An `Result` indicating whether the application should exit.
     fn process_event(&mut self) -> Result<bool> {
         self.handle_event_window(read()?);
         Ok(self.quit)
@@ -290,13 +253,6 @@ impl UI {
 
     /// Handles window events, such as resizing and mouse clicks, to manage the
     /// user interface state.
-    ///
-    /// # Arguments
-    ///
-    /// * `e`: The event that triggers the function, which can be a resize event
-    ///   or a mouse click event.
-    ///
-    /// # Details
     ///
     /// This function processes different types of events:
     /// - **Resize Event**: Adjusts the UI chunk based on the new window dimensions.

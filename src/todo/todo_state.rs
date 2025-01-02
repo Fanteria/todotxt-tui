@@ -13,10 +13,6 @@ pub enum ToDoData {
 
 impl ToDoData {
     /// Gets a reference to the specified ToDo data.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - The type of ToDo data to retrieve.
     pub fn get_data<'a>(&self, todo: &'a ToDo) -> &'a Vec<Task> {
         match self {
             Self::Pending => &todo.pending,
@@ -25,10 +21,6 @@ impl ToDoData {
     }
 
     /// Gets a mutable reference to the specified ToDo data (pending or done).
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - The type of ToDo data to retrieve (Pending or Done).
     pub fn get_data_mut<'a>(&self, todo: &'a mut ToDo) -> &'a mut Vec<Task> {
         todo.version.update(self);
         match self {
@@ -37,6 +29,7 @@ impl ToDoData {
         }
     }
 
+    /// Gets the sorting method for the specified ToDo data.
     pub fn get_sorting(&self, config: &ToDoConfig) -> TaskSort {
         use ToDoData::*;
         match self {
@@ -55,6 +48,7 @@ pub enum ToDoCategory {
 }
 
 impl ToDoCategory {
+    /// Gets category data for the specified task.
     pub fn get_data<'a>(&self, task: &'a Task) -> &'a [String] {
         use ToDoCategory::*;
         match self {
@@ -64,6 +58,7 @@ impl ToDoCategory {
         }
     }
 
+    /// Gets all categories.
     pub fn get_all() -> &'static [ToDoCategory] {
         use ToDoCategory::*;
         static ALL_CATEGORIES: [ToDoCategory; 3] = [Projects, Contexts, Hashtags];
@@ -71,12 +66,14 @@ impl ToDoCategory {
     }
 }
 
+/// Enum to represent the state of a filter.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum FilterState {
     Select,
     Remove,
 }
 
+/// This structure represents category filters and the active task.
 #[derive(Default, Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct ToDoState {
     pub active: Option<(ToDoData, usize)>,
@@ -86,6 +83,7 @@ pub struct ToDoState {
 }
 
 impl ToDoState {
+    /// Get category filters.
     pub fn get_category(&self, category: ToDoCategory) -> &BTreeMap<String, FilterState> {
         use ToDoCategory::*;
         match category {
@@ -95,6 +93,7 @@ impl ToDoState {
         }
     }
 
+    /// Get mutable category filters.
     pub fn get_mut_category(
         &mut self,
         category: ToDoCategory,
@@ -107,6 +106,7 @@ impl ToDoState {
         }
     }
 
+    /// Check if a task should be filtered out.
     pub fn filter_out(&self, task: &Task) -> bool {
         fn filter(category: &BTreeMap<String, FilterState>, task_categories: &[String]) -> bool {
             category.iter().all(|(category, state)| {
@@ -122,6 +122,7 @@ impl ToDoState {
             && filter(&self.hashtag_filters, &task.hashtags)
     }
 
+    /// Set a filter for a category.
     pub fn set_filter(&mut self, category: ToDoCategory, filter: &str, filter_state: FilterState) {
         let category = self.get_mut_category(category);
         match category.get_mut(filter) {

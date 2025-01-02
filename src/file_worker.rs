@@ -38,16 +38,6 @@ pub struct FileWorker {
 
 impl FileWorker {
     /// Creates a new `FileWorker` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `todo_path` - The path to the todo list file.
-    /// * `archive_path` - The optional path to the archive file.
-    /// * `todo` - A shared reference to the `ToDo` data structure.
-    ///
-    /// # Returns
-    ///
-    /// A `FileWorker` instance.
     pub fn new(config: FileWorkerConfig, todo: Arc<Mutex<ToDo>>) -> FileWorker {
         log::info!(
             "Init file worker: file: {:?}, archive: {:?}",
@@ -60,10 +50,6 @@ impl FileWorker {
     /// Loads todo list data from the file(s).
     ///
     /// This method loads data from the main todo list file and optionally from an archive file.
-    ///
-    /// # Returns
-    ///
-    /// An `ioResult` indicating success or an error if file operations fail.
     pub fn load(&self) -> Result<()> {
         let mut todo = ToDo::default(); // TODO this can be improved
         Self::load_tasks(
@@ -89,15 +75,6 @@ impl FileWorker {
     }
 
     /// Loads tasks from a given reader and adds them to the provided `ToDo` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `reader` - A readable source (e.g., a file) to load tasks from.
-    /// * `todo` - A mutable reference to the `ToDo` instance where tasks will be added.
-    ///
-    /// # Returns
-    ///
-    /// An `ioResult` indicating success or an error if file operations fail.
     fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> Result<()> {
         for line in BufReader::new(reader).lines() {
             let line = line?;
@@ -116,10 +93,6 @@ impl FileWorker {
     /// Saves todo list data to the file(s).
     ///
     /// This method saves data to the main todo list file and optionally to an archive file.
-    ///
-    /// # Returns
-    ///
-    /// An `ioResult` indicating success or an error if file operations fail.
     fn save(&self) -> Result<()> {
         let mut f = File::create(&self.config.todo_path)
             .map_err(|e| ToDoError::io_operation_failed(&self.config.todo_path, e))?;
@@ -144,15 +117,6 @@ impl FileWorker {
     }
 
     /// Saves a list of tasks to the provided writer.
-    ///
-    /// # Arguments
-    ///
-    /// * `writer` - A writable destination (e.g., a file) where tasks will be saved.
-    /// * `tasks` - A reference to a slice of tasks to be saved.
-    ///
-    /// # Returns
-    ///
-    /// An `ioResult` indicating success or an error if file operations fail.
     fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> Result<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
@@ -165,15 +129,6 @@ impl FileWorker {
     ///
     /// This method starts the `FileWorker` thread and handles file-related operations and
     /// synchronization with other parts of the application.
-    ///
-    /// # Arguments
-    ///
-    /// * `autosave_duration` - The duration between automatic saves of todo data.
-    /// * `handle_changes` - A flag indicating whether to handle file change events.
-    ///
-    /// # Returns
-    ///
-    /// A `Sender` that can be used to send commands to the `FileWorker` thread.
     pub fn run(self) -> Result<Sender<FileWorkerCommands>> {
         use FileWorkerCommands::*;
         let (tx, rx) = mpsc::channel::<FileWorkerCommands>();

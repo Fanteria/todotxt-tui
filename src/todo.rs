@@ -53,10 +53,6 @@ impl ToDo {
     }
 
     /// Moves data from another ToDo instance into this one.
-    ///
-    /// # Arguments
-    ///
-    /// * `other` - The other ToDo instance to move data from.
     pub fn move_data(&mut self, other: Self) {
         self.pending = other.pending;
         self.done = other.done;
@@ -95,10 +91,6 @@ impl ToDo {
     }
 
     /// Adds a new task to the ToDo list.
-    ///
-    /// # Arguments
-    ///
-    /// * `task` - The `Task` to be added to the ToDo list.
     pub fn add_task(&mut self, task: Task) {
         if task.finished {
             self.done.push(task);
@@ -110,10 +102,6 @@ impl ToDo {
     }
 
     /// Gets a filtered list of categories from the ToDo data.
-    ///
-    /// # Arguments
-    ///
-    /// * `category` - The type of category to retrieve.
     ///
     /// # Returns
     ///
@@ -186,6 +174,7 @@ impl ToDo {
         self.state.set_filter(category, filter, filter_state)
     }
 
+    /// Retrieves a list of tasks filtered according to the current state.
     fn get_filtered_tasks(&self, data: ToDoData) -> Vec<(usize, &Task)> {
         data.get_data(self)
             .iter()
@@ -390,6 +379,7 @@ impl ToDo {
         self.state = state
     }
 
+    /// Find task in ToDo list by `to_find` string.
     pub fn find_task(&self, data: ToDoData, to_find: &str) -> Vec<usize> {
         let tasks = match data {
             ToDoData::Pending => &self.pending,

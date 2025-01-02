@@ -17,6 +17,7 @@ pub struct Version {
 }
 
 impl Version {
+    /// Constructs a new `Version` instance.
     pub fn new(tx: Sender<FileWorkerCommands>) -> Self {
         Self {
             versions: Versions::default(),
@@ -24,6 +25,7 @@ impl Version {
         }
     }
 
+    /// Update version of both pending and done tasks.
     pub fn update_all(&mut self) {
         self.versions.pending += 1;
         self.versions.done += 1;
@@ -34,6 +36,7 @@ impl Version {
         }
     }
 
+    /// Update version of a specific task type.
     pub fn update(&mut self, data_type: &ToDoData) {
         match data_type {
             ToDoData::Pending => {
@@ -48,6 +51,7 @@ impl Version {
         }
     }
 
+    /// Check if the version is actual.
     pub fn is_actual(&self, version: VersionNum, data_type: &ToDoData) -> bool {
         version
             == match data_type {
@@ -56,10 +60,12 @@ impl Version {
             }
     }
 
+    /// Check if the version is actual for both pending and done tasks.
     pub fn is_actual_all(&self, versions: Versions) -> bool {
         self.versions.pending == versions.pending && self.versions.done == versions.done
     }
 
+    /// Get the version of a specific task type.
     pub fn get_version(&self, data_type: &ToDoData) -> VersionNum {
         match data_type {
             ToDoData::Pending => self.versions.pending,
@@ -67,6 +73,7 @@ impl Version {
         }
     }
 
+    /// Get the version of both pending and done tasks.
     pub fn get_version_all(&self) -> Versions {
         self.versions
     }

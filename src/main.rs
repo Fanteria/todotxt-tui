@@ -42,6 +42,7 @@ fn log_init() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Asks the user if they want to create a default configuration file.
 fn ask_to_create_config(err: ToDoError) -> ToDoError {
     fn ask() -> bool {
         let mut s = String::new();

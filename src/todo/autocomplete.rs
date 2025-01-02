@@ -1,5 +1,6 @@
 use super::{ToDo, ToDoCategory};
 
+/// This function returns the index of the first character that differs between two strings.
 fn same_start_index(fst: &str, sec: &str) -> usize {
     for (i, (fst_char, sec_char)) in fst.chars().zip(sec.chars()).enumerate() {
         if fst_char != sec_char {

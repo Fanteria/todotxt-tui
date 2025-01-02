@@ -76,6 +76,7 @@ pub enum ToDoError {
 }
 
 impl ToDoError {
+    /// Add path to IO operation failed error.
     pub fn io_operation_failed(path: impl AsRef<Path>, err: std::io::Error) -> Self {
         Self::IOoperationFailed(path.as_ref().to_path_buf(), err)
     }

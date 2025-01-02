@@ -162,14 +162,6 @@ pub struct EventHandlerUI(HashMap<KeyCodeA, UIEvent>);
 
 impl EventHandlerUI {
     /// Get the UI event corresponding to a given key code.
-    ///
-    /// # Arguments
-    ///
-    /// * `key` - The key code to map to a UI event.
-    ///
-    /// # Returns
-    ///
-    /// The UI event corresponding to the key code.
     pub fn get_event(&self, key: &KeyCode) -> UIEvent {
         *self.0.get(&KeyCodeA(*key)).unwrap_or(&UIEvent::None)
     }

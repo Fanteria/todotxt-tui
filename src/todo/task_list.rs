@@ -20,6 +20,7 @@ pub struct TaskList<'a> {
     pub styles: &'a Styles,
 }
 
+/// Represents a view of a list of tasks, limited to a specific range of indexes.
 pub struct TaskView<'a> {
     pub vec: &'a [Item<'a>],
     pub styles: &'a Styles,
@@ -37,30 +38,12 @@ impl<'a> TaskList<'a> {
     }
 
     /// Retrieves the actual index of a task based on its position in the list.
-    ///
-    /// # Arguments
-    ///
-    /// * `index` - The index of the task in the list.
-    ///
-    /// # Returns
-    ///
-    /// The actual index of the task in the original list.
     pub fn get_actual_index(&self, index: usize) -> Option<usize> {
         Some(self.vec.get(index)?.0)
     }
 
     /// Slices the task list based on the provided range of indexes and returns
     /// a view of the tasks.
-    ///
-    /// # Arguments
-    ///
-    /// * `range` - A range of indexes specifying the start and end points of the slice.
-    /// * `to_search` - An optional search string used to highlight tasks.
-    ///
-    /// # Returns
-    ///
-    /// A `TaskView` containing the sliced tasks and relevant styling, limited
-    /// to the specified range.
     pub fn get_view(
         &'a self,
         range: impl RangeBounds<usize>,
