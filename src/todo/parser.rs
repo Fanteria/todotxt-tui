@@ -1,10 +1,10 @@
 mod line;
 mod line_block;
-    ///
-    /// # Arguments
-    ///
-    /// * `column` - `x` coordinate.
-    /// * `row` - `y` coordinate.
+///
+/// # Arguments
+///
+/// * `column` - `x` coordinate.
+/// * `row` - `y` coordinate.
 mod parts;
 
 use super::{ToDo, ToDoData};
