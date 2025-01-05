@@ -46,8 +46,8 @@ impl Display for TaskSort {
 #[derive(Clone, Copy, Serialize, Deserialize, Default, ValueEnum, Debug, PartialEq, Eq)]
 pub enum SavePolicy {
     ManualOnly,
-    #[default]
     AutoSave,
+    #[default]
     OnChange,
 }
 
