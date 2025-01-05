@@ -1,0 +1,6 @@
+[book]
+authors = ["Jiří Alexandrovič"]
+language = "en"
+multilingual = false
+src = "doc"
+title = "Todo.txt TUI"
