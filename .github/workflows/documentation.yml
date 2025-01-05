@@ -25,21 +25,14 @@ jobs:
            echo `pwd`/mdbook >> $GITHUB_PATH
        - name: Build Book
          run: |
-           cd ./doc
            mdbook build
-           ls -la
        - name: Setup Pages
          uses: actions/configure-pages@v4
-       - name: Check if exists
-         run: |
-           ls -la
-           cd ./doc
-           ls -la
        - name: Upload artifact
          uses: actions/upload-pages-artifact@v3
          with:
            # Upload entire repository
-           path: 'doc/book'
+           path: 'book'
        - name: Deploy to GitHub Pages
          id: deployment
          uses: actions/deploy-pages@v4
