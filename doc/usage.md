@@ -1,5 +1,7 @@
 # Usage
 
+**Work in progress...**
+
 Todo.txt TUI provides a straightforward and customizable interface for managing your tasks. The following keybindings and actions are available for basic usage, and please note that these actions can be configured according to your preferences in the configuration file:
 
 - `j`: Move down in the list.
