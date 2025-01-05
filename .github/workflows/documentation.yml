@@ -27,8 +27,14 @@ jobs:
          run: |
            cd ./doc
            mdbook build
+           ls -la
        - name: Setup Pages
          uses: actions/configure-pages@v4
+       - name: Check if exists
+         run: |
+           ls -la
+           cd ./doc
+           ls -la
        - name: Upload artifact
          uses: actions/upload-pages-artifact@v3
          with:
