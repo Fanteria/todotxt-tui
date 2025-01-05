@@ -124,7 +124,7 @@ impl UI {
         }
 
         let todo = Arc::new(Mutex::new(todo));
-        let file_worker = FileWorker::new(config.file_worker_config.clone(), todo.clone());
+        let file_worker = FileWorker::new(config.file_worker_config.clone(), todo.clone())?;
 
         file_worker.load()?;
         let tx = file_worker.run()?;

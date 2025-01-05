@@ -11,7 +11,7 @@ use notify::{
 use std::{
     fs::File,
     io::{BufRead, BufReader, BufWriter, Read, Write},
-    path::Path,
+    path::{Path, PathBuf},
     str::FromStr,
     sync::{
         mpsc::{self, Sender},
@@ -39,31 +39,36 @@ pub struct FileWorker {
 impl FileWorker {
     /// Creates a new `FileWorker` instance.
     ///
-    /// # Arguments
-    ///
-    /// * `todo_path` - The path to the todo list file.
-    /// * `archive_path` - The optional path to the archive file.
-    /// * `todo` - A shared reference to the `ToDo` data structure.
-    ///
-    /// # Returns
-    ///
-    /// A `FileWorker` instance.
-    pub fn new(config: FileWorkerConfig, todo: Arc<Mutex<ToDo>>) -> FileWorker {
+    /// `todo_path` and `archive_path` are expanded using `shellexpand` to resolve environment
+    /// variables. If path is non UTF-8, then expansion is not performed.
+    pub fn new(mut config: FileWorkerConfig, todo: Arc<Mutex<ToDo>>) -> Result<FileWorker> {
+        if let Some(todo_path) = config.todo_path.to_str() {
+            config.todo_path = PathBuf::from(
+                shellexpand::env(todo_path)
+                    .map_err(|e| ToDoError::path_exapand(&config.todo_path, e))?
+                    .to_string(),
+            );
+        }
+        if let Some(archive_path) = &config.archive_path {
+            if let Some(archive_path) = archive_path.to_str() {
+                config.archive_path = Some(PathBuf::from(
+                    shellexpand::env(archive_path)
+                        .map_err(|e| ToDoError::path_exapand(&config.todo_path, e))?
+                        .to_string(),
+                ));
+            }
+        }
         log::info!(
             "Init file worker: file: {:?}, archive: {:?}",
             config.todo_path,
             config.archive_path
         );
-        FileWorker { config, todo }
+        Ok(FileWorker { config, todo })
     }
 
     /// Loads todo list data from the file(s).
     ///
     /// This method loads data from the main todo list file and optionally from an archive file.
-    ///
-    /// # Returns
-    ///
-    /// An `ioResult` indicating success or an error if file operations fail.
     pub fn load(&self) -> Result<()> {
         let mut todo = ToDo::default(); // TODO this can be improved
         Self::load_tasks(
@@ -89,15 +94,6 @@ impl FileWorker {
     }
 
     /// Loads tasks from a given reader and adds them to the provided `ToDo` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `reader` - A readable source (e.g., a file) to load tasks from.
-    /// * `todo` - A mutable reference to the `ToDo` instance where tasks will be added.
-    ///
-    /// # Returns
-    ///
-    /// An `ioResult` indicating success or an error if file operations fail.
     fn load_tasks<R: Read>(reader: R, todo: &mut ToDo) -> Result<()> {
         for line in BufReader::new(reader).lines() {
             let line = line?;
@@ -116,10 +112,6 @@ impl FileWorker {
     /// Saves todo list data to the file(s).
     ///
     /// This method saves data to the main todo list file and optionally to an archive file.
-    ///
-    /// # Returns
-    ///
-    /// An `ioResult` indicating success or an error if file operations fail.
     fn save(&self) -> Result<()> {
         let mut f = File::create(&self.config.todo_path)
             .map_err(|e| ToDoError::io_operation_failed(&self.config.todo_path, e))?;
@@ -144,15 +136,6 @@ impl FileWorker {
     }
 
     /// Saves a list of tasks to the provided writer.
-    ///
-    /// # Arguments
-    ///
-    /// * `writer` - A writable destination (e.g., a file) where tasks will be saved.
-    /// * `tasks` - A reference to a slice of tasks to be saved.
-    ///
-    /// # Returns
-    ///
-    /// An `ioResult` indicating success or an error if file operations fail.
     fn save_tasks<W: Write>(writer: &mut W, tasks: &[Task]) -> Result<()> {
         let mut writer = BufWriter::new(writer);
         for task in tasks.iter() {
@@ -165,15 +148,6 @@ impl FileWorker {
     ///
     /// This method starts the `FileWorker` thread and handles file-related operations and
     /// synchronization with other parts of the application.
-    ///
-    /// # Arguments
-    ///
-    /// * `autosave_duration` - The duration between automatic saves of todo data.
-    /// * `handle_changes` - A flag indicating whether to handle file change events.
-    ///
-    /// # Returns
-    ///
-    /// A `Sender` that can be used to send commands to the `FileWorker` thread.
     pub fn run(self) -> Result<Sender<FileWorkerCommands>> {
         use FileWorkerCommands::*;
         let (tx, rx) = mpsc::channel::<FileWorkerCommands>();
@@ -251,11 +225,6 @@ impl FileWorker {
     }
 
     /// Spawns an autosave thread that periodically saves the todo list data.
-    ///
-    /// # Arguments
-    ///
-    /// * `tx` - A sender for sending `FileWorkerCommands` to the `FileWorker` thread.
-    /// * `duration` - The duration between automatic saves of todo data.
     fn spawn_autosave(tx: Sender<FileWorkerCommands>, duration: Duration) {
         log::trace!("Start autosaver");
         thread::spawn(move || loop {
@@ -268,11 +237,6 @@ impl FileWorker {
     }
 
     /// Spawns a file watcher thread to monitor changes to a specific file.
-    ///
-    /// # Arguments
-    ///
-    /// * `tx` - A sender for sending `FileWorkerCommands` to the `FileWorker` thread.
-    /// * `path` - The path to the file to be watched for changes.
     fn spawn_watcher(tx: Sender<FileWorkerCommands>, path: &Path) -> Result<()> {
         log::trace!("Start file watcher");
         let (tx_handle, rx_handle) = std::sync::mpsc::channel();
@@ -388,6 +352,27 @@ mod tests {
             &get_expected(|line| line.starts_with("x ")),
             "Done check is wrong",
         )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn new_expand_env() -> Result<()> {
+        let config = FileWorkerConfig {
+            todo_path: PathBuf::from("$TODO_TUI_TEST_DIR/test"),
+            archive_path: Some(PathBuf::from("$XDG_CONFIG_HOME/test")),
+            ..Default::default()
+        };
+
+        let file_worker = FileWorker::new(config, Arc::new(Mutex::new(ToDo::default())))?;
+        assert_eq!(
+            file_worker.config.todo_path,
+            PathBuf::from(env!("TODO_TUI_TEST_DIR").to_string() + "/test")
+        );
+        assert_eq!(
+            file_worker.config.archive_path,
+            Some(PathBuf::from(env!("XDG_CONFIG_HOME").to_string() + "/test"))
+        );
 
         Ok(())
     }

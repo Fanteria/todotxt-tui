@@ -1,3 +1,4 @@
+use shellexpand::LookupError;
 use std::{
     env::VarError,
     path::{Path, PathBuf},
@@ -73,10 +74,16 @@ pub enum ToDoError {
     HookFailedToParseError(#[source] FromUtf8Error),
     #[error("Failed to parse hook stdout {0}")]
     HookFailedToParseStdout(#[source] FromUtf8Error),
+    #[error("Failed to exand path {0:?}: {1}")]
+    FailedToExpandPath(PathBuf, #[source] LookupError<VarError>),
 }
 
 impl ToDoError {
     pub fn io_operation_failed(path: impl AsRef<Path>, err: std::io::Error) -> Self {
         Self::IOoperationFailed(path.as_ref().to_path_buf(), err)
+    }
+
+    pub fn path_exapand(path: impl AsRef<Path>, err: LookupError<VarError>) -> Self {
+        Self::FailedToExpandPath(path.as_ref().to_path_buf(), err)
     }
 }
