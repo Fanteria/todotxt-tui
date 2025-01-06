@@ -29,7 +29,7 @@ The title of the window when `todotxt-tui` is opened.
 Defines the keybinds for window actions.  
 
 **Default:**  
-```plaintext
+```toml
 I  = "InsertMode"
 L  = "MoveRight"
 q  = "Quit"
