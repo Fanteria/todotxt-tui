@@ -4,9 +4,7 @@ Todo.txt TUI is a highly customizable, terminal-based application for managing y
 
 For detailed instructions on [installation](https://fanteria.github.io/todotxt-tui/installation.html) and [configuration](https://fanteria.github.io/todotxt-tui/configuration/index.html), refer to the [documentation](https://fanteria.github.io/todotxt-tui/about.html).
 
-<video controls>
- <source src="https://github.com/Fanteria/todo-tui/assets/28980012/11ab70e3-482c-4994-ac88-198953b08e39" type="video/webm">
-</video>
+[Preview.webm](https://github.com/Fanteria/todo-tui/assets/28980012/11ab70e3-482c-4994-ac88-198953b08e39)
 
 ## Feedback and Bug Reporting
 
