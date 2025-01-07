@@ -29,3 +29,5 @@ state.toml
 
 #MdBook
 /book
+
+/.vscode
