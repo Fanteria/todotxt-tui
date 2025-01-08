@@ -3,6 +3,8 @@ use crate::{
     config::{Styles, StylesValue},
     {Result, ToDoError},
 };
+use regex::Regex;
+use todo_txt::Task;
 use tui::style::Style;
 
 #[derive(Debug)]
@@ -10,6 +12,7 @@ use tui::style::Style;
 pub struct LineBlock {
     pub parts: Vec<Parts>,
     pub style: StylesValue,
+    pub to_colorize: bool,
 }
 
 impl LineBlock {
@@ -64,33 +67,65 @@ impl LineBlock {
         Ok(ret)
     }
 
-    pub fn fill(&self, todo: &ToDo, styles: &Styles) -> Option<(String, Style)> {
-        let mut ret = String::new();
-        for part in &self.parts {
-            ret += &part.fill(todo)?;
+    pub fn fill(&self, task: &Task, todo: &ToDo, styles: &Styles) -> Option<Vec<(String, Style)>> {
+        let style = match todo.get_active() {
+            Some(task) => self.style.get_style(task, styles),
+            None => Style::default(),
+        };
+        let string = self
+            .parts
+            .iter()
+            .map(|part| part.fill(task, todo))
+            .collect::<Option<String>>()?;
+        if !self.to_colorize {
+            Some(vec![(string, style)])
+        } else {
+            let re = Regex::new(r"(?:^|\s)([+@#]\w+)(?:$|\s)").unwrap();
+            let mut last_index = 0;
+            Some(
+                re.captures_iter(&string)
+                    .filter_map(|m| m.get(1))
+                    .flat_map(|m| {
+                        let start = last_index;
+                        last_index = m.end();
+                        let category = string[m.start()..m.end()].to_string();
+                        let category_style = styles.get_category_style(&category).get_style();
+                        [
+                            (string[start..m.start()].to_string(), style),
+                            (category, category_style),
+                        ]
+                    })
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .chain([(string[last_index..string.len()].to_string(), style)])
+                    .collect::<Vec<_>>(),
+            )
         }
-        Some((
-            ret,
-            match todo.get_active() {
-                Some(task) => self.style.get_style(task, styles),
-                None => Style::default(),
-            },
-        ))
     }
 
-    pub fn try_from_styled(value: &str, style: Option<String>, styles: &Styles) -> Result<Self> {
+    pub fn try_from_styled(
+        value: &str,
+        style: Option<String>,
+        to_colorize: bool,
+        styles: &Styles,
+    ) -> Result<Self> {
         Ok(LineBlock {
             parts: Self::parse_variables(value)?,
             style: match style {
                 Some(style) => styles.get_style(&style)?,
                 None => StylesValue::default(),
             },
+            to_colorize,
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use crate::config::Conf;
+
     use super::*;
 
     #[test]
@@ -157,5 +192,66 @@ mod tests {
                 .to_string(),
             ToDoError::ParseVariableNotClosed(String::from("variable ")).to_string()
         );
+    }
+
+    #[test]
+    fn fill() -> Result<()> {
+        let mut todo = ToDo::default();
+        todo.new_task("Project +project asdf").unwrap();
+        todo.new_task("Some task 2").unwrap();
+        todo.new_task("Some task 3").unwrap();
+        let task = Task::from_str("task")?;
+        let style = Styles::from_reader(
+            r#"
+[projects_style]
+fg = "Green"
+
+[contexts_style]
+fg = "Red"
+
+[hashtags_style]
+fg = "Yellow"
+
+[custom_category_style."+custom"]
+fg = "Black"
+        "#
+            .as_bytes(),
+        )
+        .unwrap();
+
+        let block = LineBlock::try_from_styled(
+            "Done +project to be @splitted here #hashtag and some +custom project",
+            Some(String::from("black")),
+            true,
+            &style,
+        )?;
+        assert_eq!(
+            block.fill(&task, &todo, &style),
+            Some(vec![
+                (String::from("Done "), Style::default()),
+                (
+                    String::from("+project"),
+                    Style::default().fg(tui::style::Color::Green)
+                ),
+                (String::from(" to be "), Style::default()),
+                (
+                    String::from("@splitted"),
+                    Style::default().fg(tui::style::Color::Red)
+                ),
+                (String::from(" here "), Style::default()),
+                (
+                    String::from("#hashtag"),
+                    Style::default().fg(tui::style::Color::Yellow)
+                ),
+                (String::from(" and some "), Style::default()),
+                (
+                    String::from("+custom"),
+                    Style::default().fg(tui::style::Color::Black)
+                ),
+                (String::from(" project"), Style::default()),
+            ])
+        );
+
+        Ok(())
     }
 }

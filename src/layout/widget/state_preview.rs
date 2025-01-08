@@ -1,5 +1,10 @@
 use super::{widget_base::WidgetBase, widget_trait::State};
-use crate::{config::Config, todo::Parser, ui::UIEvent, Result};
+use crate::{
+    config::Config,
+    todo::{Parser, ToDo},
+    ui::UIEvent,
+    Result,
+};
 use tui::{
     text::{Line, Span},
     widgets::{Paragraph, Wrap},
@@ -39,7 +44,11 @@ impl State for StatePreview {
     }
 
     fn render(&self, f: &mut Frame) {
-        let lines = self.parser.fill(&self.base.data());
+        let todo: &ToDo = &self.base.data();
+        let lines = match todo.get_active() {
+            Some(act_task) => self.parser.fill(act_task, todo),
+            None => vec![],
+        };
         let mut paragraph = Paragraph::new(
             lines
                 .iter()

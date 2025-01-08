@@ -8,6 +8,7 @@ use line::Line;
 use line_block::LineBlock;
 use parts::Parts;
 use std::iter::Peekable;
+use todo_txt::Task;
 use tui::style::Style;
 
 pub struct Parser {
@@ -50,21 +51,28 @@ impl Parser {
             match c {
                 '[' => {
                     let block = Parser::read_block(&mut iter, ']')?;
-                    line.add_span_styled(&act, None, styles)?;
+                    line.add_span_styled(&act, None, false, styles)?;
                     act = String::default();
                     let mut style = None;
+                    let mut to_colorize = false;
                     if Some(&'(') == iter.peek() {
                         iter.next();
-                        style = Some(Parser::read_block(&mut iter, ')')?);
+                        let block = Parser::read_block(&mut iter, ')')?;
+                        style = Some(if let Some(b) = block.as_str().strip_prefix('!') {
+                            to_colorize = true;
+                            b.trim().to_string()
+                        } else {
+                            block
+                        });
                     }
-                    line.add_span_styled(&block, style, styles)?;
+                    line.add_span_styled(&block, style, to_colorize, styles)?;
                 }
                 '\\' => act.push(match iter.next() {
                     Some(ch) => ch,
                     None => return Err(ToDoError::ParseBlockEscapeOnEnd(act + "\\")),
                 }),
                 '\n' => {
-                    line.add_span_styled(&act, None, styles)?;
+                    line.add_span_styled(&act, None, false, styles)?;
                     act = String::default();
                     ret.push(line);
                     line = Line::default();
@@ -72,21 +80,23 @@ impl Parser {
                 _ => act.push(c),
             }
         }
-        line.add_span_styled(&act, None, styles)?;
+        line.add_span_styled(&act, None, false, styles)?;
         ret.push(line);
         Ok(ret)
     }
 
-    pub fn fill(&self, todo: &ToDo) -> Vec<Vec<(String, Style)>> {
+    pub fn fill(&self, task: &Task, todo: &ToDo) -> Vec<Vec<(String, Style)>> {
         self.lines
             .iter()
-            .filter_map(|line| line.fill(todo, &self.styles))
+            .filter_map(|line| line.fill(task, todo, &self.styles))
             .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::config::StylesValue;
     use tui::style::{Color, Modifier};
@@ -140,6 +150,7 @@ mod tests {
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
                 style: StylesValue::default(),
+                to_colorize: false,
             }])
         );
         assert_eq!(
@@ -147,6 +158,7 @@ mod tests {
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text [ with escapes ]".to_string())],
                 style: StylesValue::default(),
+                to_colorize: false,
             }])
         );
         assert_eq!(
@@ -154,6 +166,7 @@ mod tests {
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
                 style: Style::default().fg(Color::Red).into(),
+                to_colorize: false,
             }])
         );
         assert_eq!(
@@ -162,10 +175,12 @@ mod tests {
                 LineBlock {
                     parts: vec![Parts::Text("some text".to_string())],
                     style: StylesValue::default(),
+                    to_colorize: false,
                 },
                 LineBlock {
                     parts: vec![Parts::Text(" and another text".to_string())],
                     style: StylesValue::default(),
+                    to_colorize: false,
                 }
             ])
         );
@@ -175,10 +190,12 @@ mod tests {
                 LineBlock {
                     parts: vec![Parts::Text("some text".to_string())],
                     style: StylesValue::default(),
+                    to_colorize: false,
                 },
                 LineBlock {
                     parts: vec![Parts::Text("[ and escaped text ]".to_string())],
                     style: StylesValue::default(),
+                    to_colorize: false,
                 }
             ])
         );
@@ -187,6 +204,7 @@ mod tests {
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
                 style: StylesValue::default(),
+                to_colorize: false,
             }])
         );
         assert_eq!(
@@ -198,10 +216,12 @@ mod tests {
                 LineBlock {
                     parts: vec![Parts::Text("some text".to_string())],
                     style: Style::default().fg(Color::Red).into(),
+                    to_colorize: false,
                 },
                 LineBlock {
                     parts: vec![Parts::Text(" text between ".to_string())],
                     style: StylesValue::default(),
+                    to_colorize: false,
                 },
                 LineBlock {
                     parts: vec![Parts::Text("another text".to_string())],
@@ -209,6 +229,7 @@ mod tests {
                         .fg(Color::Blue)
                         .add_modifier(Modifier::BOLD)
                         .into(),
+                    to_colorize: false,
                 }
             ])
         );
@@ -217,6 +238,7 @@ mod tests {
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
                 style: Style::default().fg(Color::Red).into(),
+                to_colorize: false,
             },])
         );
         let parse = Parser::parse("some text\nnew line", &Styles::default())?;
@@ -226,6 +248,7 @@ mod tests {
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("some text".to_string())],
                 style: StylesValue::default(),
+                to_colorize: false,
             }])
         );
         assert_eq!(
@@ -233,6 +256,7 @@ mod tests {
             Line(vec![LineBlock {
                 parts: vec![Parts::Text("new line".to_string())],
                 style: StylesValue::default(),
+                to_colorize: false,
             }])
         );
 
@@ -256,11 +280,16 @@ mod tests {
         todo.new_task("task").unwrap();
         todo.new_task("x done task").unwrap();
 
-        assert_eq!(parser.fill(&todo), Vec::<Vec<(String, Style)>>::new());
+        let task = Task::from_str("task").unwrap();
+
+        assert_eq!(
+            parser.fill(&task, &todo),
+            vec![vec![(String::from("some text"), Style::default())]]
+        );
 
         todo.set_active(ToDoData::Pending, 0);
         assert_eq!(
-            parser.fill(&todo),
+            parser.fill(&task, &todo),
             vec![vec![(String::from("some text"), Style::default())]]
         );
 
@@ -274,9 +303,10 @@ mod tests {
         todo.new_task("task").unwrap();
         todo.new_task("x done task").unwrap();
         todo.set_active(ToDoData::Pending, 0);
+        let task = Task::from_str("task").unwrap();
 
         assert_eq!(
-            parser.fill(&todo),
+            parser.fill(&task, &todo),
             vec![vec![(String::from("Done: 1 Pending: 1"), Style::default())]]
         );
 
