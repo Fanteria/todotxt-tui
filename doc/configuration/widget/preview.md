@@ -7,33 +7,37 @@ Defines the format string used to generate the preview pane, which provides a de
 Text Colors: Enclose text in `[...]` and specify the style in parentheses. As style you can use any color definition from [Colors](../colors.md)
 
 **Examples:**
+
 - `[some text](Red)` sets the text to have a red foreground.
 - `[some text](^Red)` sets the text to have a red background.
 - `[some text](Blue Bold)` sets the text to have a bold, blue foreground.
 
 Dynamic Variables: Insert task-specific values using $name. You can use the following variables to represent task attributes:
 
-| Variable        | Description                                                      |
-| :-------------- | :--------------------------------------------------------------- |
-| $pending        | Number of pending tasks.                                         |
-| $done           | Number of completed tasks.                                       |
-| $subject        | Task subject.                                                    |
-| $priority       | Task priority.                                                   |
-| $create_date    | Task creation date.                                              |
-| $finish_date    | Task finish date.                                                |
-| $finished       | Task finished status (true or false).                            |
-| $threshold_date | Task threshold date.                                             |
-| $due_date       | Task due date.                                                   |
-| $contexts       | Task contexts.                                                   |
-| $projects       | Task projects.                                                   |
-| $hashtags       | Task hashtags.                                                   |
-| other           | Special values for custom key-value pairs in the todo.txt format |
+| Variable         | Description                                                                                                                                                           |
+| :--------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $pending         | The number of pending tasks.                                                                                                                                          |
+| $done            | The number of completed tasks.                                                                                                                                        |
+| $subject         | The subject of the task.                                                                                                                                              |
+| $priority        | The task's priority. If used as `priority:A`, it specifies a particular priority. If omitted, it uses the task's default priority.                                    |
+| $custom_category | The task's custom category. If used as `custom_category:+project`, it specifies a particular custom category. If omitted, it uses the task's default custom category. |
+| $create_date     | The creation date of the task.                                                                                                                                        |
+| $finish_date     | The finish date of the task.                                                                                                                                          |
+| $finished        | Indicates whether the task is finished (true or false).                                                                                                               |
+| $threshold_date  | The threshold date of the task.                                                                                                                                       |
+| $due_date        | The due date of the task.                                                                                                                                             |
+| $contexts        | The contexts associated with the task.                                                                                                                                |
+| $projects        | The projects associated with the task.                                                                                                                                |
+| $hashtags        | The hashtags associated with the task.                                                                                                                                |
+| other            | Special values for custom key-value pairs in the todo.txt format.                                                                                                     |
+
+It is also possible to use `!` to enforce category colors.
 
 Example format string:
 
 ```plaintext
 [Pending: $pending](#ff0000) [Done: $done](^Green)
-[Subject: $subject](Blue Bold)
+[Subject: $subject](! priority)
 [Priority: $priority](priority:A)
 [Created: $create_date](^Yellow)
 [Link: $link](^9)
