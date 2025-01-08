@@ -345,30 +345,29 @@ impl Styles {
             "contexts" => Const(self.contexts_style.get_style()),
             "hashtags" => Const(self.hashtags_style.get_style()),
             "category" => Const(self.category_style.get_style()),
-            _ => {
-                if name.starts_with("priority:") {
-                    if let Some(priority) = name.get("priority:".len()..) {
-                        return Ok(Const(
-                            match self
-                                .priority_style
-                                .get_style_from_str(&priority.to_uppercase())
-                            {
-                                Some(style) => style.get_style(),
-                                None => Style::default(),
-                            },
-                        ));
-                    }
-                } else if name.starts_with("custom_category:") {
-                    if let Some(custom_category) = name.get("custom_category:".len()..) {
-                        if let Some(custom_category) =
-                            self.custom_category_style.get(custom_category)
+            _ if name.starts_with("priority:") => {
+                if let Some(priority) = name.get("priority:".len()..) {
+                    return Ok(Const(
+                        match self
+                            .priority_style
+                            .get_style_from_str(&priority.to_uppercase())
                         {
-                            return Ok(Const(custom_category.get_style()));
-                        }
+                            Some(style) => style.get_style(),
+                            None => Style::default(),
+                        },
+                    ));
+                }
+                Const(TextStyle::from_str(name)?.get_style())
+            }
+            _ if name.starts_with("custom_category:") => {
+                if let Some(custom_category) = name.get("custom_category:".len()..) {
+                    if let Some(custom_category) = self.custom_category_style.get(custom_category) {
+                        return Ok(Const(custom_category.get_style()));
                     }
                 }
                 Const(TextStyle::from_str(name)?.get_style())
             }
+            _ => Const(TextStyle::from_str(name)?.get_style()),
         })
     }
 

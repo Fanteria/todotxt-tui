@@ -1,3 +1,5 @@
+use todo_txt::Task;
+
 use super::{ToDo, ToDoData};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -19,7 +21,7 @@ pub enum Parts {
 }
 
 impl Parts {
-    pub fn fill(&self, todo: &ToDo) -> Option<String> {
+    pub fn fill(&self, task: &Task, todo: &ToDo) -> Option<String> {
         use Parts::*;
         let process_vec = |vec: &[String]| {
             if vec.is_empty() {
@@ -28,30 +30,27 @@ impl Parts {
                 Some(vec.join(", "))
             }
         };
-        match todo.get_active() {
-            Some(task) => match self {
-                Text(text) => Some(text.to_string()),
-                Pending => Some(todo.len(ToDoData::Pending).to_string()),
-                Done => Some(todo.len(ToDoData::Done).to_string()),
-                Subject => Some(task.subject.clone()),
-                Priority => {
-                    if task.priority.is_lowest() {
-                        None
-                    } else {
-                        Some(task.priority.to_string())
-                    }
+        match self {
+            Text(text) => Some(text.to_string()),
+            Pending => Some(todo.len(ToDoData::Pending).to_string()),
+            Done => Some(todo.len(ToDoData::Done).to_string()),
+            Subject => Some(task.subject.clone()),
+            Priority => {
+                if task.priority.is_lowest() {
+                    None
+                } else {
+                    Some(task.priority.to_string())
                 }
-                CreateDate => task.create_date.map(|d| d.to_string()),
-                FinishDate => task.finish_date.map(|d| d.to_string()),
-                Finished => Some(task.finished.to_string()),
-                TresholdDate => task.threshold_date.map(|d| d.to_string()),
-                DueDate => task.due_date.map(|d| d.to_string()),
-                Contexts => process_vec(task.contexts()),
-                Projects => process_vec(task.projects()),
-                Hashtags => process_vec(&task.hashtags),
-                Special(special) => task.tags.get(special).cloned(),
-            },
-            None => None,
+            }
+            CreateDate => task.create_date.map(|d| d.to_string()),
+            FinishDate => task.finish_date.map(|d| d.to_string()),
+            Finished => Some(task.finished.to_string()),
+            TresholdDate => task.threshold_date.map(|d| d.to_string()),
+            DueDate => task.due_date.map(|d| d.to_string()),
+            Contexts => process_vec(task.contexts()),
+            Projects => process_vec(task.projects()),
+            Hashtags => process_vec(&task.hashtags),
+            Special(special) => task.tags.get(special).cloned(),
         }
     }
 }
@@ -79,6 +78,8 @@ impl From<String> for Parts {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::error::Result;
 
@@ -96,75 +97,85 @@ mod tests {
         todo.new_task("task spec:some-text").unwrap();
         todo.new_task("x 2023-11-12 2023-11-12 done task").unwrap();
 
-        assert_eq!(Parts::Text("Text".to_string()).fill(&todo), None);
-
-        todo.set_active(ToDoData::Pending, 0);
+        let task = Task::from_str("task").unwrap();
         assert_eq!(
-            Parts::Text("Text".to_string()).fill(&todo),
+            Parts::Text("Text".to_string()).fill(&task, &todo),
             Some(String::from("Text"))
         );
-
-        assert_eq!(Parts::Pending.fill(&todo), Some(String::from("9")));
-
-        assert_eq!(Parts::Done.fill(&todo), Some(String::from("1")));
-
-        assert_eq!(Parts::Subject.fill(&todo), Some(String::from("task")));
-
-        assert_eq!(Parts::Priority.fill(&todo), None);
-
-        todo.set_active(ToDoData::Pending, 1);
-        assert_eq!(Parts::Priority.fill(&todo), Some(String::from("A")));
-
-        todo.set_active(ToDoData::Pending, 2);
         assert_eq!(
-            Parts::CreateDate.fill(&todo),
+            Parts::Text("Text".to_string()).fill(&task, &todo),
+            Some(String::from("Text"))
+        );
+        assert_eq!(Parts::Pending.fill(&task, &todo), Some(String::from("9")));
+        assert_eq!(Parts::Done.fill(&task, &todo), Some(String::from("1")));
+        assert_eq!(
+            Parts::Subject.fill(&task, &todo),
+            Some(String::from("task"))
+        );
+        assert_eq!(Parts::Priority.fill(&task, &todo), None);
+
+        let task = Task::from_str("(A) task").unwrap();
+        assert_eq!(Parts::Priority.fill(&task, &todo), Some(String::from("A")));
+
+        let task = Task::from_str("2023-11-12 task").unwrap();
+        assert_eq!(
+            Parts::CreateDate.fill(&task, &todo),
             Some(String::from("2023-11-12"))
         );
+        assert_eq!(Parts::FinishDate.fill(&task, &todo), None);
 
-        assert_eq!(Parts::FinishDate.fill(&todo), None);
-
-        todo.set_active(ToDoData::Done, 0);
+        let task = Task::from_str("x 2023-11-12 2023-11-12 done task").unwrap();
         assert_eq!(
-            Parts::FinishDate.fill(&todo),
+            Parts::FinishDate.fill(&task, &todo),
             Some(String::from("2023-11-12"))
         );
-
-        todo.set_active(ToDoData::Done, 0);
-        assert_eq!(Parts::Finished.fill(&todo), Some(String::from("true")));
-
-        assert_eq!(Parts::TresholdDate.fill(&todo), None);
-
-        todo.set_active(ToDoData::Pending, 3);
         assert_eq!(
-            Parts::TresholdDate.fill(&todo),
+            Parts::Finished.fill(&task, &todo),
+            Some(String::from("true"))
+        );
+        assert_eq!(Parts::TresholdDate.fill(&task, &todo), None);
+
+        let task = Task::from_str("task t:2023-11-12").unwrap();
+        assert_eq!(
+            Parts::TresholdDate.fill(&task, &todo),
             Some(String::from("2023-11-12"))
         );
+        assert_eq!(Parts::DueDate.fill(&task, &todo), None);
 
-        assert_eq!(Parts::DueDate.fill(&todo), None);
-
-        todo.set_active(ToDoData::Pending, 4);
-        assert_eq!(Parts::DueDate.fill(&todo), Some(String::from("2023-11-12")));
-
-        assert_eq!(Parts::Contexts.fill(&todo), None);
-
-        todo.set_active(ToDoData::Pending, 5);
-        assert_eq!(Parts::Contexts.fill(&todo), Some(String::from("context")));
-
-        assert_eq!(Parts::Projects.fill(&todo), None);
-
-        todo.set_active(ToDoData::Pending, 6);
-        assert_eq!(Parts::Projects.fill(&todo), Some(String::from("project")));
-
-        assert_eq!(Parts::Hashtags.fill(&todo), None);
-
-        todo.set_active(ToDoData::Pending, 7);
-        assert_eq!(Parts::Hashtags.fill(&todo), Some(String::from("hashtag")));
-
-        assert_eq!(Parts::Special(String::from("spec")).fill(&todo), None);
-
-        todo.set_active(ToDoData::Pending, 8);
+        let task = Task::from_str("task due:2023-11-12").unwrap();
         assert_eq!(
-            Parts::Special(String::from("spec")).fill(&todo),
+            Parts::DueDate.fill(&task, &todo),
+            Some(String::from("2023-11-12"))
+        );
+        assert_eq!(Parts::Contexts.fill(&task, &todo), None);
+
+        let task = Task::from_str("task @context").unwrap();
+        assert_eq!(
+            Parts::Contexts.fill(&task, &todo),
+            Some(String::from("context"))
+        );
+        assert_eq!(Parts::Projects.fill(&task, &todo), None);
+
+        let task = Task::from_str("task +project").unwrap();
+        assert_eq!(
+            Parts::Projects.fill(&task, &todo),
+            Some(String::from("project"))
+        );
+        assert_eq!(Parts::Hashtags.fill(&task, &todo), None);
+
+        let task = Task::from_str("task #hashtag").unwrap();
+        assert_eq!(
+            Parts::Hashtags.fill(&task, &todo),
+            Some(String::from("hashtag"))
+        );
+        assert_eq!(
+            Parts::Special(String::from("spec")).fill(&task, &todo),
+            None
+        );
+
+        let task = Task::from_str("task spec:some-text").unwrap();
+        assert_eq!(
+            Parts::Special(String::from("spec")).fill(&task, &todo),
             Some(String::from("some-text"))
         );
 
