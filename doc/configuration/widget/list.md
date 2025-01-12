@@ -26,3 +26,26 @@ j = "ListDown"
 ```
 </dd>
 <br>
+
+<dt><b>Flag:</b> <code>--pending-format</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_PENDING_FORMAT</code></dt>
+<dt><b>Conf:</b> <code>pending_format</code></dt>
+<dd>
+
+The format string used to render pending tasks in the list. Format is same as for [preview](./preview.md).
+
+**default:** `[$subject](! priority)`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--done-format</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_DONE_FORMAT</code></dt>
+<dt><b>Conf:</b> <code>done_format</code></dt>
+<dd>
+
+The format string used to render completed tasks in the list. Format is same as for [preview](./preview.md).
+
+**default:** `[$subject](! priority)`
+</dd>
+<br>
+
