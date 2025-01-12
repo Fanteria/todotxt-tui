@@ -133,9 +133,9 @@ pub struct ListConfig {
     /// Keybindings configured for interacting with lists.
     #[arg(short = 'L')]
     pub list_keybind: EventHandlerUI,
-    /// The format string used to generate the pending tasks in list.
+    /// The format string used to render pending tasks in the list.
     pub pending_format: String,
-    /// The format string used to generate the done tasks in list.
+    /// The format string used to render completed tasks in the list.
     pub done_format: String,
 }
 
