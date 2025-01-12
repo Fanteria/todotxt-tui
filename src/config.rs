@@ -133,6 +133,10 @@ pub struct ListConfig {
     /// Keybindings configured for interacting with lists.
     #[arg(short = 'L')]
     pub list_keybind: EventHandlerUI,
+    /// The format string used to generate the pending tasks in list.
+    pub pending_format: String,
+    /// The format string used to generate the done tasks in list.
+    pub done_format: String,
 }
 
 impl Default for ListConfig {
@@ -146,6 +150,8 @@ impl Default for ListConfig {
                 (KeyCode::Char('G'), UIEvent::ListLast),
                 (KeyCode::Char('h'), UIEvent::CleanSearch),
             ]),
+            pending_format: String::from("[$subject](! priority)"),
+            done_format: String::from("[$subject](! priority)"),
         }
     }
 }

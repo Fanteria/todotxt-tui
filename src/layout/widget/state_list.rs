@@ -1,8 +1,9 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
     config::Config,
-    todo::{search::Search, ToDo, ToDoData},
+    todo::{search::Search, Parser, ToDo, ToDoData},
     ui::{HandleEvent, UIEvent},
+    Result,
 };
 use crossterm::event::KeyCode;
 use tui::{style::Style, widgets::List, Frame};
@@ -11,6 +12,7 @@ use tui::{style::Style, widgets::List, Frame};
 pub struct StateList {
     base: WidgetList,
     style: Style,
+    parser: Parser,
     pub data_type: ToDoData,
 }
 
@@ -26,15 +28,22 @@ impl StateList {
     /// # Returns
     ///
     /// A new `StateList` instance.
-    pub fn new(base: WidgetList, data_type: ToDoData, config: &Config) -> Self {
-        Self {
+    pub fn new(base: WidgetList, data_type: ToDoData, config: &Config) -> Result<Self> {
+        Ok(Self {
             base,
             style: config
                 .active_color_config
                 .get_active_style(&data_type)
                 .get_style(),
+            parser: Parser::new(
+                match data_type {
+                    ToDoData::Pending => &config.list_config.pending_format,
+                    ToDoData::Done => &config.list_config.done_format,
+                },
+                config.styles.clone(),
+            )?,
             data_type,
-        }
+        })
     }
 
     /// Gets the number of tasks in the list.
@@ -153,8 +162,13 @@ impl State for StateList {
         let data = self.base.data();
         let filtered = data.get_filtered_and_sorted(self.data_type);
         let (first, last) = self.base.range();
-        let list = List::from(filtered.get_view(first..last, self.base.to_search.as_deref()))
-            .block(self.get_block());
+        let list = List::from(filtered.get_view(
+            first..last,
+            self.base.to_search.as_deref(),
+            &self.parser,
+            &data,
+        ))
+        .block(self.get_block());
         if !self.base.focus {
             f.render_widget(list, self.base.chunk)
         } else {

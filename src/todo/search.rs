@@ -80,7 +80,7 @@ impl<'a, 'b> SearchMatches<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Iterator for SearchMatches<'a, 'b> {
+impl Iterator for SearchMatches<'_, '_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<usize> {
@@ -128,7 +128,7 @@ impl<'a, 'b> SearchVisitor<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Iterator for SearchVisitor<'a, 'b> {
+impl<'a> Iterator for SearchVisitor<'a, '_> {
     type Item = (Option<&'a str>, Option<&'a str>);
 
     fn next(&mut self) -> Option<Self::Item> {
