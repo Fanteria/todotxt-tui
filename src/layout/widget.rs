@@ -58,12 +58,12 @@ impl Widget {
                 WidgetList::new(&widget_type, data, config),
                 ToDoData::Pending,
                 config,
-            )),
+            )?),
             Done => Self::List(StateList::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoData::Done,
                 config,
-            )),
+            )?),
             Project => Self::Category(StateCategories::new(
                 WidgetList::new(&widget_type, data, config),
                 ToDoCategory::Projects,

@@ -9,7 +9,7 @@ use tui::{
     widgets::{List, ListItem},
 };
 
-use super::search::Search;
+use super::{search::Search, Parser, ToDo};
 
 type Item<'a> = (usize, &'a Task);
 
@@ -24,6 +24,8 @@ pub struct TaskView<'a> {
     pub vec: &'a [Item<'a>],
     pub styles: &'a Styles,
     pub to_search: Option<&'a str>,
+    pub parser: &'a Parser,
+    pub todo: &'a ToDo,
 }
 
 impl<'a> TaskList<'a> {
@@ -65,7 +67,9 @@ impl<'a> TaskList<'a> {
         &'a self,
         range: impl RangeBounds<usize>,
         to_search: Option<&'a str>,
-    ) -> TaskView {
+        parser: &'a Parser,
+        todo: &'a ToDo,
+    ) -> TaskView<'a> {
         let start = match range.start_bound() {
             Bound::Included(&n) => n,
             Bound::Excluded(&n) => n + 1,
@@ -80,6 +84,8 @@ impl<'a> TaskList<'a> {
             vec: &self.vec[start..end],
             styles: self.styles,
             to_search,
+            parser,
+            todo,
         }
     }
 
@@ -173,11 +179,19 @@ impl<'a> Index<usize> for TaskList<'a> {
 impl<'a> From<TaskView<'a>> for List<'a> {
     fn from(val: TaskView<'a>) -> Self {
         List::new(val.vec.iter().map(|(_, task)| {
-            ListItem::new(Line::from(TaskList::parse_task_string(
-                task,
-                val.styles,
-                val.to_search,
-            )))
+            let x = val.parser.fill(task, &ToDo::default()); // TODO fix
+            ListItem::new(
+                x.iter()
+                    .map(|y| {
+                        Line::from(
+                            y.clone()
+                                .into_iter()
+                                .map(|(text, style)| Span::styled(text, style))
+                                .collect::<Vec<_>>(),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
         }))
     }
 }
@@ -211,13 +225,15 @@ mod tests {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
         };
-        let slice = tasklist.get_view(1..3, None);
+        let todo_list = ToDo::default();
+        let parser = Parser::new("", Styles::default()).unwrap();
+        let slice = tasklist.get_view(1..3, None, &parser, &todo_list);
 
         assert_eq!(slice.vec.len(), 2);
         assert_eq!(slice.vec[0], (1, &task2));
         assert_eq!(slice.vec[1], (2, &task3));
 
-        let slice = tasklist.get_view(1..100_000, None);
+        let slice = tasklist.get_view(1..100_000, None, &parser, &todo_list);
         assert_eq!(slice.vec.len(), 3);
         assert_eq!(slice.vec[0], (1, &task2));
         assert_eq!(slice.vec[1], (2, &task3));

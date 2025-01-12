@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use super::{Parts, ToDo};
 use crate::{
     config::{Styles, StylesValue},
@@ -6,6 +8,9 @@ use crate::{
 use regex::Regex;
 use todo_txt::Task;
 use tui::style::Style;
+
+static REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:^|\s)([+@#]\w+)(?:$|\s)").unwrap());
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -68,10 +73,7 @@ impl LineBlock {
     }
 
     pub fn fill(&self, task: &Task, todo: &ToDo, styles: &Styles) -> Option<Vec<(String, Style)>> {
-        let style = match todo.get_active() {
-            Some(task) => self.style.get_style(task, styles),
-            None => Style::default(),
-        };
+        let style = self.style.get_style(task, styles);
         let string = self
             .parts
             .iter()
@@ -80,10 +82,10 @@ impl LineBlock {
         if !self.to_colorize {
             Some(vec![(string, style)])
         } else {
-            let re = Regex::new(r"(?:^|\s)([+@#]\w+)(?:$|\s)").unwrap();
             let mut last_index = 0;
             Some(
-                re.captures_iter(&string)
+                REGEX
+                    .captures_iter(&string)
                     .filter_map(|m| m.get(1))
                     .flat_map(|m| {
                         let start = last_index;
@@ -213,7 +215,7 @@ fg = "Red"
 fg = "Yellow"
 
 [custom_category_style."+custom"]
-fg = "Black"
+fg = "Blue"
         "#
             .as_bytes(),
         )
@@ -221,34 +223,27 @@ fg = "Black"
 
         let block = LineBlock::try_from_styled(
             "Done +project to be @splitted here #hashtag and some +custom project",
-            Some(String::from("black")),
+            Some(String::from("^black")),
             true,
             &style,
         )?;
+
+        use tui::style::Color;
         assert_eq!(
             block.fill(&task, &todo, &style),
             Some(vec![
-                (String::from("Done "), Style::default()),
+                (String::from("Done "), Style::default().bg(Color::Black)),
+                (String::from("+project"), Style::default().fg(Color::Green)),
+                (String::from(" to be "), Style::default().bg(Color::Black)),
+                (String::from("@splitted"), Style::default().fg(Color::Red)),
+                (String::from(" here "), Style::default().bg(Color::Black)),
+                (String::from("#hashtag"), Style::default().fg(Color::Yellow)),
                 (
-                    String::from("+project"),
-                    Style::default().fg(tui::style::Color::Green)
+                    String::from(" and some "),
+                    Style::default().bg(Color::Black)
                 ),
-                (String::from(" to be "), Style::default()),
-                (
-                    String::from("@splitted"),
-                    Style::default().fg(tui::style::Color::Red)
-                ),
-                (String::from(" here "), Style::default()),
-                (
-                    String::from("#hashtag"),
-                    Style::default().fg(tui::style::Color::Yellow)
-                ),
-                (String::from(" and some "), Style::default()),
-                (
-                    String::from("+custom"),
-                    Style::default().fg(tui::style::Color::Black)
-                ),
-                (String::from(" project"), Style::default()),
+                (String::from("+custom"), Style::default().fg(Color::Blue)),
+                (String::from(" project"), Style::default().bg(Color::Black)),
             ])
         );
 
