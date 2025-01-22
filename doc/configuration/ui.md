@@ -106,3 +106,27 @@ Here's an example of a custom layout configuration:
 This example creates a layout with a horizontal split, where the list takes up 50% of the width, and the preview occupies the remaining space. On the right side, there's a vertical split with the list of completed tasks, contexts, and projects.
 </dd>
 <br>
+
+<dt><b>Flag:</b> <code>--paste-behavior</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_PASTE_BEHAVIOR</code></dt>
+<dt><b>Conf:</b> <code>paste_behavior</code></dt>
+<dd>
+Determines how pasted content is processed.
+
+- `AsKeys`: Simulates typing the pasted content as if entered via the keyboard.
+- `Insert`: Directly inserts the pasted content at the cursor position.
+- `None`: Disables pasting altogether.
+
+- **Default:** `Insert`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--enable-mouse</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_ENABLE_MOUSE</code></dt>
+<dt><b>Conf:</b> <code>enable_mouse</code></dt>
+<dd>
+Enables or disables mouse interaction support.
+
+- **Default:** `true`
+</dd>
+<br>
