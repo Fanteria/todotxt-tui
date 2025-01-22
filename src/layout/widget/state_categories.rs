@@ -2,7 +2,7 @@ use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::Stat
 use crate::{
     config::{ActiveColorConfig, TextStyle},
     todo::{search::Search, FilterState, ToDoCategory},
-    ui::{HandleEvent, UIEvent},
+    ui::UIEvent,
 };
 use crossterm::event::KeyCode;
 use tui::{widgets::List, Frame};
@@ -53,13 +53,12 @@ impl StateCategories {
         self.base
             .data()
             .toggle_filter(self.category, &name, filter_state);
-        self.base.len = self.len();
     }
 }
 
 impl State for StateCategories {
     fn handle_event_state(&mut self, event: UIEvent) -> bool {
-        if self.base.handle_event(event) {
+        if self.base.handle_event(event, self.len()) {
             return true;
         }
         match event {
@@ -80,7 +79,7 @@ impl State for StateCategories {
                     if let Some(next) = next {
                         log::debug!("Search next: {} times down", next);
                         for _ in 0..next + 1 {
-                            self.base.down()
+                            self.base.down(self.len())
                         }
                     }
                 }
@@ -141,9 +140,8 @@ impl State for StateCategories {
 
     fn focus_event(&mut self) -> bool {
         let len = self.len();
-        self.base.len = len;
         if self.base.act() >= len && len > 0 {
-            self.base.last();
+            self.base.last(self.len());
         }
         true
     }
@@ -165,7 +163,7 @@ impl State for StateCategories {
     }
 
     fn handle_click(&mut self, column: usize, row: usize) {
-        self.base.click(column, row);
+        self.base.click(column, row, self.len());
     }
 }
 
@@ -194,10 +192,6 @@ mod tests {
             &config.active_color_config,
         );
 
-        c.base.len = {
-            let todo = c.base.data();
-            todo.get_categories(c.category).len()
-        };
         c.base.set_size(20);
         c.search_event(String::from("proj"));
         assert!(c.handle_event_state(UIEvent::NextSearch));

@@ -2,7 +2,7 @@ use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::Stat
 use crate::{
     config::Config,
     todo::{search::Search, Parser, ToDo, ToDoData},
-    ui::{HandleEvent, UIEvent},
+    ui::UIEvent,
     Result,
 };
 use crossterm::event::KeyCode;
@@ -79,14 +79,13 @@ impl StateList {
         if len <= index && len > 0 {
             self.base.up();
         }
-        self.base.len = len;
     }
 }
 
 impl State for StateList {
     fn handle_event_state(&mut self, event: UIEvent) -> bool {
         log::trace!("StateList handle event {event:?}");
-        if self.base.handle_event(event) {
+        if self.base.handle_event(event, self.len()) {
             return true;
         }
         match event {
@@ -96,7 +95,7 @@ impl State for StateList {
                 }
             }
             UIEvent::SwapDownItem => {
-                if let Some((first, second)) = self.base.next() {
+                if let Some((first, second)) = self.base.next(self.len()) {
                     self.swap_tasks(first, second)
                 }
             }
@@ -123,7 +122,7 @@ impl State for StateList {
                     if let Some(next) = next {
                         log::debug!("Search next: {} times down", next);
                         for _ in 0..next + 1 {
-                            self.base.down()
+                            self.base.down(self.len())
                         }
                     }
                 }
@@ -187,9 +186,9 @@ impl State for StateList {
 
     fn focus_event(&mut self) -> bool {
         let len = self.len();
-        self.base.len = len;
+        // self.base.len = len;
         if self.base.act() >= len && len > 0 {
-            self.base.last();
+            self.base.last(self.len());
         }
         true
     }
@@ -211,6 +210,6 @@ impl State for StateList {
     }
 
     fn handle_click(&mut self, column: usize, row: usize) {
-        self.base.click(column, row);
+        self.base.click(column, row, self.len());
     }
 }

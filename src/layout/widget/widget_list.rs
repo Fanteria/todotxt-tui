@@ -1,7 +1,7 @@
 use super::{RCToDo, WidgetBase, WidgetType};
 use crate::{
     config::{Config, ListConfig},
-    ui::{HandleEvent, UIEvent},
+    ui::UIEvent,
 };
 use crossterm::event::KeyCode;
 use std::ops::{Deref, DerefMut};
@@ -11,7 +11,7 @@ use tui::widgets::ListState;
 pub struct WidgetList {
     base: WidgetBase,
     state: ListState,
-    pub len: usize,
+    // len: usize,
     first: usize,
     size: usize,
     config: ListConfig,
@@ -33,7 +33,7 @@ impl WidgetList {
         let mut def = Self {
             base: WidgetBase::new(widget_type, data, config),
             state: ListState::default(),
-            len: 0,
+            // len: 0,
             first: 0,
             size: 0,
             config: config.list_config.clone(),
@@ -84,14 +84,14 @@ impl WidgetList {
     }
 
     /// Moves the selection down the list.
-    pub fn down(&mut self) {
+    pub fn down(&mut self, len: usize) {
         let act = self.act();
-        if self.len <= self.size {
-            if self.len > act + 1 {
+        if len <= self.size {
+            if len > act + 1 {
                 self.state.select(Some(act + 1));
             }
         } else if self.size <= act + 1 + self.config.list_shift {
-            if self.first + self.size < self.len {
+            if self.first + self.size < len {
                 self.first += 1;
             } else if self.size > act + 1 {
                 self.state.select(Some(act + 1));
@@ -103,7 +103,7 @@ impl WidgetList {
             "List go down: act: {}, size: {} len: {}, first: {} shift: {}",
             act,
             self.size,
-            self.len,
+            len,
             self.first,
             self.config.list_shift
         );
@@ -131,13 +131,13 @@ impl WidgetList {
     ///
     /// An `Option` containing the indices of the (old, new) selections,
     /// or `None` if the list is at the end.
-    pub fn next(&mut self) -> Option<(usize, usize)> {
-        log::error!("len: {}, index: {}", self.len, self.index());
-        if self.len <= self.index() + 1 {
+    pub fn next(&mut self, len: usize) -> Option<(usize, usize)> {
+        log::error!("len: {}, index: {}", len, self.index());
+        if len <= self.index() + 1 {
             None
         } else {
             let old = self.index();
-            self.down();
+            self.down(len);
             Some((old, self.index()))
         }
     }
@@ -166,13 +166,13 @@ impl WidgetList {
     }
 
     /// Moves the selection to the last item in the list.
-    pub fn last(&mut self) {
-        let shown_items = self.len - 1;
+    pub fn last(&mut self, len: usize) {
+        let shown_items = len - 1;
         if self.size > shown_items {
             self.first = 0;
             self.state.select(Some(shown_items));
         } else {
-            self.first = self.len - self.size;
+            self.first = len - self.size;
             self.state.select(Some(self.size - 1));
         }
     }
@@ -193,28 +193,26 @@ impl WidgetList {
     pub fn range(&self) -> (usize, usize) {
         (self.first, self.first + self.size)
     }
-}
 
-impl HandleEvent for WidgetList {
-    fn get_event(&self, key: &KeyCode) -> UIEvent {
+    pub fn get_event(&self, key: &KeyCode) -> UIEvent {
         self.config.list_keybind.get_event(key)
     }
 
-    fn handle_event(&mut self, event: UIEvent) -> bool {
+    pub fn handle_event(&mut self, event: UIEvent, len: usize) -> bool {
         match event {
-            UIEvent::ListDown => self.down(),
+            UIEvent::ListDown => self.down(len),
             UIEvent::ListUp => self.up(),
             UIEvent::ListFirst => self.first(),
-            UIEvent::ListLast => self.last(),
+            UIEvent::ListLast => self.last(len),
             UIEvent::CleanSearch => self.clear_search(),
             _ => return false,
         }
         true
     }
 
-    fn click(&mut self, _column: usize, row: usize) {
+    pub fn click(&mut self, _column: usize, row: usize, len: usize) {
         let index = row - usize::from(self.base.chunk.y) - 1;
-        if index < self.len {
+        if index < len {
             log::debug!("Click on item with index {index}.");
             self.state.select(Some(index));
         }
@@ -250,12 +248,10 @@ mod tests {
         let todo = Arc::new(Mutex::new(todo));
         let mut widget = WidgetList::new(&WidgetType::List, todo, &Config::default());
         widget.set_size(10);
-        widget.len = len;
-
         widget
     }
 
-    fn n_times(times: usize, func: fn(&mut WidgetList), s: &mut WidgetList) {
+    fn n_times(times: usize, func: impl Fn(&mut WidgetList), s: &mut WidgetList) {
         for _ in 0..times {
             func(s)
         }
@@ -263,13 +259,14 @@ mod tests {
 
     #[test]
     fn movement_in_short_list() {
-        let mut widget = testing_widget(5);
+        let len = 5;
+        let mut widget = testing_widget(len);
 
         assert_eq!(widget.index(), 0);
         assert_eq!(widget.act(), 0);
         assert_eq!(widget.first, 0);
 
-        widget.down();
+        widget.down(len);
         assert_eq!(widget.index(), 1);
         assert_eq!(widget.act(), 1);
         assert_eq!(widget.first, 0);
@@ -277,7 +274,8 @@ mod tests {
 
     #[test]
     fn movement_basic() {
-        let mut widget = testing_widget(50);
+        let len = 50;
+        let mut widget = testing_widget(len);
 
         // Starting position
         assert_eq!(widget.index(), 0);
@@ -285,13 +283,13 @@ mod tests {
         assert_eq!(widget.first, 0);
 
         // First down
-        widget.down();
+        widget.down(len);
         assert_eq!(widget.index(), 1);
         assert_eq!(widget.act(), 1);
         assert_eq!(widget.first, 0);
 
         // Second down
-        widget.down();
+        widget.down(len);
         assert_eq!(widget.index(), 2);
         assert_eq!(widget.act(), 2);
         assert_eq!(widget.first, 0);
@@ -303,7 +301,7 @@ mod tests {
         assert_eq!(widget.first, 0);
 
         // Third down
-        widget.down();
+        widget.down(len);
         assert_eq!(widget.index(), 2);
         assert_eq!(widget.act(), 2);
         assert_eq!(widget.first, 0);
@@ -311,31 +309,32 @@ mod tests {
 
     #[test]
     fn movement_full_list() {
-        let mut widget = testing_widget(50);
+        let len = 50;
+        let mut widget = testing_widget(len);
 
         // Before first full list move
-        n_times(5, WidgetList::down, &mut widget);
+        n_times(5, |l| l.down(len), &mut widget);
 
         assert_eq!(widget.index(), 5);
         assert_eq!(widget.act(), 5);
         assert_eq!(widget.first, 0);
 
         // First full list move
-        widget.down();
+        widget.down(len);
 
         assert_eq!(widget.index(), 6);
         assert_eq!(widget.act(), 5);
         assert_eq!(widget.first, 1);
 
         // Second full list move
-        widget.down();
+        widget.down(len);
 
         assert_eq!(widget.index(), 7);
         assert_eq!(widget.act(), 5);
         assert_eq!(widget.first, 2);
 
         // Move to last item
-        n_times(50, WidgetList::down, &mut widget);
+        n_times(50, |l| l.down(len), &mut widget);
         assert_eq!(widget.index(), 49);
         assert_eq!(widget.act(), 9);
         assert_eq!(widget.first, 40);
@@ -378,12 +377,13 @@ mod tests {
 
     #[test]
     fn move_task() {
-        let mut widget = testing_widget(50);
-        assert_eq!(widget.next(), Some((0, 1)));
-        assert_eq!(widget.next(), Some((1, 2)));
-        assert_eq!(widget.next(), Some((2, 3)));
-        assert_eq!(widget.next(), Some((3, 4)));
-        assert_eq!(widget.next(), Some((4, 5)));
+        let len = 50;
+        let mut widget = testing_widget(len);
+        assert_eq!(widget.next(len), Some((0, 1)));
+        assert_eq!(widget.next(len), Some((1, 2)));
+        assert_eq!(widget.next(len), Some((2, 3)));
+        assert_eq!(widget.next(len), Some((3, 4)));
+        assert_eq!(widget.next(len), Some((4, 5)));
 
         assert_eq!(widget.prev(), Some((5, 4)));
         assert_eq!(widget.prev(), Some((4, 3)));
@@ -391,36 +391,38 @@ mod tests {
         assert_eq!(widget.prev(), Some((2, 1)));
         assert_eq!(widget.prev(), Some((1, 0)));
 
-        widget.down();
-        assert_eq!(widget.next(), Some((1, 2)));
+        widget.down(len);
+        assert_eq!(widget.next(len), Some((1, 2)));
 
         widget.up();
-        assert_eq!(widget.next(), Some((1, 2)));
+        assert_eq!(widget.next(len), Some((1, 2)));
 
         widget.up();
-        assert_eq!(widget.next(), Some((1, 2)));
+        assert_eq!(widget.next(len), Some((1, 2)));
     }
 
     #[test]
     fn move_task_borders() {
-        let mut widget = testing_widget(50);
+        let len = 50;
+        let mut widget = testing_widget(len);
         assert_eq!(widget.prev(), None);
 
-        widget.down();
+        widget.down(len);
         assert_eq!(widget.prev(), Some((1, 0)));
 
-        n_times(50, WidgetList::down, &mut widget);
-        assert_eq!(widget.next(), None);
+        n_times(50, |l| l.down(len), &mut widget);
+        assert_eq!(widget.next(len), None);
 
         widget.up();
-        assert_eq!(widget.next(), Some((48, 49)));
+        assert_eq!(widget.next(len), Some((48, 49)));
     }
 
     #[test]
     fn first_and_last_item() {
+        let len = 50;
         // Long list
-        let mut widget = testing_widget(50);
-        widget.last();
+        let mut widget = testing_widget(len);
+        widget.last(len);
         assert_eq!(widget.index(), 49);
         assert_eq!(widget.act(), 9);
         assert_eq!(widget.first, 40);
@@ -431,8 +433,9 @@ mod tests {
         assert_eq!(widget.first, 0);
 
         // Short list
-        let mut widget = testing_widget(5);
-        widget.last();
+        let len = 5;
+        let mut widget = testing_widget(len);
+        widget.last(len);
         assert_eq!(widget.index(), 4);
         assert_eq!(widget.act(), 4);
         assert_eq!(widget.first, 0);
@@ -451,27 +454,28 @@ mod tests {
 
     #[test]
     fn handle_event() {
-        let mut widget = testing_widget(50);
-        assert!(widget.handle_event(UIEvent::ListDown));
+        let len = 50;
+        let mut widget = testing_widget(len);
+        assert!(widget.handle_event(UIEvent::ListDown, len));
         assert_eq!(widget.index(), 1);
         assert_eq!(widget.act(), 1);
         assert_eq!(widget.first, 0);
 
-        assert!(widget.handle_event(UIEvent::ListUp));
+        assert!(widget.handle_event(UIEvent::ListUp, len));
         assert_eq!(widget.index(), 0);
         assert_eq!(widget.act(), 0);
         assert_eq!(widget.first, 0);
 
-        assert!(widget.handle_event(UIEvent::ListLast));
+        assert!(widget.handle_event(UIEvent::ListLast, len));
         assert_eq!(widget.index(), 49);
         assert_eq!(widget.act(), 9);
         assert_eq!(widget.first, 40);
 
-        assert!(widget.handle_event(UIEvent::ListFirst));
+        assert!(widget.handle_event(UIEvent::ListFirst, len));
         assert_eq!(widget.index(), 0);
         assert_eq!(widget.act(), 0);
         assert_eq!(widget.first, 0);
 
-        assert!(!widget.handle_event(UIEvent::None));
+        assert!(!widget.handle_event(UIEvent::None, len));
     }
 }
