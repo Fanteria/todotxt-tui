@@ -4,6 +4,30 @@ use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};
 use tui::{style::Modifier, widgets::BorderType};
 
+macro_rules! impl_display {
+    ($enum_name:ident) => {
+        impl std::fmt::Display for $enum_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str(&super::parsers::enum_debug_display_parser(&format!(
+                    "{:?}",
+                    self
+                )))?;
+                Ok(())
+            }
+        }
+    };
+}
+
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, ValueEnum)]
+pub enum PasteBehavior {
+    AsKeys,
+    #[default]
+    Insert,
+    None,
+}
+
+impl_display!(PasteBehavior);
+
 #[derive(Serialize, Deserialize, ValueEnum, Clone, Debug, PartialEq, Eq, Default)]
 pub enum SetFinalDateType {
     Override,
@@ -12,15 +36,7 @@ pub enum SetFinalDateType {
     Never,
 }
 
-impl Display for SetFinalDateType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&super::parsers::enum_debug_display_parser(&format!(
-            "{:?}",
-            self
-        )))?;
-        Ok(())
-    }
-}
+impl_display!(SetFinalDateType);
 
 /// Represents the possible sorting options for tasks.
 #[derive(Clone, Copy, Serialize, Deserialize, Default, ValueEnum, Debug, PartialEq, Eq)]
@@ -33,15 +49,7 @@ pub enum TaskSort {
     AlphanumericReverse,
 }
 
-impl Display for TaskSort {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&super::parsers::enum_debug_display_parser(&format!(
-            "{:?}",
-            self
-        )))?;
-        Ok(())
-    }
-}
+impl_display!(TaskSort);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default, ValueEnum, Debug, PartialEq, Eq)]
 pub enum SavePolicy {
@@ -50,6 +58,8 @@ pub enum SavePolicy {
     #[default]
     OnChange,
 }
+
+impl_display!(SavePolicy);
 
 /// Serialization and deserialization support for the TUI text modifier type.
 ///
