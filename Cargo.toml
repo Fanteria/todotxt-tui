@@ -29,6 +29,8 @@ tui-input = { version = "0.10", features = ["crossterm"], default-features = fal
 thiserror = "1.0"
 twelf = { version = "0.15", default-features = false, features = ["toml", "env", "clap"] }
 shellexpand = "3.1"
+pest = { version = "2", default-features = true }
+pest_derive = { version = "2", default-features = true }
 
 [dev-dependencies]
 test-log = "0.2"

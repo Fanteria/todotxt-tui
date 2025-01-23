@@ -1,0 +1,19 @@
+layout = { SOI ~ block ~ ","? ~ EOI }
+block = { "[" ~ (content ~ ",")* ~ (content ~ ","?)? ~ "]" }
+content = _{ direction_key | size_key | block | widget }
+
+direction_key = _{ ^"direction" ~ ":" ~ ( directory_horizontal | directory_vertical ) }
+directory_horizontal = { ^"horizontal" }
+directory_vertical = { ^"vertical" }
+
+size_key = _{ ^"size" ~ ":" ~ value }
+
+widget = { name ~ (":" ~ value)? }
+name = { ^"list" | ^"done" | ^"contexts" | ^"projects" | ^"preview" | ^"hashtags" }
+value = _{ percentage | size_raw }
+size_raw = {ASCII_DIGIT+}
+percentage = _{ size_percentage ~ percentage_sign }
+size_percentage = { ASCII_DIGIT{1,2} }
+percentage_sign = _{ "%" }
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }

@@ -76,6 +76,8 @@ pub enum ToDoError {
     HookFailedToParseStdout(#[source] FromUtf8Error),
     #[error("Failed to exand path {0:?}: {1}")]
     FailedToExpandPath(PathBuf, #[source] LookupError<VarError>),
+    #[error("Failed to parse layout:\n{0}")]
+    FailedToParseLayout(#[source] Box<pest::error::Error<crate::layout::Rule>>),
 }
 
 impl ToDoError {

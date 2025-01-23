@@ -6,7 +6,10 @@ use crate::{
     config::Config, layout::widget::State, todo::ToDo, ui::HandleEvent, Result, ToDoError,
 };
 use container::Container;
+use core::panic;
 use crossterm::event::KeyEvent;
+use pest::{iterators::Pair, Parser};
+use pest_derive::Parser;
 use std::{fmt::Debug, str::FromStr, sync::Arc, sync::Mutex};
 use tui::{
     layout::{Constraint, Direction, Rect},
@@ -14,13 +17,11 @@ use tui::{
 };
 use widget::{widget_type::WidgetType, Widget};
 
-pub use render_trait::Render;
+#[derive(Parser)]
+#[grammar = "./layout/grammar.pest"]
+struct LayoutParser;
 
-// Define separators
-const ITEM_SEPARATOR: char = ',';
-const ARG_SEPARATOR: char = ':';
-const START_CONTAINER: char = '[';
-const END_CONTAINER: char = ']';
+pub use render_trait::Render;
 
 struct Holder {
     container: usize,    // container
@@ -67,148 +68,78 @@ impl Layout {
     /// This function parses a template string and creates a new `Layout` instance based on the
     /// specified template. The template string defines the layout of the user interface, including
     /// the arrangement of containers and widgets.
-    ///
-    /// # Parameters
-    ///
-    /// - `template`: A string containing the layout template.
-    /// - `data`: An `Arc<Mutex<ToDo>>` representing the shared to-do data.
-    ///
-    /// # Returns
-    ///
-    /// A `Result<Self>` result containing the created `Layout` if successful, or an error if
-    /// parsing fails.
     pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>, config: &Config) -> Result<Self> {
-        /// Parse and convert a string value to a `Constraint`.
-        ///
-        /// # Parameters
-        ///
-        /// - `value`: A string slice representing the layout constraint.
-        ///
-        /// # Returns
-        ///
-        /// Returns a `Result` containing the converted `Constraint` or an error if parsing fails.
-        fn value_from_string(value: Option<&str>) -> Result<Constraint> {
-            Ok(match value {
-                Some(value) => match value.find('%') {
-                    Some(i) if i + 1 < value.len() => {
-                        return Err(ToDoError::ParseUnknownValue(value.to_string()))
-                    }
-                    Some(i) => Constraint::Percentage(value[..i].parse()?),
-                    None => Constraint::Length(value.parse()?),
-                },
-                None => Constraint::Percentage(50),
-            })
-        }
-
-        fn process_item(
-            item: &str,
-            container: &mut Container,
+        fn read_block(
+            conts: &mut Vec<Container>,
+            parent: Option<usize>,
+            block: Pair<'_, Rule>,
             data: Arc<Mutex<ToDo>>,
             config: &Config,
-        ) -> Result<Option<Constraint>> {
-            log::trace!("Process item: {item}");
-            let s = item.to_lowercase();
-            let x: Vec<&str> = s.splitn(2, ARG_SEPARATOR).map(|s| s.trim()).collect();
-            let x = (x[0], if x.len() > 1 { Some(x[1]) } else { None });
-            match x.0 {
-                "direction" => {
-                    match x.1 {
-                        None | Some("vertical") => container.set_direction(Direction::Vertical),
-                        Some("horizontal") => container.set_direction(Direction::Horizontal),
-                        Some(direction) => {
-                            return Err(ToDoError::ParseInvalidDirection(direction.to_owned()))
-                        }
+        ) -> Result<usize> {
+            let index = conts.len();
+            conts.push(Container::default());
+            conts[index].parent = parent;
+            // Set direction toggling.
+            let direction = match conts[index].parent.map(|i| conts[i].get_direction()) {
+                Some(Direction::Vertical) => Direction::Horizontal,
+                _ => Direction::Vertical,
+            };
+            conts[index].set_direction(direction);
+            let mut constrains = vec![];
+            let mut act_constrain = None;
+            for inner in block.into_inner() {
+                use Constraint::*;
+                use Direction::*;
+                let get_num = |i: &Pair<'_, Rule>| -> u16 { i.as_str().parse().unwrap() };
+                match inner.as_rule() {
+                    Rule::directory_horizontal => conts[index].set_direction(Horizontal),
+                    Rule::directory_vertical => conts[index].set_direction(Vertical),
+                    Rule::size_raw => act_constrain = Some(Length(get_num(&inner))),
+                    Rule::size_percentage => act_constrain = Some(Percentage(get_num(&inner))),
+                    Rule::widget => {
+                        // First item is mandatory name and second item is optional size.
+                        let widget_blocks = inner.into_inner().collect::<Vec<_>>();
+                        constrains.push(match widget_blocks.get(1) {
+                            Some(size) if size.as_rule() == Rule::size_raw => {
+                                Constraint::Length(get_num(size))
+                            }
+                            Some(size) if size.as_rule() == Rule::size_percentage => {
+                                Constraint::Percentage(get_num(size))
+                            }
+                            _ => Constraint::Percentage(50),
+                        });
+                        conts[index].add_widget(Widget::new(
+                            WidgetType::from_str(widget_blocks[0].as_str())?,
+                            data.clone(),
+                            config,
+                        )?);
                     }
-                    Ok(None)
-                }
-                "size" => Ok(Some(value_from_string(x.1)?)),
-                _ => {
-                    container.add_widget(Widget::new(
-                        WidgetType::from_str(x.0)?,
-                        data.clone(),
-                        config,
-                    )?);
-                    Ok(Some(value_from_string(x.1)?))
+                    Rule::block => {
+                        constrains.push(act_constrain.take().unwrap_or(Constraint::Percentage(50)));
+                        let next_item =
+                            read_block(conts, Some(index), inner, data.clone(), config)?;
+                        conts[index].add_cont(next_item);
+                    }
+                    _ => unreachable!(),
                 }
             }
+            conts[index].set_constraints(constrains);
+            Ok(index)
         }
+        let parsed = LayoutParser::parse(Rule::layout, template)
+            .map_err(|e| ToDoError::FailedToParseLayout(Box::new(e)))?
+            .next()
+            .unwrap(); // It is parsed by pest, its is safe to get first item
 
-        // Find first '[' and move start of template to it (start of first container)
-        let index = match template.find('[') {
-            Some(i) => i,
-            None => return Err(ToDoError::ParseNotStart),
-        };
-        let template = &template[index + 1..];
-        log::debug!("Layout from str: {}", template);
+        // Here are two inners in, first is outer block and second is EOI.
+        let outer_block = parsed.into_inner().collect::<Vec<_>>().remove(0);
+        let mut containers: Vec<Container> = vec![];
+        read_block(&mut containers, None, outer_block, data, config)?;
 
-        let mut string = String::new();
-
-        let mut constraints_stack: Vec<Vec<Constraint>> = Vec::new();
-        constraints_stack.push(Vec::new());
-        let mut containers: Vec<Container> = Vec::new();
-        let mut layout = Layout {
-            act: Container::add_container(&mut containers, Container::default()),
-            containers,
-        };
-
-        for ch in template.chars() {
-            match ch {
-                START_CONTAINER => {
-                    if !string.is_empty() {
-                        return Err(ToDoError::ParseUnknowBeforeContainer(string));
-                    }
-                    if layout.act().item_count() >= constraints_stack.last().unwrap().len() {
-                        constraints_stack
-                            .last_mut()
-                            .unwrap()
-                            .push(Constraint::Percentage(50));
-                    }
-                    let mut cont = Container::default();
-                    cont.parent = Some(layout.act);
-                    cont.set_direction(match layout.act().get_direction() {
-                        Direction::Horizontal => Direction::Vertical,
-                        Direction::Vertical => Direction::Horizontal,
-                    });
-                    layout.act = Container::add_container(&mut layout.containers, cont);
-                    constraints_stack.push(Vec::new());
-                }
-                END_CONTAINER => {
-                    log::trace!(
-                        "Act: {}, Constraints: {:?}",
-                        layout.act,
-                        constraints_stack.last()
-                    );
-                    layout
-                        .act_mut()
-                        .set_constraints(constraints_stack.pop().unwrap());
-                    layout.act = match layout.act().parent {
-                        Some(parent) => parent,
-                        // We are at root. Return created layout.
-                        None => {
-                            Container::actualize_layout(&mut layout);
-                            layout.act_mut().actual_mut().unwrap().focus();
-                            return Ok(layout);
-                        }
-                    };
-                    string.clear();
-                }
-                ITEM_SEPARATOR => {
-                    // Skip leading ITEM_SEPARATOR
-                    if !string.is_empty() {
-                        if let Some(constrain) =
-                            process_item(&string, layout.act_mut(), data.clone(), config)?
-                        {
-                            constraints_stack.last_mut().unwrap().push(constrain);
-                        }
-                        string.clear();
-                    }
-                }
-                ' ' => {}
-                '\n' => {}
-                _ => string.push(ch),
-            };
-        }
-        Err(ToDoError::ParseNotEnd)
+        let mut layout = Self { containers, act: 0 };
+        Container::actualize_layout(&mut layout);
+        layout.act_mut().actual_mut().unwrap().focus();
+        Ok(layout)
     }
 
     fn act(&self) -> &Container {
@@ -517,8 +448,6 @@ mod tests {
               ],
               Projects: 50%,
             ]
-            
-            Direction: ERROR,
         "#;
 
         let mut layout = Layout::from_str(
