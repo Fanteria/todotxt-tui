@@ -29,14 +29,8 @@ impl Container {
         self.items.push(It::Item(widget));
     }
 
-    pub fn add_container(containers: &mut Vec<Self>, container: Container) -> usize {
-        let index = containers.len();
-        // check if container have parent
-        if let Some(parent_index) = container.parent {
-            containers[parent_index].items.push(It::Cont(index));
-        }
-        containers.push(container);
-        index
+    pub fn add_cont(&mut self, container_index: usize) {
+        self.items.push(It::Cont(container_index));
     }
 
     pub fn set_direction(&mut self, direction: Direction) {
@@ -50,10 +44,6 @@ impl Container {
 
     pub fn set_constraints(&mut self, constraints: Vec<Constraint>) {
         self.layout = self.layout.clone().constraints(constraints);
-    }
-
-    pub fn item_count(&self) -> usize {
-        self.items.len()
     }
 
     pub fn get_index(&self) -> usize {
@@ -236,44 +226,28 @@ mod tests {
     use super::*;
     use crate::{config::Config, layout::widget::State, todo::ToDo, Result};
     use std::sync::{Arc, Mutex};
-    use tui::layout::Direction::*;
     use WidgetType::*;
 
     fn testing_layout() -> Layout {
         let todo = Arc::new(Mutex::new(ToDo::default()));
 
-        // Main container
-        let mut containers: Vec<Container> = Vec::new();
-        let index = Container::add_container(&mut containers, Container::default());
-        containers[index].set_direction(Vertical);
-        containers[index].set_constraints(vec![Constraint::Percentage(30)]);
-
-        // Holder container
-        let mut cont = Container {
-            parent: Some(index),
-            ..Container::default()
-        };
-        cont.set_direction(Horizontal);
-        cont.set_constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
-        // Left widget
-        cont.add_widget(Widget::new(WidgetType::List, todo.clone(), &Config::default()).unwrap());
-        let index = Container::add_container(&mut containers, cont);
-
-        // Right container
-        let mut cont = Container {
-            parent: Some(index),
-            ..Container::default()
-        };
-        cont.set_direction(Vertical);
-        cont.set_constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)]);
-        cont.add_widget(Widget::new(WidgetType::Done, todo.clone(), &Config::default()).unwrap());
-        cont.add_widget(Widget::new(WidgetType::Project, todo, &Config::default()).unwrap());
-        let index = Container::add_container(&mut containers, cont);
-
-        Layout {
-            containers,
-            act: index,
-        }
+        Layout::from_str(
+            r#"
+            [
+                Direction: Horizontal,
+                Size: 30%,
+                List: 50%,
+                [
+                    Direction: Vertical,
+                    Done: 50%,
+                    Projects: 50%,
+                ],
+            ]
+            "#,
+            todo,
+            &Config::default(),
+        )
+        .unwrap()
     }
 
     fn check_active(layout: &Layout, widget_type: WidgetType) {
@@ -381,11 +355,11 @@ mod tests {
                 It::Item(widget) => assert_eq!(widget.get_base().chunk, rect),
             };
         };
-        assert_eq!(0, count_widgets(0));
-        assert_eq!(1, count_widgets(1));
-        check_chunk(1, 0, Rect::new(0, 0, 10, 6));
-        assert_eq!(2, count_widgets(2));
-        check_chunk(2, 0, Rect::new(10, 0, 10, 3));
-        check_chunk(2, 1, Rect::new(10, 3, 10, 3));
+        // assert_eq!(0, count_widgets(0));
+        assert_eq!(1, count_widgets(0));
+        check_chunk(0, 0, Rect::new(0, 0, 10, 20));
+        check_chunk(1, 0, Rect::new(10, 0, 6, 10));
+        assert_eq!(2, count_widgets(1));
+        check_chunk(1, 1, Rect::new(10, 10, 6, 10));
     }
 }
