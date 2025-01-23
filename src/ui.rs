@@ -9,7 +9,7 @@ pub use ui_event::*;
 pub use ui_state::UIState;
 
 use crate::{
-    config::{Config, UiConfig, WidgetBorderType},
+    config::{Config, PasteBehavior, UiConfig, WidgetBorderType},
     file_worker::{FileWorker, FileWorkerCommands},
     layout::{Layout, Render},
     todo::{autocomplete, ToDo},
@@ -17,7 +17,10 @@ use crate::{
 };
 use crossterm::{
     self,
-    event::{self, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEvent},
+    event::{
+        self, read, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
+        EnableMouseCapture, Event, KeyCode, MouseEvent,
+    },
     execute,
     terminal::{
         disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
@@ -161,19 +164,30 @@ impl UI {
     ///
     /// An `Result` indicating the success of running the user interface.
     pub fn run(&mut self) -> Result<()> {
-        fn restore_tui() -> io::Result<()> {
+        fn restore_tui(enable_mouse: bool, paste_behavior: PasteBehavior) -> io::Result<()> {
             disable_raw_mode()?;
-            execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+            execute!(io::stdout(), LeaveAlternateScreen,)?;
+            if enable_mouse {
+                execute!(io::stdout(), DisableMouseCapture,)?;
+            }
+            if paste_behavior != PasteBehavior::AsKeys {
+                execute!(io::stdout(), DisableBracketedPaste,)?;
+            }
             Ok(())
         }
 
         fn run_ui(this: &mut UI) -> Result<()> {
             // setup terminal
             enable_raw_mode()?;
-            let mut stdout = io::stdout();
-            execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+            execute!(io::stdout(), EnterAlternateScreen,)?;
+            if this.config.enable_mouse {
+                execute!(io::stdout(), EnableMouseCapture,)?;
+            }
+            if this.config.paste_behavior != PasteBehavior::AsKeys {
+                execute!(io::stdout(), EnableBracketedPaste,)?;
+            }
 
-            let mut backend = CrosstermBackend::new(stdout);
+            let mut backend = CrosstermBackend::new(io::stdout());
             backend.execute(SetTitle(this.config.window_title.clone()))?;
 
             let mut terminal = Terminal::new(backend)?;
@@ -185,7 +199,7 @@ impl UI {
             this.main_loop(&mut terminal)?;
 
             // restore terminal
-            restore_tui()?;
+            restore_tui(this.config.enable_mouse, this.config.paste_behavior)?;
             terminal.show_cursor()?;
 
             Ok(())
@@ -193,8 +207,10 @@ impl UI {
 
         // Setup panic hook.
         let orig_hook = take_hook();
+        let enable_mouse = self.config.enable_mouse;
+        let paste_behavior = self.config.paste_behavior;
         set_hook(Box::new(move |panic_info| {
-            let _ = restore_tui();
+            let _ = restore_tui(enable_mouse, paste_behavior);
             orig_hook(panic_info);
         }));
 
@@ -306,94 +322,104 @@ impl UI {
     ///   or `Mode::Normal`), handles input for task creation, editing, and general navigation
     ///   using specific keys.
     fn handle_event_window(&mut self, e: Event) {
-        match e {
-            Event::Resize(width, height) => {
+        match (&e, &self.mode) {
+            (Event::Resize(width, height), _) => {
                 log::debug!("Resize event: width {width}, height {height}");
-                self.update_chunk(Rect::new(0, 0, width, height));
+                self.update_chunk(Rect::new(0, 0, *width, *height));
             }
-            Event::Mouse(MouseEvent {
-                kind: event::MouseEventKind::Up(event::MouseButton::Left),
-                column,
-                row,
-                modifiers: _,
-            }) => {
+            (
+                Event::Mouse(MouseEvent {
+                    kind: event::MouseEventKind::Up(event::MouseButton::Left),
+                    column,
+                    row,
+                    modifiers: _,
+                }),
+                _,
+            ) => {
                 log::debug!("Mouse event: column {column}, row {row}");
-                self.layout.click(column, row);
+                self.layout.click(*column, *row);
             }
-            Event::Key(event) => match self.mode {
-                Mode::Input => match event.code {
-                    KeyCode::Enter => {
-                        if let Err(e) = self.data.lock().unwrap().new_task(self.tinput.value()) {
-                            log::error!("Error while adding new task: {e}");
-                            self.popup.add_message(format!("Failed add task: {e}"));
-                        }
-                        self.tinput.reset();
-                        self.mode = Mode::Normal;
-                        self.layout.focus();
+            (Event::Paste(s), Mode::Normal) => {
+                if self.config.paste_behavior == PasteBehavior::Insert {
+                    log::debug!("Pasted: {s}");
+                    if let Err(e) = self.data.lock().unwrap().new_task(&s) {
+                        log::error!("Error while pasting new task: {e}");
+                        self.popup.add_message(format!("Failed paste task: {e}"));
                     }
-                    KeyCode::Esc => {
-                        self.mode = Mode::Normal;
-                        self.layout.focus();
+                }
+            }
+            (Event::Paste(s), _) => self.tinput = Input::new(self.tinput.value().to_owned() + s),
+            (Event::Key(event), Mode::Input) => match event.code {
+                KeyCode::Enter => {
+                    if let Err(e) = self.data.lock().unwrap().new_task(self.tinput.value()) {
+                        log::error!("Error while adding new task: {e}");
+                        self.popup.add_message(format!("Failed add task: {e}"));
                     }
-                    KeyCode::Tab => {
-                        if let Some(input) =
-                            autocomplete(&self.data.lock().unwrap(), self.tinput.value())
-                        {
-                            self.tinput = input.into();
-                        }
+                    self.tinput.reset();
+                    self.mode = Mode::Normal;
+                    self.layout.focus();
+                }
+                KeyCode::Esc => {
+                    self.mode = Mode::Normal;
+                    self.layout.focus();
+                }
+                KeyCode::Tab => {
+                    if let Some(input) =
+                        autocomplete(&self.data.lock().unwrap(), self.tinput.value())
+                    {
+                        self.tinput = input.into();
                     }
-                    _ => {
-                        self.tinput.handle_event(&e);
-                    }
-                },
-                Mode::Edit => match event.code {
-                    KeyCode::Enter => {
-                        if let Err(e) = self.data.lock().unwrap().update_active(self.tinput.value())
-                        {
-                            log::error!("Error while updating existing task: {e}");
-                            self.popup.add_message(format!("Failed update task: {e}"));
-                        }
-                        self.tinput.reset();
-                        self.mode = Mode::Normal;
-                        self.layout.focus();
-                    }
-                    KeyCode::Esc => {
-                        self.tinput.reset();
-                        self.mode = Mode::Normal;
-                        self.layout.focus();
-                    }
-                    KeyCode::Tab => {
-                        if let Some(input) =
-                            autocomplete(&self.data.lock().unwrap(), self.tinput.value())
-                        {
-                            self.tinput = input.into();
-                        }
-                    }
-                    _ => {
-                        self.tinput.handle_event(&e);
-                    }
-                },
-                Mode::Search => match event.code {
-                    KeyCode::Enter => {
-                        self.mode = Mode::Normal;
-                        self.layout.focus();
-                        self.tinput.reset();
-                    }
-                    KeyCode::Esc => {
-                        self.tinput.reset();
-                        self.mode = Mode::Normal;
-                        self.layout.clean_search();
-                        self.layout.focus();
-                    }
-                    _ => {
-                        self.tinput.handle_event(&e);
-                        self.layout.search(self.tinput.to_string())
-                    }
-                },
-                Mode::Normal => {
-                    let _ = self.handle_key(&event.code) || self.layout.handle_key(&event);
+                }
+                _ => {
+                    self.tinput.handle_event(&e);
                 }
             },
+            (Event::Key(event), Mode::Edit) => match event.code {
+                KeyCode::Enter => {
+                    if let Err(e) = self.data.lock().unwrap().update_active(self.tinput.value()) {
+                        log::error!("Error while updating existing task: {e}");
+                        self.popup.add_message(format!("Failed update task: {e}"));
+                    }
+                    self.tinput.reset();
+                    self.mode = Mode::Normal;
+                    self.layout.focus();
+                }
+                KeyCode::Esc => {
+                    self.tinput.reset();
+                    self.mode = Mode::Normal;
+                    self.layout.focus();
+                }
+                KeyCode::Tab => {
+                    if let Some(input) =
+                        autocomplete(&self.data.lock().unwrap(), self.tinput.value())
+                    {
+                        self.tinput = input.into();
+                    }
+                }
+                _ => {
+                    self.tinput.handle_event(&e);
+                }
+            },
+            (Event::Key(event), Mode::Search) => match event.code {
+                KeyCode::Enter => {
+                    self.mode = Mode::Normal;
+                    self.layout.focus();
+                    self.tinput.reset();
+                }
+                KeyCode::Esc => {
+                    self.tinput.reset();
+                    self.mode = Mode::Normal;
+                    self.layout.clean_search();
+                    self.layout.focus();
+                }
+                _ => {
+                    self.tinput.handle_event(&e);
+                    self.layout.search(self.tinput.to_string())
+                }
+            },
+            (Event::Key(event), Mode::Normal) => {
+                let _ = self.handle_key(&event.code) || self.layout.handle_key(&event);
+            }
             _ => {}
         }
     }

@@ -9,7 +9,9 @@ mod traits;
 pub use self::{
     colors::Color,
     keycode::KeyCodeDef,
-    options::{SavePolicy, SetFinalDateType, TaskSort, TextModifier, WidgetBorderType},
+    options::{
+        PasteBehavior, SavePolicy, SetFinalDateType, TaskSort, TextModifier, WidgetBorderType,
+    },
     styles::{CustomCategoryStyle, StylesValue},
     text_style::{TextStyle, TextStyleList},
     traits::{Conf, ConfMerge, ConfigDefaults},
@@ -232,6 +234,14 @@ pub struct UiConfig {
     /// This can be customized using a layout string.
     #[arg(short = 'l')]
     pub layout: String, // TODO describe layout language
+    /// Determines how pasted content is processed.
+    ///
+    /// Option as-keys simulates typing the pasted content as if entered via the keyboard.
+    /// Option insert directly inserts the pasted content at the cursor position.
+    /// Option none disables pasting altogether.
+    pub paste_behavior: PasteBehavior,
+    /// Enables or disables mouse interaction support.
+    pub enable_mouse: bool,
 }
 
 impl Default for UiConfig {
@@ -270,6 +280,8 @@ impl Default for UiConfig {
                 "  ],",
                 "]",
             )),
+            paste_behavior: Default::default(),
+            enable_mouse: true,
         }
     }
 }
