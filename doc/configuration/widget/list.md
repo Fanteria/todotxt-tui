@@ -14,7 +14,8 @@ Determines the number of lines displayed above and below the currently active it
 <dt><b>Env:</b> <code>$TODOTXT_TUI_LIST_KEYBIND</code></dt>
 <dt><b>Conf:</b> <code>list_keybind</code></dt>
 <dd>
-Configures the keybindings for interacting with task lists. These bindings enable efficient scrolling, selection, and manipulation of list items.
+
+Configures the [keybindings](../index.md#keybindings) for interacting with task lists. These bindings enable efficient scrolling, selection, and manipulation of list items.
 
 **default:**
 ```toml

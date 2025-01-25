@@ -26,7 +26,8 @@ The title of the window when `todotxt-tui` is opened.
 <dt><b>Env:</b> <code>$TODOTXT_TUI_WINDOW_KEYBINDS</code></dt>
 <dt><b>Conf:</b> <code>window_keybinds</code></dt>
 <dd>
-Defines the keybinds for window actions.  
+
+Defines the [keybinds](./index.md#keybindings) for window actions.  
 
 **Default:**  
 ```toml
