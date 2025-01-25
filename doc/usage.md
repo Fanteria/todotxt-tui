@@ -53,3 +53,4 @@ The task input bar allows you to add or edit tasks. Press `Enter` to confirm the
 - `Ctrl+k`: Delete from the cursor to the end of the line.
 - `Ctrl+u`: Delete from the cursor to the beginning of the line.
 
+It is also possible to use `tab` key to autocomplete existing projects, contexts or hashtags.

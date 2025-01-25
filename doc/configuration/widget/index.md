@@ -4,7 +4,8 @@
 <dt><b>Env:</b> <code>$TODOTXT_TUI_TASKS_KEYBIND</code></dt>
 <dt><b>Conf:</b> <code>tasks_keybind</code></dt>
 <dd>
-Defines the keybindings used for interacting with task items within the application. These bindings allow you to quickly navigate, edit, and perform actions on tasks.
+
+Defines the [keybindings](../index.md#keybindings) used for interacting with task items within the application. These bindings allow you to quickly navigate, edit, and perform actions on tasks.
 
 **default:**
 ```toml
@@ -23,7 +24,8 @@ N = "PrevSearch"
 <dt><b>Env:</b> <code>$TODOTXT_TUI_CATEGORY_KEYBIND</code></dt>
 <dt><b>Conf:</b> <code>category_keybind</code></dt>
 <dd>
-Specifies the keybindings for managing and navigating categories such as projects and contexts. These categories help you organize tasks effectively.
+
+Specifies the [keybindings](../index.md#keybindings) for managing and navigating categories such as projects and contexts. These categories help you organize tasks effectively.
 
 **default:**
 ```toml
