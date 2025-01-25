@@ -20,11 +20,11 @@ pub use self::{
 use crate::{
     layout::widget::widget_type::WidgetType,
     todo::{ToDoCategory, ToDoData},
-    ui::{EventHandlerUI, UIEvent},
+    ui::{EventHandlerUI, KeyShortcut, UIEvent},
     Result,
 };
 use clap::{builder::styling::AnsiColor, FromArgMatches};
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyModifiers};
 use std::{env::var, path::PathBuf, str::FromStr, time::Duration};
 use todotxt_tui_macros::{Conf, ConfMerge};
 use tui::style::{Color as tuiColor, Style};
@@ -146,11 +146,14 @@ impl Default for ListConfig {
         Self {
             list_shift: 4,
             list_keybind: EventHandlerUI::from([
-                (KeyCode::Char('j'), UIEvent::ListDown),
-                (KeyCode::Char('k'), UIEvent::ListUp),
-                (KeyCode::Char('g'), UIEvent::ListFirst),
-                (KeyCode::Char('G'), UIEvent::ListLast),
-                (KeyCode::Char('h'), UIEvent::CleanSearch),
+                (KeyShortcut::from(KeyCode::Char('j')), UIEvent::ListDown),
+                (KeyShortcut::from(KeyCode::Char('k')), UIEvent::ListUp),
+                (KeyShortcut::from(KeyCode::Char('g')), UIEvent::ListFirst),
+                (
+                    KeyShortcut::new(KeyCode::Char('g'), KeyModifiers::SHIFT),
+                    UIEvent::ListLast,
+                ),
+                (KeyShortcut::from(KeyCode::Char('h')), UIEvent::CleanSearch),
             ]),
             pending_format: String::from("[$subject](! priority)"),
             done_format: String::from("[$subject](! priority)"),
@@ -250,16 +253,37 @@ impl Default for UiConfig {
             init_widget: WidgetType::List,
             window_title: String::from("ToDo tui"),
             window_keybinds: EventHandlerUI::from([
-                (KeyCode::Char('q'), UIEvent::Quit),
-                (KeyCode::Char('S'), UIEvent::Save),
-                (KeyCode::Char('u'), UIEvent::Load),
-                (KeyCode::Char('H'), UIEvent::MoveLeft),
-                (KeyCode::Char('L'), UIEvent::MoveRight),
-                (KeyCode::Char('K'), UIEvent::MoveUp),
-                (KeyCode::Char('J'), UIEvent::MoveDown),
-                (KeyCode::Char('I'), UIEvent::InsertMode),
-                (KeyCode::Char('E'), UIEvent::EditMode),
-                (KeyCode::Char('/'), UIEvent::SearchMode),
+                (KeyShortcut::from(KeyCode::Char('q')), UIEvent::Quit),
+                (
+                    KeyShortcut::new(KeyCode::Char('s'), KeyModifiers::SHIFT),
+                    UIEvent::Save,
+                ),
+                (KeyShortcut::from(KeyCode::Char('u')), UIEvent::Load),
+                (
+                    KeyShortcut::new(KeyCode::Char('h'), KeyModifiers::SHIFT),
+                    UIEvent::MoveLeft,
+                ),
+                (
+                    KeyShortcut::new(KeyCode::Char('l'), KeyModifiers::SHIFT),
+                    UIEvent::MoveRight,
+                ),
+                (
+                    KeyShortcut::new(KeyCode::Char('k'), KeyModifiers::SHIFT),
+                    UIEvent::MoveUp,
+                ),
+                (
+                    KeyShortcut::new(KeyCode::Char('j'), KeyModifiers::SHIFT),
+                    UIEvent::MoveDown,
+                ),
+                (
+                    KeyShortcut::new(KeyCode::Char('i'), KeyModifiers::SHIFT),
+                    UIEvent::InsertMode,
+                ),
+                (
+                    KeyShortcut::new(KeyCode::Char('e'), KeyModifiers::SHIFT),
+                    UIEvent::EditMode,
+                ),
+                (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
             ]),
             list_refresh_rate: Duration::from_secs(5),
             save_state_path: None,
@@ -302,19 +326,31 @@ impl Default for WidgetBaseConfig {
     fn default() -> Self {
         Self {
             tasks_keybind: EventHandlerUI::from([
-                (KeyCode::Char('U'), UIEvent::SwapUpItem),
-                (KeyCode::Char('D'), UIEvent::SwapDownItem),
-                (KeyCode::Char('x'), UIEvent::RemoveItem),
-                (KeyCode::Char('d'), UIEvent::MoveItem),
-                (KeyCode::Enter, UIEvent::Select),
-                (KeyCode::Char('n'), UIEvent::NextSearch),
-                (KeyCode::Char('N'), UIEvent::PrevSearch),
+                (
+                    KeyShortcut::new(KeyCode::Char('u'), KeyModifiers::SHIFT),
+                    UIEvent::SwapUpItem,
+                ),
+                (
+                    KeyShortcut::new(KeyCode::Char('d'), KeyModifiers::SHIFT),
+                    UIEvent::SwapDownItem,
+                ),
+                (KeyShortcut::from(KeyCode::Char('x')), UIEvent::RemoveItem),
+                (KeyShortcut::from(KeyCode::Char('d')), UIEvent::MoveItem),
+                (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
+                (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
+                (
+                    KeyShortcut::new(KeyCode::Char('n'), KeyModifiers::SHIFT),
+                    UIEvent::PrevSearch,
+                ),
             ]),
             category_keybind: EventHandlerUI::from([
-                (KeyCode::Enter, UIEvent::Select),
-                (KeyCode::Backspace, UIEvent::Remove),
-                (KeyCode::Char('n'), UIEvent::NextSearch),
-                (KeyCode::Char('N'), UIEvent::PrevSearch),
+                (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
+                (KeyShortcut::from(KeyCode::Backspace), UIEvent::Remove),
+                (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
+                (
+                    KeyShortcut::new(KeyCode::Char('n'), KeyModifiers::SHIFT),
+                    UIEvent::PrevSearch,
+                ),
             ]),
             border_type: WidgetBorderType::default(),
         }
@@ -663,44 +699,80 @@ mod tests {
         expected.preview_config.preview_format = String::from("unimportant preview");
         expected.preview_config.wrap_preview = false;
         expected.ui_config.window_keybinds = EventHandlerUI::from([
-            (KeyCode::Char('e'), UIEvent::EditMode),
-            (KeyCode::Char('q'), UIEvent::Quit),
-            (KeyCode::Char('S'), UIEvent::Save),
-            (KeyCode::Char('u'), UIEvent::Load),
-            (KeyCode::Char('H'), UIEvent::MoveLeft),
-            (KeyCode::Char('L'), UIEvent::MoveRight),
-            (KeyCode::Char('K'), UIEvent::MoveUp),
-            (KeyCode::Char('J'), UIEvent::MoveDown),
-            (KeyCode::Char('I'), UIEvent::InsertMode),
-            (KeyCode::Char('E'), UIEvent::EditMode),
-            (KeyCode::Char('/'), UIEvent::SearchMode),
+            (KeyShortcut::from(KeyCode::Char('e')), UIEvent::EditMode),
+            (KeyShortcut::from(KeyCode::Char('q')), UIEvent::Quit),
+            (
+                KeyShortcut::new(KeyCode::Char('s'), KeyModifiers::SHIFT),
+                UIEvent::Save,
+            ),
+            (KeyShortcut::from(KeyCode::Char('u')), UIEvent::Load),
+            (
+                KeyShortcut::new(KeyCode::Char('h'), KeyModifiers::SHIFT),
+                UIEvent::MoveLeft,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('l'), KeyModifiers::SHIFT),
+                UIEvent::MoveRight,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('k'), KeyModifiers::SHIFT),
+                UIEvent::MoveUp,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('j'), KeyModifiers::SHIFT),
+                UIEvent::MoveDown,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('i'), KeyModifiers::SHIFT),
+                UIEvent::InsertMode,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('e'), KeyModifiers::SHIFT),
+                UIEvent::EditMode,
+            ),
+            (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
         ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(10);
         expected.active_color_config.list_active_color = TextStyle::default().bg(Color::green());
         expected.file_worker_config.autosave_duration = Duration::from_secs(100);
         expected.list_config.list_keybind = EventHandlerUI::from([
-            (KeyCode::Char('g'), UIEvent::ListLast),
-            (KeyCode::Char('j'), UIEvent::ListDown),
-            (KeyCode::Char('k'), UIEvent::ListUp),
-            (KeyCode::Char('G'), UIEvent::ListLast),
-            (KeyCode::Char('h'), UIEvent::CleanSearch),
+            (KeyShortcut::from(KeyCode::Char('g')), UIEvent::ListLast),
+            (KeyShortcut::from(KeyCode::Char('j')), UIEvent::ListDown),
+            (KeyShortcut::from(KeyCode::Char('k')), UIEvent::ListUp),
+            (
+                KeyShortcut::new(KeyCode::Char('g'), KeyModifiers::SHIFT),
+                UIEvent::ListLast,
+            ),
+            (KeyShortcut::from(KeyCode::Char('h')), UIEvent::CleanSearch),
         ]);
         expected.widget_base_config.tasks_keybind = EventHandlerUI::from([
-            (KeyCode::Char('s'), UIEvent::Select),
-            (KeyCode::Char('U'), UIEvent::SwapUpItem),
-            (KeyCode::Char('D'), UIEvent::SwapDownItem),
-            (KeyCode::Char('x'), UIEvent::RemoveItem),
-            (KeyCode::Char('d'), UIEvent::MoveItem),
-            (KeyCode::Enter, UIEvent::Select),
-            (KeyCode::Char('n'), UIEvent::NextSearch),
-            (KeyCode::Char('N'), UIEvent::PrevSearch),
+            (KeyShortcut::from(KeyCode::Char('s')), UIEvent::Select),
+            (
+                KeyShortcut::new(KeyCode::Char('u'), KeyModifiers::SHIFT),
+                UIEvent::SwapUpItem,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('d'), KeyModifiers::SHIFT),
+                UIEvent::SwapDownItem,
+            ),
+            (KeyShortcut::from(KeyCode::Char('x')), UIEvent::RemoveItem),
+            (KeyShortcut::from(KeyCode::Char('d')), UIEvent::MoveItem),
+            (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
+            (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
+            (
+                KeyShortcut::new(KeyCode::Char('n'), KeyModifiers::SHIFT),
+                UIEvent::PrevSearch,
+            ),
         ]);
         expected.widget_base_config.category_keybind = EventHandlerUI::from([
-            (KeyCode::Char('r'), UIEvent::Remove),
-            (KeyCode::Enter, UIEvent::Select),
-            (KeyCode::Backspace, UIEvent::Remove),
-            (KeyCode::Char('n'), UIEvent::NextSearch),
-            (KeyCode::Char('N'), UIEvent::PrevSearch),
+            (KeyShortcut::from(KeyCode::Char('r')), UIEvent::Remove),
+            (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
+            (KeyShortcut::from(KeyCode::Backspace), UIEvent::Remove),
+            (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
+            (
+                KeyShortcut::new(KeyCode::Char('n'), KeyModifiers::SHIFT),
+                UIEvent::PrevSearch,
+            ),
         ]);
         expected.styles.category_select_style = TextStyle::default().fg(Color::red());
         expected.styles.category_remove_style = TextStyle::default().fg(Color::green());
@@ -709,9 +781,6 @@ mod tests {
             String::from("+project"),
             TextStyle::default().fg(Color::green()),
         );
-
-        // assert_eq!(config, expected);
-        // assert_eq!(config.list_config.list_keybind, expected.list_config.list_keybind);
 
         assert_eq!(config.ui_config, expected.ui_config);
         assert_eq!(config.todo_config, expected.todo_config);
@@ -798,45 +867,82 @@ mod tests {
         expected.preview_config.preview_format = String::from("extra important preview");
         expected.preview_config.wrap_preview = true;
         expected.ui_config.window_keybinds = EventHandlerUI::from([
-            (KeyCode::Char('e'), UIEvent::EditMode),
-            (KeyCode::Char('q'), UIEvent::Quit),
-            (KeyCode::Char('S'), UIEvent::Save),
-            (KeyCode::Char('u'), UIEvent::Load),
-            (KeyCode::Char('H'), UIEvent::MoveLeft),
-            (KeyCode::Char('L'), UIEvent::MoveRight),
-            (KeyCode::Char('K'), UIEvent::MoveUp),
-            (KeyCode::Char('J'), UIEvent::MoveDown),
-            (KeyCode::Char('I'), UIEvent::InsertMode),
-            (KeyCode::Char('E'), UIEvent::EditMode),
-            (KeyCode::Char('/'), UIEvent::SearchMode),
+            // TODO HERE
+            (KeyShortcut::from(KeyCode::Char('e')), UIEvent::EditMode),
+            (KeyShortcut::from(KeyCode::Char('q')), UIEvent::Quit),
+            (
+                KeyShortcut::new(KeyCode::Char('s'), KeyModifiers::SHIFT),
+                UIEvent::Save,
+            ),
+            (KeyShortcut::from(KeyCode::Char('u')), UIEvent::Load),
+            (
+                KeyShortcut::new(KeyCode::Char('h'), KeyModifiers::SHIFT),
+                UIEvent::MoveLeft,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('l'), KeyModifiers::SHIFT),
+                UIEvent::MoveRight,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('k'), KeyModifiers::SHIFT),
+                UIEvent::MoveUp,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('j'), KeyModifiers::SHIFT),
+                UIEvent::MoveDown,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('i'), KeyModifiers::SHIFT),
+                UIEvent::InsertMode,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('e'), KeyModifiers::SHIFT),
+                UIEvent::EditMode,
+            ),
+            (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
         ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(15);
         expected.active_color_config.list_active_color =
             TextStyle::default().bg(Color::blue()).fg(Color::yellow());
         expected.file_worker_config.autosave_duration = Duration::from_secs(150);
         expected.list_config.list_keybind = EventHandlerUI::from([
-            (KeyCode::Char('g'), UIEvent::ListLast),
-            (KeyCode::Char('j'), UIEvent::ListDown),
-            (KeyCode::Char('k'), UIEvent::ListUp),
-            (KeyCode::Char('G'), UIEvent::ListLast),
-            (KeyCode::Char('h'), UIEvent::CleanSearch),
+            (KeyShortcut::from(KeyCode::Char('g')), UIEvent::ListLast),
+            (KeyShortcut::from(KeyCode::Char('j')), UIEvent::ListDown),
+            (KeyShortcut::from(KeyCode::Char('k')), UIEvent::ListUp),
+            (
+                KeyShortcut::new(KeyCode::Char('g'), KeyModifiers::SHIFT),
+                UIEvent::ListLast,
+            ),
+            (KeyShortcut::from(KeyCode::Char('h')), UIEvent::CleanSearch),
         ]);
         expected.widget_base_config.tasks_keybind = EventHandlerUI::from([
-            (KeyCode::Char('s'), UIEvent::Select),
-            (KeyCode::Char('U'), UIEvent::SwapUpItem),
-            (KeyCode::Char('D'), UIEvent::SwapDownItem),
-            (KeyCode::Char('x'), UIEvent::RemoveItem),
-            (KeyCode::Char('d'), UIEvent::MoveItem),
-            (KeyCode::Enter, UIEvent::Select),
-            (KeyCode::Char('n'), UIEvent::NextSearch),
-            (KeyCode::Char('N'), UIEvent::PrevSearch),
+            (KeyShortcut::from(KeyCode::Char('s')), UIEvent::Select),
+            (
+                KeyShortcut::new(KeyCode::Char('u'), KeyModifiers::SHIFT),
+                UIEvent::SwapUpItem,
+            ),
+            (
+                KeyShortcut::new(KeyCode::Char('d'), KeyModifiers::SHIFT),
+                UIEvent::SwapDownItem,
+            ),
+            (KeyShortcut::from(KeyCode::Char('x')), UIEvent::RemoveItem),
+            (KeyShortcut::from(KeyCode::Char('d')), UIEvent::MoveItem),
+            (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
+            (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
+            (
+                KeyShortcut::new(KeyCode::Char('n'), KeyModifiers::SHIFT),
+                UIEvent::PrevSearch,
+            ),
         ]);
         expected.widget_base_config.category_keybind = EventHandlerUI::from([
-            (KeyCode::Char('r'), UIEvent::Remove),
-            (KeyCode::Enter, UIEvent::Select),
-            (KeyCode::Backspace, UIEvent::Remove),
-            (KeyCode::Char('n'), UIEvent::NextSearch),
-            (KeyCode::Char('N'), UIEvent::PrevSearch),
+            (KeyShortcut::from(KeyCode::Char('r')), UIEvent::Remove),
+            (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
+            (KeyShortcut::from(KeyCode::Backspace), UIEvent::Remove),
+            (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
+            (
+                KeyShortcut::new(KeyCode::Char('n'), KeyModifiers::SHIFT),
+                UIEvent::PrevSearch,
+            ),
         ]);
         expected.styles.category_select_style = TextStyle::default().fg(Color::blue());
         expected.styles.category_remove_style = TextStyle::default().fg(Color::yellow());

@@ -19,7 +19,7 @@ use crossterm::{
     self,
     event::{
         self, read, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
-        EnableMouseCapture, Event, KeyCode, MouseEvent,
+        EnableMouseCapture, Event, KeyCode, KeyEvent, MouseEvent,
     },
     execute,
     terminal::{
@@ -342,7 +342,7 @@ impl UI {
             (Event::Paste(s), Mode::Normal) => {
                 if self.config.paste_behavior == PasteBehavior::Insert {
                     log::debug!("Pasted: {s}");
-                    if let Err(e) = self.data.lock().unwrap().new_task(&s) {
+                    if let Err(e) = self.data.lock().unwrap().new_task(s) {
                         log::error!("Error while pasting new task: {e}");
                         self.popup.add_message(format!("Failed paste task: {e}"));
                     }
@@ -418,7 +418,8 @@ impl UI {
                 }
             },
             (Event::Key(event), Mode::Normal) => {
-                let _ = self.handle_key(&event.code) || self.layout.handle_key(&event);
+                log::debug!("Handle event: {:?}", event);
+                let _ = self.handle_key(event) || self.layout.handle_key(event);
             }
             _ => {}
         }
@@ -426,8 +427,9 @@ impl UI {
 }
 
 impl HandleEvent for UI {
-    fn get_event(&self, key: &KeyCode) -> UIEvent {
-        self.config.window_keybinds.get_event(key)
+    fn get_event(&self, event: &KeyEvent) -> UIEvent {
+        log::debug!("get_event {:#?}", self.config.window_keybinds);
+        self.config.window_keybinds.get_event(event)
     }
 
     fn handle_event(&mut self, event: UIEvent) -> bool {
@@ -498,13 +500,14 @@ impl HandleEvent for UI {
 mod tests {
     use super::*;
     use crate::{config::Conf, layout::widget::widget_type::WidgetType};
-    use crossterm::event::{KeyEvent, KeyModifiers};
-    use std::env;
+    use crossterm::event::KeyEvent;
+    use std::{env, str::FromStr};
     use test_log::test;
 
     macro_rules! handle_event {
         ($ui:expr, $code:expr) => {
-            let event = Event::Key(KeyEvent::new($code, KeyModifiers::NONE));
+            let key_shortcut = KeyShortcut::from_str($code)?;
+            let event = Event::Key(KeyEvent::new(key_shortcut.key, key_shortcut.modifiers));
             $ui.handle_event_window(event);
         };
     }
@@ -538,22 +541,22 @@ mod tests {
         let mut ui = default_ui()?;
         ui.update_chunk(Rect::new(0, 0, 20, 20));
 
-        handle_event!(ui, KeyCode::Char('J'));
+        handle_event!(ui, "S+j");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
 
-        handle_event!(ui, KeyCode::Char('L'));
+        handle_event!(ui, "S+l");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
 
-        handle_event!(ui, KeyCode::Char('K'));
+        handle_event!(ui, "S+k");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
 
-        handle_event!(ui, KeyCode::Char('L'));
+        handle_event!(ui, "S+l");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
 
-        handle_event!(ui, KeyCode::Char('J'));
+        handle_event!(ui, "S+j");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::Context);
 
-        handle_event!(ui, KeyCode::Char('H'));
+        handle_event!(ui, "S+h");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
 
         Ok(())
@@ -567,99 +570,99 @@ mod tests {
         let event = Event::Resize(50, 50);
         ui.handle_event_window(event);
 
-        handle_event!(ui, KeyCode::Char('j'));
+        handle_event!(ui, "j");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
 
-        handle_event!(ui, KeyCode::Enter);
+        handle_event!(ui, "Enter");
         assert!(ui.data.lock().unwrap().get_active().is_some());
 
-        handle_event!(ui, KeyCode::Char('I'));
+        handle_event!(ui, "S+i");
         assert_eq!(ui.mode, Mode::Input);
 
-        handle_event!(ui, KeyCode::Esc);
+        handle_event!(ui, "Esc");
         assert_eq!(ui.mode, Mode::Normal);
 
-        handle_event!(ui, KeyCode::Char('E'));
+        handle_event!(ui, "S+e");
         assert_eq!(ui.mode, Mode::Edit);
 
-        handle_event!(ui, KeyCode::Esc);
+        handle_event!(ui, "Esc");
         assert_eq!(ui.mode, Mode::Normal);
 
-        handle_event!(ui, KeyCode::Char('/'));
+        handle_event!(ui, "/");
         assert_eq!(ui.mode, Mode::Search);
 
-        handle_event!(ui, KeyCode::Esc);
+        handle_event!(ui, "Esc");
         assert_eq!(ui.mode, Mode::Normal);
 
-        handle_event!(ui, KeyCode::Char('/'));
+        handle_event!(ui, "/");
         assert_eq!(ui.mode, Mode::Search);
 
-        handle_event!(ui, KeyCode::Char('a'));
+        handle_event!(ui, "a");
         assert_eq!(ui.mode, Mode::Search);
 
-        handle_event!(ui, KeyCode::Enter);
+        handle_event!(ui, "Enter");
         assert_eq!(ui.mode, Mode::Normal);
 
-        handle_event!(ui, KeyCode::Char('u'));
+        handle_event!(ui, "u");
 
-        handle_event!(ui, KeyCode::Char('I'));
+        handle_event!(ui, "S+i");
         assert_eq!(ui.mode, Mode::Input);
 
-        handle_event!(ui, KeyCode::Char('a'));
+        handle_event!(ui, "a");
         assert_eq!(ui.tinput.to_string(), "a");
         assert_eq!(ui.mode, Mode::Input);
-        handle_event!(ui, KeyCode::Char('b'));
+        handle_event!(ui, "b");
         assert_eq!(ui.tinput.to_string(), "ab");
         assert_eq!(ui.mode, Mode::Input);
-        handle_event!(ui, KeyCode::Char('c'));
+        handle_event!(ui, "c");
         assert_eq!(ui.tinput.to_string(), "abc");
         assert_eq!(ui.mode, Mode::Input);
-        handle_event!(ui, KeyCode::Tab);
+        handle_event!(ui, "Tab");
         assert_eq!(ui.tinput.to_string(), "abc");
         assert_eq!(ui.mode, Mode::Input);
 
-        handle_event!(ui, KeyCode::Enter);
+        handle_event!(ui, "Enter");
         assert_eq!(ui.tinput.to_string(), "");
         assert_eq!(ui.mode, Mode::Normal);
 
-        handle_event!(ui, KeyCode::Char('E'));
+        handle_event!(ui, "S+e");
         assert_eq!(ui.mode, Mode::Edit);
 
-        handle_event!(ui, KeyCode::Char(' '));
+        handle_event!(ui, " ");
         assert_eq!(ui.tinput.to_string(), "Second task ");
         assert_eq!(ui.mode, Mode::Edit);
-        handle_event!(ui, KeyCode::Char('+'));
+        handle_event!(ui, "plus");
         assert_eq!(ui.tinput.to_string(), "Second task +");
         assert_eq!(ui.mode, Mode::Edit);
-        handle_event!(ui, KeyCode::Char('a'));
+        handle_event!(ui, "a");
         assert_eq!(ui.tinput.to_string(), "Second task +a");
         assert_eq!(ui.mode, Mode::Edit);
-        handle_event!(ui, KeyCode::Tab);
+        handle_event!(ui, "Tab");
         assert_eq!(ui.tinput.to_string(), "Second task +abcdef ");
         assert_eq!(ui.mode, Mode::Edit);
-        handle_event!(ui, KeyCode::Backspace);
-        handle_event!(ui, KeyCode::Backspace);
-        handle_event!(ui, KeyCode::Backspace);
-        handle_event!(ui, KeyCode::Backspace);
-        handle_event!(ui, KeyCode::Backspace);
-        handle_event!(ui, KeyCode::Backspace);
-        handle_event!(ui, KeyCode::Backspace);
-        handle_event!(ui, KeyCode::Backspace);
-        handle_event!(ui, KeyCode::Backspace);
+        handle_event!(ui, "Backspace");
+        handle_event!(ui, "Backspace");
+        handle_event!(ui, "Backspace");
+        handle_event!(ui, "Backspace");
+        handle_event!(ui, "Backspace");
+        handle_event!(ui, "Backspace");
+        handle_event!(ui, "Backspace");
+        handle_event!(ui, "Backspace");
+        handle_event!(ui, "Backspace");
 
-        handle_event!(ui, KeyCode::Enter);
+        handle_event!(ui, "Enter");
         assert_eq!(ui.tinput.to_string(), "");
         assert_eq!(ui.mode, Mode::Normal);
 
         // Remove items added in this test
-        handle_event!(ui, KeyCode::Char('G'));
-        handle_event!(ui, KeyCode::Char('x'));
-        handle_event!(ui, KeyCode::Char('x'));
-        handle_event!(ui, KeyCode::Char('x'));
+        handle_event!(ui, "S+g");
+        handle_event!(ui, "x");
+        handle_event!(ui, "x");
+        handle_event!(ui, "x");
 
         // Quit TUI.
         assert!(!ui.quit);
-        handle_event!(ui, KeyCode::Char('q'));
+        handle_event!(ui, "q");
         assert!(ui.quit);
         ui.quit = false;
 
@@ -671,26 +674,26 @@ mod tests {
         let mut ui = default_ui()?;
         ui.update_chunk(Rect::new(0, 0, 20, 20));
 
-        handle_event!(ui, KeyCode::Char('L'));
+        handle_event!(ui, "S+l");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
 
-        handle_event!(ui, KeyCode::Char('J'));
+        handle_event!(ui, "S+j");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::Context);
 
-        handle_event!(ui, KeyCode::Char('/'));
+        handle_event!(ui, "/");
         assert_eq!(ui.mode, Mode::Search);
 
-        handle_event!(ui, KeyCode::Char('a'));
+        handle_event!(ui, "a");
         assert_eq!(ui.mode, Mode::Search);
 
-        handle_event!(ui, KeyCode::Char('b'));
+        handle_event!(ui, "b");
         assert_eq!(ui.mode, Mode::Search);
 
-        handle_event!(ui, KeyCode::Enter);
+        handle_event!(ui, "Enter");
         assert_eq!(ui.mode, Mode::Normal);
 
         // clean search
-        handle_event!(ui, KeyCode::Char('h'));
+        handle_event!(ui, "h");
         assert_eq!(ui.mode, Mode::Normal);
 
         Ok(())

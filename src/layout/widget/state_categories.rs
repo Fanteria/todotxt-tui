@@ -4,7 +4,7 @@ use crate::{
     todo::{search::Search, FilterState, ToDoCategory},
     ui::UIEvent,
 };
-use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
 use tui::{widgets::List, Frame};
 
 /// Represents the state for a widget that displays categories.
@@ -158,8 +158,8 @@ impl State for StateCategories {
         self.base.set_size(self.base.chunk.height - 2); // Two chars are borders.
     }
 
-    fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
-        self.base.get_event(key)
+    fn get_internal_event(&self, event: &KeyEvent) -> UIEvent {
+        self.base.get_event(event)
     }
 
     fn handle_click(&mut self, column: usize, row: usize) {

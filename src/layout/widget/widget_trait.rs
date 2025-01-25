@@ -1,6 +1,6 @@
 use super::{super::Render, widget_base::WidgetBase};
 use crate::ui::{HandleEvent, UIEvent};
-use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
 use tui::{
     prelude::Rect,
     style::Style,
@@ -81,7 +81,7 @@ pub trait State {
     /// # Returns
     ///
     /// An internal UI event generated based on the provided key code.
-    fn get_internal_event(&self, _: &KeyCode) -> UIEvent {
+    fn get_internal_event(&self, _: &KeyEvent) -> UIEvent {
         UIEvent::None
     }
 
@@ -90,10 +90,10 @@ pub trait State {
 }
 
 impl<S: State> HandleEvent for S {
-    fn get_event(&self, key: &KeyCode) -> UIEvent {
-        let event = self.get_internal_event(key);
+    fn get_event(&self, key_event: &KeyEvent) -> UIEvent {
+        let event = self.get_internal_event(key_event);
         if event == UIEvent::None {
-            self.get_base().event_handler.get_event(key)
+            self.get_base().event_handler.get_event(key_event)
         } else {
             event
         }

@@ -3,7 +3,7 @@ use crate::{
     config::{Config, ListConfig},
     ui::UIEvent,
 };
-use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
 use std::ops::{Deref, DerefMut};
 use tui::widgets::ListState;
 
@@ -194,8 +194,8 @@ impl WidgetList {
         (self.first, self.first + self.size)
     }
 
-    pub fn get_event(&self, key: &KeyCode) -> UIEvent {
-        self.config.list_keybind.get_event(key)
+    pub fn get_event(&self, event: &KeyEvent) -> UIEvent {
+        self.config.list_keybind.get_event(event)
     }
 
     pub fn handle_event(&mut self, event: UIEvent, len: usize) -> bool {
