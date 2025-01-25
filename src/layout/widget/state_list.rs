@@ -5,7 +5,7 @@ use crate::{
     ui::UIEvent,
     Result,
 };
-use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
 use tui::{style::Style, widgets::List, Frame};
 
 /// Represents the state for a list widget that displays tasks.
@@ -205,8 +205,8 @@ impl State for StateList {
         self.base.set_size(self.base.chunk.height - 2); // Two chars are borders.
     }
 
-    fn get_internal_event(&self, key: &KeyCode) -> UIEvent {
-        self.base.get_event(key)
+    fn get_internal_event(&self, event: &KeyEvent) -> UIEvent {
+        self.base.get_event(event)
     }
 
     fn handle_click(&mut self, column: usize, row: usize) {

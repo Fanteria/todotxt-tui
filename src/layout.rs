@@ -264,7 +264,7 @@ impl Layout {
         self.act_mut()
             .actual_mut()
             .expect("Actual is not widget")
-            .handle_key(&event.code)
+            .handle_key(event)
     }
 
     pub fn get_active_widget(&self) -> WidgetType {

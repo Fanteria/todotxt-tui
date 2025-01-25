@@ -1,5 +1,5 @@
 use super::UIEvent;
-use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
 
 /// Trait for handling UI events.
 pub trait HandleEvent {
@@ -12,7 +12,7 @@ pub trait HandleEvent {
     /// # Returns
     ///
     /// The UI event corresponding to the key code.
-    fn get_event(&self, key: &KeyCode) -> UIEvent;
+    fn get_event(&self, event: &KeyEvent) -> UIEvent;
 
     /// Handle a UI event.
     ///
@@ -34,9 +34,9 @@ pub trait HandleEvent {
     /// # Returns
     ///
     /// `true` if the event was successfully handled, `false` otherwise.
-    fn handle_key(&mut self, key: &KeyCode) -> bool {
-        let event = self.get_event(key);
-        log::trace!("EventHandler: Key '{:?}' cause event '{:?}'", key, event);
+    fn handle_key(&mut self, event: &KeyEvent) -> bool {
+        let event = self.get_event(event);
+        log::trace!("EventHandler: Key '{:?}' cause event '{:?}'", event, event);
         self.handle_event(event)
     }
 

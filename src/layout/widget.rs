@@ -13,7 +13,7 @@ use crate::{
     ui::UIEvent,
     Result,
 };
-use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
 use state_categories::StateCategories;
 use state_list::StateList;
 use state_preview::StatePreview;
