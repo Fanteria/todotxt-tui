@@ -109,7 +109,6 @@ mod tests {
     use super::*;
     use std::env::var;
     use test_log::test;
-    // TODO
 
     #[test]
     fn run_empty_hooks() {

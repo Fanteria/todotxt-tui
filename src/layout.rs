@@ -10,7 +10,7 @@ use core::panic;
 use crossterm::event::KeyEvent;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
-use std::{fmt::Debug, str::FromStr, sync::Arc, sync::Mutex};
+use std::str::FromStr;
 use tui::{
     layout::{Constraint, Direction, Rect},
     Frame,
@@ -68,12 +68,11 @@ impl Layout {
     /// This function parses a template string and creates a new `Layout` instance based on the
     /// specified template. The template string defines the layout of the user interface, including
     /// the arrangement of containers and widgets.
-    pub fn from_str(template: &str, data: Arc<Mutex<ToDo>>, config: &Config) -> Result<Self> {
+    pub fn from_str(template: &str, todo: &ToDo, config: &Config) -> Result<Self> {
         fn read_block(
             conts: &mut Vec<Container>,
             parent: Option<usize>,
             block: Pair<'_, Rule>,
-            data: Arc<Mutex<ToDo>>,
             config: &Config,
         ) -> Result<usize> {
             let index = conts.len();
@@ -110,14 +109,12 @@ impl Layout {
                         });
                         conts[index].add_widget(Widget::new(
                             WidgetType::from_str(widget_blocks[0].as_str())?,
-                            data.clone(),
                             config,
                         )?);
                     }
                     Rule::block => {
                         constrains.push(act_constrain.take().unwrap_or(Constraint::Percentage(50)));
-                        let next_item =
-                            read_block(conts, Some(index), inner, data.clone(), config)?;
+                        let next_item = read_block(conts, Some(index), inner, config)?;
                         conts[index].add_cont(next_item);
                     }
                     _ => unreachable!(),
@@ -134,11 +131,11 @@ impl Layout {
         // Here are two inners in, first is outer block and second is EOI.
         let outer_block = parsed.into_inner().collect::<Vec<_>>().remove(0);
         let mut containers: Vec<Container> = vec![];
-        read_block(&mut containers, None, outer_block, data, config)?;
+        read_block(&mut containers, None, outer_block, config)?;
 
         let mut layout = Self { containers, act: 0 };
         Container::actualize_layout(&mut layout);
-        layout.act_mut().actual_mut().unwrap().focus();
+        layout.act_mut().actual_mut().unwrap().focus(todo);
         Ok(layout)
     }
 
@@ -150,11 +147,11 @@ impl Layout {
         &mut self.containers[self.act]
     }
 
-    fn walk_in_container(&mut self, f: &impl Fn(&mut Container) -> bool) -> bool {
+    fn walk_in_container(&mut self, f: &impl Fn(&mut Container) -> bool, todo: &ToDo) -> bool {
         if f(self.act_mut()) {
             Container::actualize_layout(self);
             match self.act_mut().actual_mut() {
-                Some(widget) => widget.focus() || self.walk_in_container(f),
+                Some(widget) => widget.focus(todo) || self.walk_in_container(f, todo),
                 None => true,
             }
         } else {
@@ -167,7 +164,12 @@ impl Layout {
     /// # Parameters
     ///
     /// - `next`: An `Option<RcCon>` representing the new container to focus.
-    fn change_focus(&mut self, direction: &Direction, f: &impl Fn(&mut Container) -> bool) -> bool {
+    fn change_focus(
+        &mut self,
+        direction: &Direction,
+        f: &impl Fn(&mut Container) -> bool,
+        todo: &ToDo,
+    ) -> bool {
         log::trace!(
             "Layout::change_focus: direction {:?}, act {}",
             &direction,
@@ -183,7 +185,7 @@ impl Layout {
         if f(self.act_mut()) {
             Container::actualize_layout(self);
             if match self.act_mut().actual_mut() {
-                Some(widget) => widget.focus() || self.walk_in_container(f),
+                Some(widget) => widget.focus(todo) || self.walk_in_container(f, todo),
                 None => true,
             } {
                 old.unfocus(self);
@@ -202,7 +204,7 @@ impl Layout {
                 // check if there is upper container that can handle change
                 Some(index) => {
                     self.act = index;
-                    if self.change_focus(direction, f) {
+                    if self.change_focus(direction, f, todo) {
                         old.unfocus(self);
                         true
                     } else {
@@ -220,8 +222,13 @@ impl Layout {
 
     /// This method moves the focus to the container or widget to the `Site`
     /// of the currently focused element within the layout.
-    fn move_focus(&mut self, direction: Direction, function: fn(&mut Container) -> bool) -> bool {
-        let ret = self.change_focus(&direction, &function);
+    fn move_focus(
+        &mut self,
+        direction: Direction,
+        function: fn(&mut Container) -> bool,
+        todo: &ToDo,
+    ) -> bool {
+        let ret = self.change_focus(&direction, &function, todo);
         Container::actualize_layout(self);
         log::debug!(
             "Moved: {ret}, act widget: {}, container: {}, position: {}",
@@ -233,23 +240,23 @@ impl Layout {
     }
 
     /// Move the focus to the left.
-    pub fn left(&mut self) -> bool {
-        self.move_focus(Direction::Horizontal, Container::previous_item)
+    pub fn left(&mut self, todo: &ToDo) -> bool {
+        self.move_focus(Direction::Horizontal, Container::previous_item, todo)
     }
 
     /// Move the focus to the right.
-    pub fn right(&mut self) -> bool {
-        self.move_focus(Direction::Horizontal, Container::next_item)
+    pub fn right(&mut self, todo: &ToDo) -> bool {
+        self.move_focus(Direction::Horizontal, Container::next_item, todo)
     }
 
     /// Move the focus upwards.
-    pub fn up(&mut self) -> bool {
-        self.move_focus(Direction::Vertical, Container::previous_item)
+    pub fn up(&mut self, todo: &ToDo) -> bool {
+        self.move_focus(Direction::Vertical, Container::previous_item, todo)
     }
 
     /// Move the focus downwards.
-    pub fn down(&mut self) -> bool {
-        self.move_focus(Direction::Vertical, Container::next_item)
+    pub fn down(&mut self, todo: &ToDo) -> bool {
+        self.move_focus(Direction::Vertical, Container::next_item, todo)
     }
 
     /// Handle a key event.
@@ -260,11 +267,11 @@ impl Layout {
     /// # Parameters
     ///
     /// - `event`: A reference to the `KeyEvent` to be handled.
-    pub fn handle_key(&mut self, event: &KeyEvent) -> bool {
+    pub fn handle_key(&mut self, event: &KeyEvent, todo: &mut ToDo) -> bool {
         self.act_mut()
             .actual_mut()
             .expect("Actual is not widget")
-            .handle_key(event)
+            .handle_key(event, todo)
     }
 
     pub fn get_active_widget(&self) -> WidgetType {
@@ -275,6 +282,7 @@ impl Layout {
         &mut self,
         find_functor: impl Fn(&&mut Widget) -> bool,
         process_widget: impl Fn(&mut Widget),
+        todo: &ToDo,
     ) {
         let cont_act_index = self.act().get_index();
         let indexes = match self
@@ -294,7 +302,7 @@ impl Layout {
                 process_widget(widget);
                 if self.act == layout_index && cont_act_index == cont_index {
                     None
-                } else if widget.focus() {
+                } else if widget.focus(todo) {
                     Some((layout_index, cont_index))
                 } else {
                     None
@@ -313,7 +321,7 @@ impl Layout {
         }
     }
 
-    pub fn click(&mut self, column: u16, row: u16) {
+    pub fn click(&mut self, column: u16, row: u16, todo: &ToDo) {
         log::debug!("Click on column {column}, row {row}");
         self.find_widget(
             |w| {
@@ -322,13 +330,14 @@ impl Layout {
                 let y = chunk.y < row && row < chunk.y + chunk.height;
                 x && y
             },
-            |w| w.click(column.into(), row.into()),
+            |w| w.click(column.into(), row.into(), todo),
+            todo,
         );
     }
 
-    pub fn select_widget(&mut self, widget_type: WidgetType) {
+    pub fn select_widget(&mut self, widget_type: WidgetType, todo: &ToDo) {
         log::debug!("Select widget {widget_type}");
-        self.find_widget(|w| w.widget_type() == widget_type, |_| {});
+        self.find_widget(|w| w.widget_type() == widget_type, |_| {}, todo);
     }
 
     pub fn search(&mut self, to_search: String) {
@@ -349,8 +358,8 @@ impl Layout {
 }
 
 impl Render for Layout {
-    fn render(&self, f: &mut Frame) {
-        self.containers[0].render(f, &self.containers);
+    fn render(&self, f: &mut Frame, todo: &ToDo) {
+        self.containers[0].render(f, &self.containers, todo);
     }
 
     fn unfocus(&mut self) {
@@ -360,9 +369,9 @@ impl Render for Layout {
         }
     }
 
-    fn focus(&mut self) -> bool {
+    fn focus(&mut self, todo: &ToDo) -> bool {
         match self.act_mut().actual_mut() {
-            Some(w) => w.focus(),
+            Some(w) => w.focus(todo),
             None => panic!("Actual to focus is not a widget"),
         }
     }
@@ -387,19 +396,14 @@ mod tests {
             ],
             [ Direction: Vertical,
               Done,
-              [ 
+              [
                 Contexts,
                 Projects,
               ],
             ],
         ]
         "#;
-        Layout::from_str(
-            mock_layout,
-            Arc::new(Mutex::new(ToDo::default())),
-            &Config::default(),
-        )
-        .unwrap()
+        Layout::from_str(mock_layout, &ToDo::default(), &Config::default()).unwrap()
     }
 
     #[test]
@@ -407,29 +411,29 @@ mod tests {
         let mut l = mock_layout();
         assert_eq!(l.get_active_widget(), WidgetType::List);
 
-        assert!(l.right());
+        assert!(l.right(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::Done);
-        assert!(l.left());
+        assert!(l.left(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::List);
-        assert!(l.right());
+        assert!(l.right(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::Done);
-        assert!(!l.right());
+        assert!(!l.right(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::Done);
-        assert!(l.down());
+        assert!(l.down(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::Context);
-        assert!(l.right());
+        assert!(l.right(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::Project);
-        assert!(!l.down());
+        assert!(!l.down(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::Project);
-        assert!(l.left());
+        assert!(l.left(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::Context);
-        assert!(l.left());
+        assert!(l.left(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::List);
-        assert!(l.right());
+        assert!(l.right(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::Context);
-        assert!(l.left());
+        assert!(l.left(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::List);
-        assert!(!l.up());
+        assert!(!l.up(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::List);
 
         Ok(())
@@ -450,11 +454,7 @@ mod tests {
             ]
         "#;
 
-        let mut layout = Layout::from_str(
-            str_layout,
-            Arc::new(Mutex::new(ToDo::default())),
-            &Config::default(),
-        )?;
+        let mut layout = Layout::from_str(str_layout, &ToDo::default(), &Config::default())?;
         assert_eq!(layout.containers.len(), 2);
 
         assert_eq!(*layout.containers[0].get_direction(), Direction::Horizontal);

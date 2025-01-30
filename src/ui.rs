@@ -3,8 +3,9 @@ mod popup;
 mod ui_event;
 mod ui_state;
 
-pub use handle_event_trait::HandleEvent;
 use popup::Popup;
+
+pub use handle_event_trait::HandleEvent;
 pub use ui_event::*;
 pub use ui_state::UIState;
 
@@ -16,10 +17,9 @@ use crate::{
     Result,
 };
 use crossterm::{
-    self,
     event::{
         self, read, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
-        EnableMouseCapture, Event, KeyCode, KeyEvent, MouseEvent,
+        EnableMouseCapture, Event, KeyCode, MouseEvent,
     },
     execute,
     terminal::{
@@ -126,15 +126,15 @@ impl UI {
             }
         }
 
+        let mut layout = Layout::from_str(&config.ui_config.layout, &todo, config)?;
+
         let todo = Arc::new(Mutex::new(todo));
         let file_worker = FileWorker::new(config.file_worker_config.clone(), todo.clone())?;
 
         file_worker.load()?;
         let tx = file_worker.run()?;
 
-        let mut layout = Layout::from_str(&config.ui_config.layout, todo.clone(), config)?;
-
-        layout.select_widget(init_widget);
+        layout.select_widget(init_widget, &todo.lock().unwrap());
 
         Ok(UI::new(layout, todo, tx.clone(), config))
     }
@@ -276,7 +276,7 @@ impl UI {
                 Paragraph::new(self.tinput.value()).block(block),
                 self.input_chunk,
             );
-            self.layout.render(f);
+            self.layout.render(f, &self.data.lock().unwrap());
 
             if self.mode == Mode::Input || self.mode == Mode::Edit {
                 let width = self.input_chunk.width.max(3) - 3;
@@ -337,7 +337,7 @@ impl UI {
                 _,
             ) => {
                 log::debug!("Mouse event: column {column}, row {row}");
-                self.layout.click(*column, *row);
+                self.layout.click(*column, *row, &self.data.lock().unwrap());
             }
             (Event::Paste(s), Mode::Normal) => {
                 if self.config.paste_behavior == PasteBehavior::Insert {
@@ -357,11 +357,11 @@ impl UI {
                     }
                     self.tinput.reset();
                     self.mode = Mode::Normal;
-                    self.layout.focus();
+                    self.layout.focus(&self.data.lock().unwrap());
                 }
                 KeyCode::Esc => {
                     self.mode = Mode::Normal;
-                    self.layout.focus();
+                    self.layout.focus(&self.data.lock().unwrap());
                 }
                 KeyCode::Tab => {
                     if let Some(input) =
@@ -382,12 +382,12 @@ impl UI {
                     }
                     self.tinput.reset();
                     self.mode = Mode::Normal;
-                    self.layout.focus();
+                    self.layout.focus(&self.data.lock().unwrap());
                 }
                 KeyCode::Esc => {
                     self.tinput.reset();
                     self.mode = Mode::Normal;
-                    self.layout.focus();
+                    self.layout.focus(&self.data.lock().unwrap());
                 }
                 KeyCode::Tab => {
                     if let Some(input) =
@@ -403,14 +403,14 @@ impl UI {
             (Event::Key(event), Mode::Search) => match event.code {
                 KeyCode::Enter => {
                     self.mode = Mode::Normal;
-                    self.layout.focus();
+                    self.layout.focus(&self.data.lock().unwrap());
                     self.tinput.reset();
                 }
                 KeyCode::Esc => {
                     self.tinput.reset();
                     self.mode = Mode::Normal;
                     self.layout.clean_search();
-                    self.layout.focus();
+                    self.layout.focus(&self.data.lock().unwrap());
                 }
                 _ => {
                     self.tinput.handle_event(&e);
@@ -419,22 +419,18 @@ impl UI {
             },
             (Event::Key(event), Mode::Normal) => {
                 log::debug!("Handle event: {:?}", event);
-                let _ = self.handle_key(event) || self.layout.handle_key(event);
+                if !self.handle(event) {
+                    self.layout
+                        .handle_key(event, &mut self.data.lock().unwrap());
+                }
             }
             _ => {}
         }
     }
-}
 
-impl HandleEvent for UI {
-    fn get_event(&self, event: &KeyEvent) -> UIEvent {
-        log::debug!("get_event {:#?}", self.config.window_keybinds);
-        self.config.window_keybinds.get_event(event)
-    }
-
-    fn handle_event(&mut self, event: UIEvent) -> bool {
+    fn handle(&mut self, event: &event::KeyEvent) -> bool {
         use UIEvent::*;
-        match event {
+        match self.config.window_keybinds.get_event(event) {
             Quit => {
                 if let Some(path) = &self.config.save_state_path {
                     if let Err(e) =
@@ -450,16 +446,16 @@ impl HandleEvent for UI {
                 self.layout.unfocus();
             }
             MoveRight => {
-                self.layout.right();
+                self.layout.right(&self.data.lock().unwrap());
             }
             MoveLeft => {
-                self.layout.left();
+                self.layout.left(&self.data.lock().unwrap());
             }
             MoveUp => {
-                self.layout.up();
+                self.layout.up(&self.data.lock().unwrap());
             }
             MoveDown => {
-                self.layout.down();
+                self.layout.down(&self.data.lock().unwrap());
             }
             Save => {
                 if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
@@ -495,6 +491,76 @@ impl HandleEvent for UI {
         true
     }
 }
+
+// impl HandleEvent for UI {
+//     fn get_event(&self, event: &KeyEvent) -> UIEvent {
+//         log::debug!("get_event {:#?}", self.config.window_keybinds);
+//         self.config.window_keybinds.get_event(event)
+//     }
+//
+//     fn handle_event(&mut self, event: UIEvent, todo: &mut ToDo) -> bool {
+//         use UIEvent::*;
+//         match event {
+//             Quit => {
+//                 if let Some(path) = &self.config.save_state_path {
+//                     if let Err(e) =
+//                         UIState::new(&self.layout, &self.data.lock().unwrap()).save(path)
+//                     {
+//                         log::error!("Error while saving UI state: {}", e);
+//                     }
+//                 }
+//                 self.quit = true;
+//             }
+//             InsertMode => {
+//                 self.mode = Mode::Input;
+//                 self.layout.unfocus();
+//             }
+//             MoveRight => {
+//                 self.layout.right(todo);
+//             }
+//             MoveLeft => {
+//                 self.layout.left(todo);
+//             }
+//             MoveUp => {
+//                 self.layout.up(todo);
+//             }
+//             MoveDown => {
+//                 self.layout.down(todo);
+//             }
+//             Save => {
+//                 if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
+//                     log::error!("Error while send signal to save todo list: {e}");
+//                     self.popup
+//                         .add_message(format!("Cannot save todo list: {e}"));
+//                 }
+//             }
+//             Load => {
+//                 if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
+//                     log::error!("Error while send signal to load todo list: {e}");
+//                     self.popup
+//                         .add_message(format!("Cannot load todo list: {e}"));
+//                 }
+//             }
+//             EditMode => {
+//                 if let Some(active) = self.data.lock().unwrap().get_active() {
+//                     self.tinput = active.to_string().into();
+//                     self.mode = Mode::Edit;
+//                     self.layout.unfocus();
+//                     // self.in
+//                 }
+//             }
+//             SearchMode => {
+//                 self.tinput.reset();
+//                 self.mode = Mode::Search;
+//                 self.layout.unfocus();
+//             }
+//             _ => {
+//                 return false;
+//             }
+//         }
+//         true
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

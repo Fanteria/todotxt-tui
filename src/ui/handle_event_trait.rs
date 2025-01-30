@@ -1,3 +1,5 @@
+use crate::todo::ToDo;
+
 use super::UIEvent;
 use crossterm::event::KeyEvent;
 
@@ -23,7 +25,7 @@ pub trait HandleEvent {
     /// # Returns
     ///
     /// `true` if the event was successfully handled, `false` otherwise.
-    fn handle_event(&mut self, event: UIEvent) -> bool;
+    fn handle_event(&mut self, event: UIEvent, todo: &mut ToDo) -> bool;
 
     /// Handle a key press event.
     ///
@@ -34,10 +36,10 @@ pub trait HandleEvent {
     /// # Returns
     ///
     /// `true` if the event was successfully handled, `false` otherwise.
-    fn handle_key(&mut self, event: &KeyEvent) -> bool {
+    fn handle_key(&mut self, event: &KeyEvent, todo: &mut ToDo) -> bool {
         let event = self.get_event(event);
         log::trace!("EventHandler: Key '{:?}' cause event '{:?}'", event, event);
-        self.handle_event(event)
+        self.handle_event(event, todo)
     }
 
     /// Handle a click event on a specified coordinates in the UI.
@@ -47,5 +49,5 @@ pub trait HandleEvent {
     /// * `column` - `x` coordinate.
     /// * `row` - `y` coordinate.
     #[allow(unused_variables)]
-    fn click(&mut self, column: usize, row: usize) {}
+    fn click(&mut self, column: usize, row: usize, todo: &ToDo) {}
 }

@@ -1,3 +1,5 @@
+use crate::todo::ToDo;
+
 use super::{render_trait::Render, widget::widget_type::WidgetType, Layout, Widget};
 use tui::{
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},
@@ -176,10 +178,10 @@ impl Container {
         Some(self.actual()?.widget_type())
     }
 
-    pub fn render(&self, f: &mut Frame, containers: &Vec<Self>) {
+    pub fn render(&self, f: &mut Frame, containers: &Vec<Self>, todo: &ToDo) {
         self.items.iter().for_each(|cont| match cont {
-            It::Cont(index) => containers[*index].render(f, containers),
-            It::Item(widget) => widget.render(f),
+            It::Cont(index) => containers[*index].render(f, containers, todo),
+            It::Item(widget) => widget.render(f, todo),
         });
     }
 
@@ -225,12 +227,9 @@ mod tests {
     use super::super::Layout;
     use super::*;
     use crate::{config::Config, layout::widget::State, todo::ToDo, Result};
-    use std::sync::{Arc, Mutex};
     use WidgetType::*;
 
     fn testing_layout() -> Layout {
-        let todo = Arc::new(Mutex::new(ToDo::default()));
-
         Layout::from_str(
             r#"
             [
@@ -244,7 +243,7 @@ mod tests {
                 ],
             ]
             "#,
-            todo,
+            &ToDo::default(),
             &Config::default(),
         )
         .unwrap()
@@ -262,7 +261,7 @@ mod tests {
     fn test_selecting_widget() -> Result<()> {
         let mut layout = testing_layout();
         let mut check = |widget_type| -> Result<()> {
-            layout.select_widget(widget_type);
+            layout.select_widget(widget_type, &ToDo::default());
             check_active(&layout, widget_type);
             Ok(())
         };
@@ -272,7 +271,7 @@ mod tests {
         check(Project)?;
 
         // If Context is not find it is not set.
-        layout.select_widget(Context);
+        layout.select_widget(Context, &ToDo::default());
         check_active(&layout, Project);
 
         Ok(())
@@ -283,19 +282,19 @@ mod tests {
         let mut layout = testing_layout();
 
         // Test next widget in child container.
-        layout.select_widget(List);
+        layout.select_widget(List, &ToDo::default());
         assert!(layout.act_mut().next_item());
         Container::actualize_layout(&mut layout);
         check_active(&layout, Done);
 
         // Test next widget in same container.
-        layout.select_widget(Done);
+        layout.select_widget(Done, &ToDo::default());
         assert!(layout.act_mut().next_item());
         Container::actualize_layout(&mut layout);
         check_active(&layout, Project);
 
         // Test next in container have not default value
-        layout.select_widget(List);
+        layout.select_widget(List, &ToDo::default());
         assert!(layout.act_mut().next_item());
         Container::actualize_layout(&mut layout);
         check_active(&layout, Project);
@@ -318,7 +317,7 @@ mod tests {
         let mut layout = testing_layout();
 
         // Test previous widget in same container.
-        layout.select_widget(Project);
+        layout.select_widget(Project, &ToDo::default());
         assert!(layout.act_mut().previous_item());
         Container::actualize_layout(&mut layout);
 

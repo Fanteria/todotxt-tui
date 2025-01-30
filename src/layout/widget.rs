@@ -51,36 +51,36 @@ impl Widget {
     /// # Returns
     ///
     /// Returns a new instance of the specified widget type.
-    pub fn new(widget_type: WidgetType, data: RCToDo, config: &Config) -> Result<Self> {
+    pub fn new(widget_type: WidgetType, config: &Config) -> Result<Self> {
         use WidgetType::*;
         Ok(match widget_type {
             List => Self::List(StateList::new(
-                WidgetList::new(&widget_type, data, config),
+                WidgetList::new(&widget_type, config),
                 ToDoData::Pending,
                 config,
             )?),
             Done => Self::List(StateList::new(
-                WidgetList::new(&widget_type, data, config),
+                WidgetList::new(&widget_type, config),
                 ToDoData::Done,
                 config,
             )?),
             Project => Self::Category(StateCategories::new(
-                WidgetList::new(&widget_type, data, config),
+                WidgetList::new(&widget_type, config),
                 ToDoCategory::Projects,
                 &config.active_color_config,
             )),
             Context => Self::Category(StateCategories::new(
-                WidgetList::new(&widget_type, data, config),
+                WidgetList::new(&widget_type, config),
                 ToDoCategory::Contexts,
                 &config.active_color_config,
             )),
             Hashtag => Self::Category(StateCategories::new(
-                WidgetList::new(&widget_type, data, config),
+                WidgetList::new(&widget_type, config),
                 ToDoCategory::Hashtags,
                 &config.active_color_config,
             )),
             Preview => Self::Preview(StatePreview::new(
-                WidgetBase::new(&widget_type, data, config),
+                WidgetBase::new(&widget_type, config),
                 config,
             )?),
         })

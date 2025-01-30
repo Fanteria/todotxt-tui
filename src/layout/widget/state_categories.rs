@@ -1,7 +1,7 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
     config::{ActiveColorConfig, TextStyle},
-    todo::{search::Search, FilterState, ToDoCategory},
+    todo::{search::Search, FilterState, ToDo, ToDoCategory},
     ui::UIEvent,
 };
 use crossterm::event::KeyEvent;
@@ -34,40 +34,31 @@ impl StateCategories {
         }
     }
 
-    /// Returns the number of items in the category associated with this widget.
-    ///
-    /// # Returns
-    ///
-    /// The number of items in the category.
-    pub fn len(&self) -> usize {
-        self.base.data().get_categories(self.category).len()
+    /// Number of items in the category associated with this widget.
+    pub fn len(&self, todo: &ToDo) -> usize {
+        todo.get_categories(self.category).len()
     }
 
-    fn toggle_filter(&mut self, filter_state: FilterState) {
-        let name = {
-            let todo = self.base.data();
-            todo.get_categories(self.category)
-                .get_name(self.base.act())
-                .clone()
-        };
-        self.base
-            .data()
-            .toggle_filter(self.category, &name, filter_state);
+    fn toggle_filter(&mut self, filter_state: FilterState, todo: &mut ToDo) {
+        let name = todo
+            .get_categories(self.category)
+            .get_name(self.base.act())
+            .clone();
+        todo.toggle_filter(self.category, &name, filter_state);
     }
 }
 
 impl State for StateCategories {
-    fn handle_event_state(&mut self, event: UIEvent) -> bool {
-        if self.base.handle_event(event, self.len()) {
+    fn handle_event_state(&mut self, event: UIEvent, todo: &mut ToDo) -> bool {
+        if self.base.handle_event(event, self.len(todo)) {
             return true;
         }
         match event {
-            UIEvent::Select => self.toggle_filter(FilterState::Select),
-            UIEvent::Remove => self.toggle_filter(FilterState::Remove),
+            UIEvent::Select => self.toggle_filter(FilterState::Select, todo),
+            UIEvent::Remove => self.toggle_filter(FilterState::Remove, todo),
             UIEvent::NextSearch => {
                 if let Some(to_search) = &self.base.to_search {
                     let next = {
-                        let todo = self.base.data();
                         let data = todo.get_categories(self.category);
                         let next = Search::find(
                             data.vec.iter().skip(self.base.index() + 1).enumerate(),
@@ -79,7 +70,7 @@ impl State for StateCategories {
                     if let Some(next) = next {
                         log::debug!("Search next: {} times down", next);
                         for _ in 0..next + 1 {
-                            self.base.down(self.len())
+                            self.base.down(self.len(todo))
                         }
                     }
                 }
@@ -87,7 +78,6 @@ impl State for StateCategories {
             UIEvent::PrevSearch => {
                 if let Some(to_search) = &self.base.to_search {
                     let prev = {
-                        let todo = self.base.data();
                         let data = todo.get_categories(self.category);
                         let prev = Search::find(
                             data.vec
@@ -113,8 +103,7 @@ impl State for StateCategories {
         true
     }
 
-    fn render(&self, f: &mut Frame) {
-        let todo = self.base.data();
+    fn render(&self, f: &mut Frame, todo: &ToDo) {
         let data = todo.get_categories(self.category);
         let (first, last) = self.base.range();
         let list = List::from(data.get_view(first..last, self.base.to_search.as_deref()))
@@ -138,10 +127,10 @@ impl State for StateCategories {
         &mut self.base
     }
 
-    fn focus_event(&mut self) -> bool {
-        let len = self.len();
+    fn focus_event(&mut self, todo: &ToDo) -> bool {
+        let len = self.len(todo);
         if self.base.act() >= len && len > 0 {
-            self.base.last(self.len());
+            self.base.last(self.len(todo));
         }
         true
     }
@@ -162,20 +151,16 @@ impl State for StateCategories {
         self.base.get_event(event)
     }
 
-    fn handle_click(&mut self, column: usize, row: usize) {
-        self.base.click(column, row, self.len());
+    fn handle_click(&mut self, column: usize, row: usize, todo: &ToDo) {
+        self.base.click(column, row, self.len(todo));
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        str::FromStr,
-        sync::{Arc, Mutex},
-    };
-
     use super::*;
     use crate::{config::Config, layout::widget::widget_type::WidgetType, todo::ToDo};
+    use std::str::FromStr;
 
     #[test]
     fn handle_event_state() {
@@ -187,45 +172,43 @@ mod tests {
         todo.add_task(todo_txt::Task::from_str("Task +project3").unwrap());
 
         let mut c = StateCategories::new(
-            WidgetList::new(&WidgetType::Project, Arc::new(Mutex::new(todo)), &config),
+            WidgetList::new(&WidgetType::Project, &config),
             ToDoCategory::Projects,
             &config.active_color_config,
         );
 
         c.base.set_size(20);
         c.search_event(String::from("proj"));
-        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert!(c.handle_event_state(UIEvent::NextSearch, &mut todo));
         assert_eq!(c.base.index(), 1);
-        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert!(c.handle_event_state(UIEvent::NextSearch, &mut todo));
         assert_eq!(c.base.act(), 2);
-        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert!(c.handle_event_state(UIEvent::NextSearch, &mut todo));
         assert_eq!(c.base.act(), 2);
-        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert!(c.handle_event_state(UIEvent::NextSearch, &mut todo));
         assert_eq!(c.base.act(), 2);
 
-        assert!(c.handle_event_state(UIEvent::PrevSearch));
+        assert!(c.handle_event_state(UIEvent::PrevSearch, &mut todo));
         assert_eq!(c.base.act(), 1);
-        assert!(c.handle_event_state(UIEvent::PrevSearch));
+        assert!(c.handle_event_state(UIEvent::PrevSearch, &mut todo));
         assert_eq!(c.base.act(), 0);
-        assert!(c.handle_event_state(UIEvent::PrevSearch));
+        assert!(c.handle_event_state(UIEvent::PrevSearch, &mut todo));
         assert_eq!(c.base.act(), 0);
 
         c.clear_search();
-        assert!(c.handle_event_state(UIEvent::NextSearch));
+        assert!(c.handle_event_state(UIEvent::NextSearch, &mut todo));
         assert_eq!(c.base.act(), 0);
 
-        assert!(c.handle_event_state(UIEvent::Select));
+        assert!(c.handle_event_state(UIEvent::Select, &mut todo));
         {
-            let todo = c.base.data();
             assert_eq!(
                 todo.get_state().get_category(c.category)["project1"],
                 FilterState::Select
             );
         }
 
-        assert!(c.handle_event_state(UIEvent::Remove));
+        assert!(c.handle_event_state(UIEvent::Remove, &mut todo));
         {
-            let todo = c.base.data();
             assert_eq!(
                 todo.get_state().get_category(c.category)["project1"],
                 FilterState::Remove
@@ -233,6 +216,6 @@ mod tests {
         }
 
         // Do nothing on unknown event
-        assert!(!c.handle_event_state(UIEvent::Quit));
+        assert!(!c.handle_event_state(UIEvent::Quit, &mut todo));
     }
 }

@@ -1,5 +1,7 @@
 use tui::{prelude::Rect, Frame};
 
+use crate::todo::ToDo;
+
 /// A trait for rendering UI components.
 ///
 /// The `Render` trait defines methods for rendering UI components within a TUI (Text-based User Interface).
@@ -15,13 +17,13 @@ pub trait Render {
     /// # Parameters
     ///
     /// - `f`: A mutable reference to a TUI frame where the component should be rendered.
-    fn render(&self, f: &mut Frame);
+    fn render(&self, f: &mut Frame, todo: &ToDo);
 
     /// Focus the UI component.
     ///
     /// This method is called to give focus to the UI component. Focusing a component
     /// typically means that it can now accept user input and respond to events.
-    fn focus(&mut self) -> bool;
+    fn focus(&mut self, todo: &ToDo) -> bool;
 
     /// Unfocus the UI component.
     ///
