@@ -1,4 +1,6 @@
-use super::{super::Render, widget_base::WidgetBase};
+use std::fmt::Debug;
+
+use super::{super::Render, widget_base::WidgetBase, widget_type::WidgetType};
 use crate::{
     todo::ToDo,
     ui::{HandleEvent, UIEvent},
@@ -12,17 +14,9 @@ use tui::{
 };
 
 #[enum_dispatch]
-pub trait State {
+pub trait State: Debug {
     /// Handles a UI event specific to the state and returns a boolean indicating
     /// whether the event was handled successfully.
-    ///
-    /// # Parameters
-    ///
-    /// - `event`: The UI event to be handled.
-    ///
-    /// # Returns
-    ///
-    /// A boolean indicating whether the event was successfully handled.
     fn handle_event_state(&mut self, event: UIEvent, todo: &mut ToDo) -> bool;
 
     /// Renders the widget's state using the provided TUI frame.
@@ -90,9 +84,12 @@ pub trait State {
 
     #[allow(unused_variables)]
     fn handle_click(&mut self, column: usize, row: usize, todo: &ToDo) {}
+
+    /// Get the type of the widget.
+    fn widget_type(&self) -> WidgetType;
 }
 
-impl<S: State> HandleEvent for S {
+impl<S: ?Sized + State> HandleEvent for S {
     fn get_event(&self, key_event: &KeyEvent) -> UIEvent {
         let event = self.get_internal_event(key_event);
         if event == UIEvent::None {
@@ -111,7 +108,7 @@ impl<S: State> HandleEvent for S {
     }
 }
 
-impl<S: State> Render for S {
+impl<S: ?Sized + State> Render for S {
     fn render(&self, f: &mut Frame, todo: &ToDo) {
         State::render(self, f, todo);
     }

@@ -1,6 +1,10 @@
 use crate::todo::ToDo;
 
-use super::{render_trait::Render, widget::widget_type::WidgetType, Layout, Widget};
+use super::{
+    render_trait::Render,
+    widget::{State, WidgetType},
+    Layout,
+};
 use tui::{
     layout::{Constraint, Direction, Layout as TuiLayout, Rect},
     Frame,
@@ -9,7 +13,7 @@ use tui::{
 #[derive(Debug)]
 enum It {
     Cont(usize),
-    Item(Widget),
+    Item(Box<dyn State>),
 }
 
 /// Represents a container that can hold widgets and other containers.
@@ -27,7 +31,7 @@ pub struct Container {
 }
 
 impl Container {
-    pub fn add_widget(&mut self, widget: Widget) {
+    pub fn add_widget(&mut self, widget: Box<dyn State>) {
         self.items.push(It::Item(widget));
     }
 
@@ -61,16 +65,16 @@ impl Container {
         }
     }
 
-    pub fn get_widget(&self, index: usize) -> Option<&Widget> {
+    pub fn get_widget(&self, index: usize) -> Option<&dyn State> {
         match &self.items[index] {
-            It::Item(w) => Some(w),
+            It::Item(w) => Some(w.as_ref()),
             It::Cont(_) => None,
         }
     }
 
-    pub fn get_widget_mut(&mut self, index: usize) -> Option<&mut Widget> {
+    pub fn get_widget_mut(&mut self, index: usize) -> Option<&mut dyn State> {
         match &mut self.items[index] {
-            It::Item(w) => Some(w),
+            It::Item(w) => Some(w.as_mut()),
             It::Cont(_) => None,
         }
     }
@@ -81,7 +85,7 @@ impl Container {
     ///
     /// A result containing a reference to the active `Widget` or a `None`
     /// if the active item is not a widget.
-    pub fn actual(&self) -> Option<&Widget> {
+    pub fn actual(&self) -> Option<&dyn State> {
         self.get_widget(self.act_index)
     }
 
@@ -91,7 +95,7 @@ impl Container {
     ///
     /// A result containing a mutable reference to the active `Widget` or a `None`
     /// if the active item is not a widget.
-    pub fn actual_mut(&mut self) -> Option<&mut Widget> {
+    pub fn actual_mut(&mut self) -> Option<&mut dyn State> {
         self.get_widget_mut(self.act_index)
     }
 
@@ -191,7 +195,7 @@ impl Container {
             let index = match &mut containers[index].items[i] {
                 It::Cont(index) => *index,
                 It::Item(widget) => {
-                    widget.update_chunk(chunks[i]);
+                    widget.as_mut().update_chunk(chunks[i]);
                     continue;
                 }
             };
@@ -199,7 +203,7 @@ impl Container {
         }
     }
 
-    pub fn get_widgets_mut(&mut self) -> impl IntoIterator<Item = &mut Widget> {
+    pub fn get_widgets_mut(&mut self) -> impl IntoIterator<Item = &mut Box<dyn State>> {
         self.items.iter_mut().filter_map(|item| {
             if let It::Item(w) = item {
                 Some(w)
@@ -226,7 +230,7 @@ impl Default for Container {
 mod tests {
     use super::super::Layout;
     use super::*;
-    use crate::{config::Config, layout::widget::State, todo::ToDo, Result};
+    use crate::{config::Config, todo::ToDo, Result};
     use WidgetType::*;
 
     fn testing_layout() -> Layout {

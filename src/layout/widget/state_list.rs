@@ -9,6 +9,7 @@ use crossterm::event::KeyEvent;
 use tui::{style::Style, widgets::List, Frame};
 
 /// Represents the state for a list widget that displays tasks.
+#[derive(Debug)]
 pub struct StateList {
     base: WidgetList,
     style: Style,
@@ -184,5 +185,9 @@ impl State for StateList {
 
     fn handle_click(&mut self, column: usize, row: usize, todo: &ToDo) {
         self.base.click(column, row, todo.len(self.data_type));
+    }
+
+    fn widget_type(&self) -> super::widget_type::WidgetType {
+        self.data_type.into()
     }
 }

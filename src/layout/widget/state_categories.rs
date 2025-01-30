@@ -8,6 +8,7 @@ use crossterm::event::KeyEvent;
 use tui::{widgets::List, Frame};
 
 /// Represents the state for a widget that displays categories.
+#[derive(Debug)]
 pub struct StateCategories {
     base: WidgetList,
     pub category: ToDoCategory,
@@ -153,6 +154,10 @@ impl State for StateCategories {
 
     fn handle_click(&mut self, column: usize, row: usize, todo: &ToDo) {
         self.base.click(column, row, self.len(todo));
+    }
+
+    fn widget_type(&self) -> super::widget_type::WidgetType {
+        self.category.into()
     }
 }
 

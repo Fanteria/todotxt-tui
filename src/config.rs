@@ -18,7 +18,7 @@ pub use self::{
 };
 
 use crate::{
-    layout::widget::widget_type::WidgetType,
+    layout::widget::WidgetType,
     todo::{ToDoCategory, ToDoData},
     ui::{EventHandlerUI, KeyShortcut, UIEvent},
     Result,
@@ -544,7 +544,6 @@ impl ConfigDefaults for Config {
 mod tests {
     use self::parsers::*;
     use super::*;
-    use crate::layout::widget::widget_type::WidgetType;
     use pretty_assertions::assert_eq;
     use std::{path::PathBuf, time::Duration};
     use test_log::test;
@@ -867,7 +866,6 @@ mod tests {
         expected.preview_config.preview_format = String::from("extra important preview");
         expected.preview_config.wrap_preview = true;
         expected.ui_config.window_keybinds = EventHandlerUI::from([
-            // TODO HERE
             (KeyShortcut::from(KeyCode::Char('e')), UIEvent::EditMode),
             (KeyShortcut::from(KeyCode::Char('q')), UIEvent::Quit),
             (

@@ -1,5 +1,5 @@
 use crate::{
-    layout::{widget::widget_type::WidgetType, Layout},
+    layout::{widget::WidgetType, Layout},
     todo::{ToDo, ToDoState},
     Result, ToDoError,
 };

@@ -47,7 +47,7 @@ impl ToDoData {
 }
 
 /// Enum to represent different categories.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToDoCategory {
     Projects,
     Contexts,

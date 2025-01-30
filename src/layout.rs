@@ -15,7 +15,7 @@ use tui::{
     layout::{Constraint, Direction, Rect},
     Frame,
 };
-use widget::{widget_type::WidgetType, Widget};
+use widget::{new_widget, WidgetType};
 
 #[derive(Parser)]
 #[grammar = "./layout/grammar.pest"]
@@ -107,7 +107,7 @@ impl Layout {
                             }
                             _ => Constraint::Percentage(50),
                         });
-                        conts[index].add_widget(Widget::new(
+                        conts[index].add_widget(new_widget(
                             WidgetType::from_str(widget_blocks[0].as_str())?,
                             config,
                         )?);
@@ -280,8 +280,8 @@ impl Layout {
 
     fn find_widget(
         &mut self,
-        find_functor: impl Fn(&&mut Widget) -> bool,
-        process_widget: impl Fn(&mut Widget),
+        find_functor: impl Fn(&&mut Box<dyn State>) -> bool,
+        process_widget: impl Fn(&mut dyn State),
         todo: &ToDo,
     ) {
         let cont_act_index = self.act().get_index();
@@ -299,7 +299,7 @@ impl Layout {
             .find(|(_, _, w)| find_functor(w))
         {
             Some((layout_index, cont_index, widget)) => {
-                process_widget(widget);
+                process_widget(widget.as_mut());
                 if self.act == layout_index && cont_act_index == cont_index {
                     None
                 } else if widget.focus(todo) {
