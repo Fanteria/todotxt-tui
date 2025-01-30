@@ -179,7 +179,7 @@ impl<'a> Index<usize> for TaskList<'a> {
 impl<'a> From<TaskView<'a>> for List<'a> {
     fn from(val: TaskView<'a>) -> Self {
         List::new(val.vec.iter().map(|(_, task)| {
-            let x = val.parser.fill(task, &ToDo::default()); // TODO fix
+            let x = val.parser.fill(task, val.todo);
             ListItem::new(
                 x.iter()
                     .map(|y| {

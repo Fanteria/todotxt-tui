@@ -46,36 +46,16 @@ impl StateList {
         })
     }
 
-    /// Gets the number of tasks in the list.
-    ///
-    /// # Returns
-    ///
-    /// The number of tasks in the list.
-    pub fn len(&self) -> usize {
-        self.base.data().len(self.data_type)
-    }
-
-    /// Swaps tasks in the list at the selected and previous indices.
-    ///
-    /// # Parameters
-    ///
-    /// - `first`: The index of the first task to swap.
-    /// - `second`: The index of the second task to swap.
-    fn swap_tasks(&mut self, first: usize, second: usize) {
-        log::trace!("Swap tasks with indexes: {}, {}", first, second);
-        self.base.data().swap_tasks(self.data_type, first, second);
-    }
-
     /// Moves the currently selected task using the specified function.
     ///
     /// # Parameters
     ///
     /// - `move_fn`: The function to move the task (e.g., remove or move).
-    fn move_task(&mut self, r#move: fn(&mut ToDo, ToDoData, usize)) {
+    fn move_task(&mut self, r#move: fn(&mut ToDo, ToDoData, usize), todo: &mut ToDo) {
         let index = self.base.index();
         log::info!("Remove task with index {index}.");
-        r#move(&mut self.base.data(), self.data_type, index);
-        let len = self.len();
+        r#move(todo, self.data_type, index);
+        let len = todo.len(self.data_type);
         if len <= index && len > 0 {
             self.base.up();
         }
@@ -83,35 +63,32 @@ impl StateList {
 }
 
 impl State for StateList {
-    fn handle_event_state(&mut self, event: UIEvent) -> bool {
+    fn handle_event_state(&mut self, event: UIEvent, todo: &mut ToDo) -> bool {
         log::trace!("StateList handle event {event:?}");
-        if self.base.handle_event(event, self.len()) {
+        if self.base.handle_event(event, todo.len(self.data_type)) {
             return true;
         }
         match event {
             UIEvent::SwapUpItem => {
                 if let Some((first, second)) = self.base.prev() {
-                    self.swap_tasks(first, second)
+                    todo.swap_tasks(self.data_type, first, second)
                 }
             }
             UIEvent::SwapDownItem => {
-                if let Some((first, second)) = self.base.next(self.len()) {
-                    self.swap_tasks(first, second)
+                if let Some((first, second)) = self.base.next(todo.len(self.data_type)) {
+                    todo.swap_tasks(self.data_type, first, second)
                 }
             }
-            UIEvent::RemoveItem => self.move_task(ToDo::remove_task),
-            UIEvent::MoveItem => self.move_task(ToDo::move_task),
+            UIEvent::RemoveItem => self.move_task(ToDo::remove_task, todo),
+            UIEvent::MoveItem => self.move_task(ToDo::move_task, todo),
             UIEvent::Select => {
                 log::trace!("Set item on index {} active.", self.base.index());
-                self.base
-                    .data()
-                    .set_active(self.data_type, self.base.index());
+                todo.set_active(self.data_type, self.base.index());
             }
             UIEvent::NextSearch => {
                 if let Some(to_search) = &self.base.to_search {
                     let next = {
-                        let data = self.base.data();
-                        let filtered = data.get_filtered_and_sorted(self.data_type);
+                        let filtered = todo.get_filtered_and_sorted(self.data_type);
                         let next = Search::find(
                             filtered.vec.iter().skip(self.base.index() + 1).enumerate(),
                             to_search,
@@ -122,7 +99,7 @@ impl State for StateList {
                     if let Some(next) = next {
                         log::debug!("Search next: {} times down", next);
                         for _ in 0..next + 1 {
-                            self.base.down(self.len())
+                            self.base.down(todo.len(self.data_type))
                         }
                     }
                 }
@@ -130,8 +107,7 @@ impl State for StateList {
             UIEvent::PrevSearch => {
                 if let Some(to_search) = &self.base.to_search {
                     let prev = {
-                        let data = self.base.data();
-                        let filtered = data.get_filtered_and_sorted(self.data_type);
+                        let filtered = todo.get_filtered_and_sorted(self.data_type);
                         let prev = Search::find(
                             filtered
                                 .vec
@@ -157,15 +133,14 @@ impl State for StateList {
         true
     }
 
-    fn render(&self, f: &mut Frame) {
-        let data = self.base.data();
-        let filtered = data.get_filtered_and_sorted(self.data_type);
+    fn render(&self, f: &mut Frame, todo: &ToDo) {
+        let filtered = todo.get_filtered_and_sorted(self.data_type);
         let (first, last) = self.base.range();
         let list = List::from(filtered.get_view(
             first..last,
             self.base.to_search.as_deref(),
             &self.parser,
-            &data,
+            todo,
         ))
         .block(self.get_block());
         if !self.base.focus {
@@ -184,11 +159,9 @@ impl State for StateList {
         &mut self.base
     }
 
-    fn focus_event(&mut self) -> bool {
-        let len = self.len();
-        // self.base.len = len;
-        if self.base.act() >= len && len > 0 {
-            self.base.last(self.len());
+    fn focus_event(&mut self, todo: &ToDo) -> bool {
+        if self.base.act() >= todo.len(self.data_type) && todo.len(self.data_type) > 0 {
+            self.base.last(todo.len(self.data_type));
         }
         true
     }
@@ -209,7 +182,7 @@ impl State for StateList {
         self.base.get_event(event)
     }
 
-    fn handle_click(&mut self, column: usize, row: usize) {
-        self.base.click(column, row, self.len());
+    fn handle_click(&mut self, column: usize, row: usize, todo: &ToDo) {
+        self.base.click(column, row, todo.len(self.data_type));
     }
 }

@@ -69,11 +69,7 @@ mod tests {
     use crate::config::Config;
 
     use super::*;
-    use std::{
-        io::BufWriter,
-        path::PathBuf,
-        sync::{Arc, Mutex},
-    };
+    use std::{io::BufWriter, path::PathBuf};
     use test_log::test;
 
     #[test]
@@ -99,12 +95,7 @@ mod tests {
 
     #[test]
     fn de_serialize() -> Result<()> {
-        let layout = Layout::from_str(
-            "[ Done, ]",
-            Arc::new(Mutex::new(ToDo::default())),
-            &Config::default(),
-        )
-        .unwrap();
+        let layout = Layout::from_str("[ Done, ]", &ToDo::default(), &Config::default()).unwrap();
         let state = UIState::new(&layout, &ToDo::default());
 
         let mut writer = BufWriter::new(Vec::new());

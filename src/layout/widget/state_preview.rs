@@ -39,12 +39,11 @@ impl StatePreview {
 }
 
 impl State for StatePreview {
-    fn handle_event_state(&mut self, _: UIEvent) -> bool {
+    fn handle_event_state(&mut self, _: UIEvent, _todo: &mut ToDo) -> bool {
         false
     }
 
-    fn render(&self, f: &mut Frame) {
-        let todo: &ToDo = &self.base.data();
+    fn render(&self, f: &mut Frame, todo: &ToDo) {
         let lines = match todo.get_active() {
             Some(act_task) => self.parser.fill(act_task, todo),
             None => vec![],
@@ -76,7 +75,7 @@ impl State for StatePreview {
         &mut self.base
     }
 
-    fn focus_event(&mut self) -> bool {
+    fn focus_event(&mut self, _todo: &ToDo) -> bool {
         false
     }
 }

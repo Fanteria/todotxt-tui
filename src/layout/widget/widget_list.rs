@@ -1,4 +1,4 @@
-use super::{RCToDo, WidgetBase, WidgetType};
+use super::{WidgetBase, WidgetType};
 use crate::{
     config::{Config, ListConfig},
     ui::UIEvent,
@@ -29,11 +29,10 @@ impl WidgetList {
     /// # Returns
     ///
     /// A new `WidgetList` instance.
-    pub fn new(widget_type: &WidgetType, data: RCToDo, config: &Config) -> Self {
+    pub fn new(widget_type: &WidgetType, config: &Config) -> Self {
         let mut def = Self {
-            base: WidgetBase::new(widget_type, data, config),
+            base: WidgetBase::new(widget_type, config),
             state: ListState::default(),
-            // len: 0,
             first: 0,
             size: 0,
             config: config.list_config.clone(),
@@ -237,7 +236,6 @@ impl DerefMut for WidgetList {
 mod tests {
     use super::*;
     use crate::todo::ToDo;
-    use std::sync::{Arc, Mutex};
     use test_log::test;
 
     fn testing_widget(len: usize) -> WidgetList {
@@ -245,8 +243,7 @@ mod tests {
         for i in 1..len {
             todo.new_task(&format!("Task {}", i)).unwrap();
         }
-        let todo = Arc::new(Mutex::new(todo));
-        let mut widget = WidgetList::new(&WidgetType::List, todo, &Config::default());
+        let mut widget = WidgetList::new(&WidgetType::List, &Config::default());
         widget.set_size(10);
         widget
     }
