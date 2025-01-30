@@ -11,6 +11,7 @@ use std::iter::Peekable;
 use todo_txt::Task;
 use tui::style::Style;
 
+#[derive(Debug)]
 pub struct Parser {
     lines: Vec<Line>,
     styles: Styles,

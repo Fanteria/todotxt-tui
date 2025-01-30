@@ -6,6 +6,7 @@ use crate::{
 use tui::{prelude::Rect, style::Color};
 
 /// Represents the base properties shared among different widget types.
+#[derive(Debug)]
 pub struct WidgetBase {
     pub title: String,
     pub active_color: Color,

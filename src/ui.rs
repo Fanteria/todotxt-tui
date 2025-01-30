@@ -74,9 +74,6 @@ impl UI {
     /// * `data` - Shared data representing the to-do list.
     /// * `tx` - Sender for communicating with the file worker.
     ///
-    /// # Returns
-    ///
-    /// A new `UI` instance.
     pub fn new(
         layout: Layout,
         data: Arc<Mutex<ToDo>>,
@@ -492,80 +489,10 @@ impl UI {
     }
 }
 
-// impl HandleEvent for UI {
-//     fn get_event(&self, event: &KeyEvent) -> UIEvent {
-//         log::debug!("get_event {:#?}", self.config.window_keybinds);
-//         self.config.window_keybinds.get_event(event)
-//     }
-//
-//     fn handle_event(&mut self, event: UIEvent, todo: &mut ToDo) -> bool {
-//         use UIEvent::*;
-//         match event {
-//             Quit => {
-//                 if let Some(path) = &self.config.save_state_path {
-//                     if let Err(e) =
-//                         UIState::new(&self.layout, &self.data.lock().unwrap()).save(path)
-//                     {
-//                         log::error!("Error while saving UI state: {}", e);
-//                     }
-//                 }
-//                 self.quit = true;
-//             }
-//             InsertMode => {
-//                 self.mode = Mode::Input;
-//                 self.layout.unfocus();
-//             }
-//             MoveRight => {
-//                 self.layout.right(todo);
-//             }
-//             MoveLeft => {
-//                 self.layout.left(todo);
-//             }
-//             MoveUp => {
-//                 self.layout.up(todo);
-//             }
-//             MoveDown => {
-//                 self.layout.down(todo);
-//             }
-//             Save => {
-//                 if let Err(e) = self.tx.send(FileWorkerCommands::ForceSave) {
-//                     log::error!("Error while send signal to save todo list: {e}");
-//                     self.popup
-//                         .add_message(format!("Cannot save todo list: {e}"));
-//                 }
-//             }
-//             Load => {
-//                 if let Err(e) = self.tx.send(FileWorkerCommands::Load) {
-//                     log::error!("Error while send signal to load todo list: {e}");
-//                     self.popup
-//                         .add_message(format!("Cannot load todo list: {e}"));
-//                 }
-//             }
-//             EditMode => {
-//                 if let Some(active) = self.data.lock().unwrap().get_active() {
-//                     self.tinput = active.to_string().into();
-//                     self.mode = Mode::Edit;
-//                     self.layout.unfocus();
-//                     // self.in
-//                 }
-//             }
-//             SearchMode => {
-//                 self.tinput.reset();
-//                 self.mode = Mode::Search;
-//                 self.layout.unfocus();
-//             }
-//             _ => {
-//                 return false;
-//             }
-//         }
-//         true
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::Conf, layout::widget::widget_type::WidgetType};
+    use crate::{config::Conf, layout::widget::WidgetType};
     use crossterm::event::KeyEvent;
     use std::{env, str::FromStr};
     use test_log::test;

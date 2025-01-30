@@ -8,6 +8,7 @@ use std::ops::{Deref, DerefMut};
 use tui::widgets::ListState;
 
 /// Represents a widget that displays a list of items.
+#[derive(Debug)]
 pub struct WidgetList {
     base: WidgetBase,
     state: ListState,
@@ -67,10 +68,6 @@ impl WidgetList {
     /// A clone of the list state.
     pub fn state(&self) -> ListState {
         self.state.clone()
-    }
-
-    pub fn state_mut(&mut self) -> &mut ListState {
-        &mut self.state
     }
 
     /// Sets the size of the list widget.

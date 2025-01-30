@@ -1,4 +1,4 @@
-use super::{widget_base::WidgetBase, widget_trait::State};
+use super::{widget_base::WidgetBase, widget_trait::State, widget_type::WidgetType};
 use crate::{
     config::Config,
     todo::{Parser, ToDo},
@@ -12,6 +12,7 @@ use tui::{
 };
 
 /// Represents the state for a preview widget that displays task details.
+#[derive(Debug)]
 pub struct StatePreview {
     base: WidgetBase,
     parser: Parser,
@@ -75,7 +76,11 @@ impl State for StatePreview {
         &mut self.base
     }
 
-    fn focus_event(&mut self, _todo: &ToDo) -> bool {
+    fn focus_event(&mut self, _: &ToDo) -> bool {
         false
+    }
+
+    fn widget_type(&self) -> WidgetType {
+        WidgetType::Preview
     }
 }
