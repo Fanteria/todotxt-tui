@@ -3,87 +3,28 @@ mod line_block;
 mod parts;
 
 use super::{ToDo, ToDoData};
-use crate::{config::Styles, Result, ToDoError};
-use line::Line;
+use crate::{config::Styles, Result};
+use line::Lines;
 use line_block::LineBlock;
-use parts::Parts;
-use std::iter::Peekable;
+use std::str::FromStr;
 use todo_txt::Task;
 use tui::style::Style;
 
+#[derive(pest_derive::Parser)]
+#[grammar = "./todo/parser/grammar.pest"]
+struct ParserGrammar;
+
 #[derive(Debug)]
 pub struct Parser {
-    lines: Vec<Line>,
+    lines: Lines,
     styles: Styles,
 }
 
 impl Parser {
     pub fn new(value: &str, styles: Styles) -> Result<Self> {
-        let lines = Parser::parse(value, &styles)?;
+        let lines = Lines::from_str(value)?;
         log::debug!("Loaded parser: {:#?}", lines);
         Ok(Parser { lines, styles })
-    }
-
-    fn read_block(iter: &mut Peekable<std::str::Chars<'_>>, delimiter: char) -> Result<String> {
-        let mut read = String::default();
-        loop {
-            let c = match iter.next() {
-                Some(c) => c,
-                None => return Err(ToDoError::ParseBlockNotClosed(read.to_string())),
-            };
-            match c {
-                '\\' => read.push(match iter.next() {
-                    Some(ch) => ch,
-                    None => return Err(ToDoError::ParseBlockEscapeOnEnd(read + "\\")),
-                }),
-                c if c == delimiter => break,
-                _ => read.push(c),
-            };
-        }
-        Ok(read)
-    }
-
-    fn parse(template: &str, styles: &Styles) -> Result<Vec<Line>> {
-        let mut ret = Vec::new();
-        let mut line = Line::default();
-        let mut act = String::default();
-        let mut iter = template.chars().peekable();
-        while let Some(c) = iter.next() {
-            match c {
-                '[' => {
-                    let block = Parser::read_block(&mut iter, ']')?;
-                    line.add_span_styled(&act, None, false, styles)?;
-                    act = String::default();
-                    let mut style = None;
-                    let mut to_colorize = false;
-                    if Some(&'(') == iter.peek() {
-                        iter.next();
-                        let block = Parser::read_block(&mut iter, ')')?;
-                        style = Some(if let Some(b) = block.as_str().strip_prefix('!') {
-                            to_colorize = true;
-                            b.trim().to_string()
-                        } else {
-                            block
-                        });
-                    }
-                    line.add_span_styled(&block, style, to_colorize, styles)?;
-                }
-                '\\' => act.push(match iter.next() {
-                    Some(ch) => ch,
-                    None => return Err(ToDoError::ParseBlockEscapeOnEnd(act + "\\")),
-                }),
-                '\n' => {
-                    line.add_span_styled(&act, None, false, styles)?;
-                    act = String::default();
-                    ret.push(line);
-                    line = Line::default();
-                }
-                _ => act.push(c),
-            }
-        }
-        line.add_span_styled(&act, None, false, styles)?;
-        ret.push(line);
-        Ok(ret)
     }
 
     pub fn fill(&self, task: &Task, todo: &ToDo) -> Vec<Vec<(String, Style)>> {
@@ -99,179 +40,57 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-    use crate::config::StylesValue;
-    use tui::style::{Color, Modifier};
+    use crate::config::Conf;
 
     #[test]
-    fn read_block() -> Result<()> {
-        let mut iter = "block to parse]".chars().peekable();
-        assert_eq!(&Parser::read_block(&mut iter, ']')?, "block to parse");
-        assert_eq!(&iter.collect::<String>(), "");
+    fn fill() -> Result<()> {
+        let mut todo = ToDo::default();
+        todo.new_task("Project +project asdf").unwrap();
+        todo.new_task("Some task 2").unwrap();
+        todo.new_task("Some task 3").unwrap();
+        let task = Task::from_str("task")?;
+        let style = Styles::from_reader(
+            r#"
+[projects_style]
+fg = "Green"
 
-        let mut iter = "Some style block)".chars().peekable();
-        assert_eq!(&Parser::read_block(&mut iter, ')')?, "Some style block");
-        assert_eq!(&iter.collect::<String>(), "");
+[contexts_style]
+fg = "Red"
 
-        let mut iter = "block to parse] some other text".chars().peekable();
-        assert_eq!(&Parser::read_block(&mut iter, ']')?, "block to parse");
-        assert_eq!(&iter.collect::<String>(), " some other text");
+[hashtags_style]
+fg = "Yellow"
 
-        let mut iter = "block to parse \\] with some \\\\ escapes]"
-            .chars()
-            .peekable();
-        assert_eq!(
-            &Parser::read_block(&mut iter, ']')?,
-            "block to parse ] with some \\ escapes"
-        );
-        assert_eq!(&iter.collect::<String>(), "");
+[custom_category_style."+custom"]
+fg = "Blue"
+        "#
+            .as_bytes(),
+        )
+        .unwrap();
 
-        Ok(())
-    }
+        let lines = Lines::from_str(
+            "[Done +project to be @splitted here #hashtag and some +custom project](! ^black)",
+        )?;
 
-    #[test]
-    fn read_block_error() {
-        let mut iter = "not closed block".chars().peekable();
+        use tui::style::Color;
         assert_eq!(
-            Parser::read_block(&mut iter, ']').unwrap_err().to_string(),
-            ToDoError::ParseBlockNotClosed("not closed block".to_string()).to_string()
-        );
-
-        let mut iter = "not closed block \\".chars().peekable();
-        assert_eq!(
-            Parser::read_block(&mut iter, ']').unwrap_err().to_string(),
-            ToDoError::ParseBlockEscapeOnEnd("not closed block \\".to_string()).to_string()
-        );
-    }
-
-    #[test]
-    fn parse() -> Result<()> {
-        assert_eq!(Parser::parse("", &Styles::default())?[0], Line::default());
-        assert_eq!(
-            Parser::parse("some text", &Styles::default())?[0],
-            Line(vec![LineBlock {
-                parts: vec![Parts::Text("some text".to_string())],
-                style: StylesValue::default(),
-                to_colorize: false,
-            }])
-        );
-        assert_eq!(
-            Parser::parse("some text \\[ with escapes \\]", &Styles::default())?[0],
-            Line(vec![LineBlock {
-                parts: vec![Parts::Text("some text [ with escapes ]".to_string())],
-                style: StylesValue::default(),
-                to_colorize: false,
-            }])
-        );
-        assert_eq!(
-            Parser::parse("[some text](Red)", &Styles::default())?[0],
-            Line(vec![LineBlock {
-                parts: vec![Parts::Text("some text".to_string())],
-                style: Style::default().fg(Color::Red).into(),
-                to_colorize: false,
-            }])
-        );
-        assert_eq!(
-            Parser::parse("[some text] and another text", &Styles::default())?[0],
-            Line(vec![
-                LineBlock {
-                    parts: vec![Parts::Text("some text".to_string())],
-                    style: StylesValue::default(),
-                    to_colorize: false,
-                },
-                LineBlock {
-                    parts: vec![Parts::Text(" and another text".to_string())],
-                    style: StylesValue::default(),
-                    to_colorize: false,
-                }
+            lines[0][0].fill(&task, &todo, &style),
+            Some(vec![
+                (String::from("Done "), Style::default().bg(Color::Black)),
+                (String::from("+project"), Style::default().fg(Color::Green)),
+                (String::from(" to be "), Style::default().bg(Color::Black)),
+                (String::from("@splitted"), Style::default().fg(Color::Red)),
+                (String::from(" here "), Style::default().bg(Color::Black)),
+                (String::from("#hashtag"), Style::default().fg(Color::Yellow)),
+                (
+                    String::from(" and some "),
+                    Style::default().bg(Color::Black)
+                ),
+                (String::from("+custom"), Style::default().fg(Color::Blue)),
+                (String::from(" project"), Style::default().bg(Color::Black)),
             ])
-        );
-        assert_eq!(
-            Parser::parse("[some text]\\[ and escaped text \\]", &Styles::default())?[0],
-            Line(vec![
-                LineBlock {
-                    parts: vec![Parts::Text("some text".to_string())],
-                    style: StylesValue::default(),
-                    to_colorize: false,
-                },
-                LineBlock {
-                    parts: vec![Parts::Text("[ and escaped text ]".to_string())],
-                    style: StylesValue::default(),
-                    to_colorize: false,
-                }
-            ])
-        );
-        assert_eq!(
-            Parser::parse("[some text]", &Styles::default())?[0],
-            Line(vec![LineBlock {
-                parts: vec![Parts::Text("some text".to_string())],
-                style: StylesValue::default(),
-                to_colorize: false,
-            }])
-        );
-        assert_eq!(
-            Parser::parse(
-                "[some text](red) text between [another text](blue bold)",
-                &Styles::default()
-            )?[0],
-            Line(vec![
-                LineBlock {
-                    parts: vec![Parts::Text("some text".to_string())],
-                    style: Style::default().fg(Color::Red).into(),
-                    to_colorize: false,
-                },
-                LineBlock {
-                    parts: vec![Parts::Text(" text between ".to_string())],
-                    style: StylesValue::default(),
-                    to_colorize: false,
-                },
-                LineBlock {
-                    parts: vec![Parts::Text("another text".to_string())],
-                    style: Style::default()
-                        .fg(Color::Blue)
-                        .add_modifier(Modifier::BOLD)
-                        .into(),
-                    to_colorize: false,
-                }
-            ])
-        );
-        assert_eq!(
-            Parser::parse("[some text](priority:A)", &Styles::default())?[0],
-            Line(vec![LineBlock {
-                parts: vec![Parts::Text("some text".to_string())],
-                style: Style::default().fg(Color::Red).into(),
-                to_colorize: false,
-            },])
-        );
-        let parse = Parser::parse("some text\nnew line", &Styles::default())?;
-        assert_eq!(parse.len(), 2);
-        assert_eq!(
-            parse[0],
-            Line(vec![LineBlock {
-                parts: vec![Parts::Text("some text".to_string())],
-                style: StylesValue::default(),
-                to_colorize: false,
-            }])
-        );
-        assert_eq!(
-            parse[1],
-            Line(vec![LineBlock {
-                parts: vec![Parts::Text("new line".to_string())],
-                style: StylesValue::default(),
-                to_colorize: false,
-            }])
         );
 
         Ok(())
-    }
-
-    #[test]
-    fn parse_error() {
-        assert_eq!(
-            Parser::parse("escape on end of line \\", &Styles::default())
-                .unwrap_err()
-                .to_string(),
-            ToDoError::ParseBlockEscapeOnEnd("escape on end of line \\".to_string()).to_string()
-        );
     }
 
     #[test]

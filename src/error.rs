@@ -78,6 +78,8 @@ pub enum ToDoError {
     FailedToExpandPath(PathBuf, #[source] LookupError<VarError>),
     #[error("Failed to parse layout:\n{0}")]
     FailedToParseLayout(#[source] Box<pest::error::Error<crate::layout::Rule>>),
+    #[error("Failed to parse parser:\n{0}")]
+    FailedToParseParser(#[source] Box<pest::error::Error<crate::todo::parser::Rule>>),
 }
 
 impl ToDoError {

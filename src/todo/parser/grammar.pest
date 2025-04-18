@@ -1,0 +1,41 @@
+lines                =  { SOI ~ (line ~ NEWLINE)* ~ (line ~ NEWLINE?)? ~ EOI }
+line                 = ${ (block | variable | text)* }
+text                 = ${ (!(NEWLINE | "$" | "[" | "]" | "(" | ")") ~ ANY)+ }
+block                = ${ "[" ~ line ~ "]" ~ style? }
+style                =  { "(" ~ bang? ~ WHITESPACE* ~ (style_options ~ WHITESPACE* ~ "," ~ WHITESPACE*)* ~ (style_options ~ WHITESPACE* ~ ","? ~ WHITESPACE*)? ~ ")" }
+style_options        = _{ (style_named | style_color) }
+style_color          =  { bg? ~ (term_color | number_color | hex_color) }
+term_color           =  { ASCII_ALPHA+ }
+number_color         =  { ASCII_DIGIT{1, 2} }
+hex_color            = @{ "#" ~ ASCII_HEX_DIGIT{6} }
+bg                   =  { "^" }
+bang                 =  { "!" }
+
+variable        = _{ "$" ~ (variable_braced | variable_names) }
+variable_braced = _{ "{" ~ variable_names ~ "}" }
+variable_names  = _{ (var_pending | var_done | var_subject | var_priority | var_create_date | var_finish_date | var_finished | var_treshold_date | var_due_date | var_contexts | var_projects | var_hashtags | var_link) }
+style_named     = _{ style_named_priority | style_named_custom_category | style_named_projects | style_named_contexts | style_named_hashtags | style_named_category }
+
+style_named_priority        = { ^"priority" }
+style_named_custom_category = { ^"custom_category" }
+style_named_projects        = { ^"projects" }
+style_named_contexts        = { ^"contexts" }
+style_named_hashtags        = { ^"hashtags" }
+style_named_category        = { ^"category" }
+
+var_pending       = { ^"Pending" }
+var_done          = { ^"Done" }
+var_subject       = { ^"Subject" }
+var_priority      = { ^"Priority" }
+var_create_date   = { ^"CreateDate" | ^"create_date" }
+var_finish_date   = { ^"FinishDate" }
+var_finished      = { ^"Finished" }
+var_treshold_date = { ^"TresholdDate" }
+var_due_date      = { ^"DueDate" }
+var_contexts      = { ^"Contexts" }
+var_projects      = { ^"Projects" }
+var_hashtags      = { ^"Hashtags" }
+var_link          = { ^"Link" }
+
+WHITESPACE = _{ " " | "\t" }
+NEWLINE    = _{ "\r\n" | "\n" }

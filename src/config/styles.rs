@@ -9,6 +9,7 @@ use std::{
 use todo_txt::Task;
 use tui::style::Style;
 
+// TODO no more needed
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub enum StylesValue {

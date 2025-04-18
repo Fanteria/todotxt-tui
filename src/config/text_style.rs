@@ -195,9 +195,13 @@ impl TextStyleList {
     ///
     /// A TUI `Style` object representing the text style for the specified priority level.
     pub fn get_style(&self, index: u8) -> Style {
+        self.get_text_style(index).get_style()
+    }
+
+    pub fn get_text_style(&self, index: u8) -> TextStyle {
         match self.0.get(&todo_txt::Priority::from(index).to_string()) {
-            Some(item) => item.get_style(),
-            None => TextStyle::default().get_style(),
+            Some(item) => *item,
+            None => TextStyle::default(),
         }
     }
 
