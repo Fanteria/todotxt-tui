@@ -382,7 +382,7 @@ pub struct Styles {
     /// Allows custom text styles to be applied to specific categories by name.
     /// Note: Custom styles defined here will override all other category-specific styles,
     /// including `category_style`, `category_select_style`, and `category_remove_style`.
-    custom_category_style: CustomCategoryStyle,
+    pub custom_category_style: CustomCategoryStyle,
     /// Specifies the text style used to highlight elements that match a search
     /// within lists.
     pub highlight: TextStyle,

@@ -1,6 +1,112 @@
+use std::str::FromStr;
+
+use super::{Rule, ToDo, ToDoData};
+use crate::{
+    config::{Color, Styles, TextModifier, TextStyle},
+    ToDoError,
+};
+use pest::iterators::Pairs;
 use todo_txt::Task;
 
-use super::{ToDo, ToDoData};
+#[derive(Default, Clone, Copy, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum PartStyleValue {
+    Const(TextStyle),
+    #[default]
+    Priority,
+    CustomCategory,
+    Projects,
+    Contexts,
+    Hashtags,
+    Category,
+}
+
+impl PartStyleValue {
+    fn get_style(&self, task: &Task, styles: &Styles) -> TextStyle {
+        match self {
+            Self::Const(style) => *style,
+            Self::CustomCategory => {
+                let mut text_style = TextStyle::default();
+                let mut process_projects = |prefix: &str, data: &[String]| {
+                    data.iter().for_each(|category: &String| {
+                        if let Some(style) = styles
+                            .custom_category_style
+                            .get(&(prefix.to_string() + category))
+                        {
+                            text_style = text_style.combine(style);
+                        }
+                    });
+                };
+                process_projects("+", task.projects());
+                process_projects("@", task.contexts());
+                process_projects("#", &task.hashtags);
+
+                text_style
+            }
+            Self::Priority => styles
+                .priority_style
+                .get_text_style(task.priority.clone().into()),
+            _ => unimplemented!(),
+        }
+    }
+}
+
+#[derive(Default, Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct PartStyle {
+    pub style: Vec<PartStyleValue>, // TODO add modifiers
+    pub to_colorize: bool,
+    pub skip_projects: bool, // TODO add this
+    pub skip_contexts: bool, // TODO add this
+    pub skip_hashtags: bool, // TODO add this
+}
+
+impl PartStyle {
+    pub fn get_style(&self, task: &Task, styles: &Styles) -> TextStyle {
+        self.style
+            .iter()
+            .fold(TextStyle::default(), |accumulate, right| {
+                accumulate.combine(&right.get_style(task, styles))
+            })
+    }
+}
+
+impl TryFrom<Pairs<'_, Rule>> for PartStyle {
+    type Error = ToDoError;
+
+    fn try_from(pairs: Pairs<'_, Rule>) -> Result<Self, Self::Error> {
+        let mut s = Self::default();
+        for value in pairs {
+            use PartStyleValue::*;
+            match value.as_rule() {
+                Rule::bang => s.to_colorize = true,
+                Rule::style_named_priority => s.style.push(Priority),
+                Rule::style_named_custom_category => s.style.push(CustomCategory),
+                Rule::style_named_projects => s.style.push(Projects),
+                Rule::style_named_contexts => s.style.push(Contexts),
+                Rule::style_named_hashtags => s.style.push(Hashtags),
+                Rule::style_named_category => s.style.push(Category),
+                Rule::style_color => {
+                    let mut it = value.into_inner().rev();
+                    let name = it.next().unwrap().as_str();
+                    if let Ok(color) = Color::from_str(name) {
+                        s.style.push(Const(if it.next().is_some() {
+                            TextStyle::default().bg(color)
+                        } else {
+                            TextStyle::default().fg(color)
+                        }))
+                    } else {
+                        s.style.push(Const(
+                            TextStyle::default().modifier(TextModifier::from_str(name)?),
+                        ));
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+        Ok(s)
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Parts {
