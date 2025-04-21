@@ -13,15 +13,19 @@ bang                 =  { "!" }
 
 variable        = _{ "$" ~ (variable_braced | variable_names) }
 variable_braced = _{ "{" ~ variable_names ~ "}" }
-variable_names  = _{ (var_pending | var_done | var_subject | var_priority | var_create_date | var_finish_date | var_finished | var_treshold_date | var_due_date | var_contexts | var_projects | var_hashtags | var_link) }
-style_named     = _{ style_named_priority | style_named_custom_category | style_named_projects | style_named_contexts | style_named_hashtags | style_named_category }
+variable_names  = _{ (var_pending | var_done | var_subject | var_priority | var_create_date | var_finish_date | var_finished | var_treshold_date | var_due_date | var_contexts | var_projects | var_hashtags | var_any) }
+style_named     = _{ style_specific_priority | style_priority | style_custom_category | style_projects | style_contexts | style_hashtags | style_category | style_skip_projects | style_skip_contexts | style_skip_hashtags }
 
-style_named_priority        = { ^"priority" }
-style_named_custom_category = { ^"custom_category" }
-style_named_projects        = { ^"projects" }
-style_named_contexts        = { ^"contexts" }
-style_named_hashtags        = { ^"hashtags" }
-style_named_category        = { ^"category" }
+style_specific_priority = { ^"priority:" ~ ASCII_ALPHA }
+style_priority        = { ^"priority" }
+style_custom_category = { ^"custom_category" }
+style_projects        = { ^"projects" }
+style_contexts        = { ^"contexts" }
+style_hashtags        = { ^"hashtags" }
+style_category        = { ^"category" }
+style_skip_projects   = { ^"skip_projects" }
+style_skip_contexts   = { ^"skip_contexts" }
+style_skip_hashtags   = { ^"skip_hashtags" }
 
 var_pending       = { ^"Pending" }
 var_done          = { ^"Done" }
@@ -35,7 +39,7 @@ var_due_date      = { ^"DueDate" }
 var_contexts      = { ^"Contexts" }
 var_projects      = { ^"Projects" }
 var_hashtags      = { ^"Hashtags" }
-var_link          = { ^"Link" }
+var_any           = { (!(WHITESPACE | "{" | "}") ~ ANY)+ }
 
 WHITESPACE = _{ " " | "\t" }
 NEWLINE    = _{ "\r\n" | "\n" }

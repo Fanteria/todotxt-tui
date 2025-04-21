@@ -193,21 +193,37 @@ mod tests {
         assert_eq!(it.remaining(), ".");
     }
 
-    // TODO change this to searchable
-    // #[test]
-    // fn find() {
-    //     let v = [
-    //         "line with A letter",
-    //         "line with B letter",
-    //         "line with C letter",
-    //         "line with D letter",
-    //     ];
-    //     assert_eq!(
-    //         *Search::find(v.iter(), "B", |s| s).unwrap(),
-    //         "line with B letter"
-    //     );
-    //     assert_eq!(Search::find(v.iter(), "E", |s| s), None);
-    // }
+    #[test]
+    fn searchable() {
+        struct S {
+            v: [&'static str; 4],
+        }
+        impl Searchable for S {
+            fn search_through(&self) -> impl DoubleEndedIterator + ExactSizeIterator<Item = &str> {
+                self.v.iter().copied()
+            }
+        }
+        let s = S {
+            v: [
+                "line with A letter",
+                "line with B letter",
+                "line with C letter",
+                "line with D letter",
+            ],
+        };
+        assert_eq!(s.next_search("B", 0), Some((1, "line with B letter")));
+        assert_eq!(s.next_search("B", 1), Some((0, "line with B letter")));
+        assert_eq!(s.next_search("B", 2), None);
+        assert_eq!(s.next_search("E", 0), None);
+        assert_eq!(s.next_search_index("C", 0), Some(2));
+
+        assert_eq!(s.prev_search("B", 0), None);
+        assert_eq!(s.prev_search("B", 1), None);
+        assert_eq!(s.prev_search("B", 2), Some((0, "line with B letter")));
+        assert_eq!(s.prev_search("B", 3), Some((1, "line with B letter")));
+        assert_eq!(s.prev_search("F", 0), None);
+        assert_eq!(s.prev_search_index("C", 4), Some(1));
+    }
 
     #[test]
     fn highlight() {

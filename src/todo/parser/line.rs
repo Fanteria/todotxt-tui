@@ -73,7 +73,7 @@ impl FromStr for Lines {
                 Rule::var_contexts => block_parts.push(Parts::Contexts),
                 Rule::var_projects => block_parts.push(Parts::Projects),
                 Rule::var_hashtags => block_parts.push(Parts::Hashtags),
-                Rule::var_link => block_parts.push(Parts::Special("link".into())),
+                Rule::var_any => block_parts.push(Parts::Special(part.as_str().to_string())),
                 Rule::block => {
                     let mut inner = part.into_inner();
                     if !block_parts.is_empty() {
@@ -174,17 +174,21 @@ mod tests {
             ]
         );
 
-        // TODO this test failing
-        // assert_eq!(
-        //     Lines::from_str("special task text $some-special")?[0][0].parts,
-        //     vec![Parts::Text("special task text ".into()), Parts::Special("some-special".into())]
-        // );
+        assert_eq!(
+            Lines::from_str("special task text $some-special")?[0][0].parts,
+            vec![
+                Parts::Text("special task text ".into()),
+                Parts::Special("some-special".into())
+            ]
+        );
 
-        // TODO this test failing
-        // assert_eq!(
-        //     Lines::from_str("special \\$ character")?[0][0].parts,
-        //     vec![Parts::Text("special $ character".into())]
-        // );
+        assert_eq!(
+            Lines::from_str("special task text ${some-special}")?[0][0].parts,
+            vec![
+                Parts::Text("special task text ".into()),
+                Parts::Special("some-special".into())
+            ]
+        );
 
         assert_eq!(
             Lines::from_str("Pending: $pending Done: $done")?[0][0].parts,
@@ -216,22 +220,11 @@ mod tests {
             vec![Parts::Text("some text".to_string())]
         );
 
-        // TODO failed
-        // assert_eq!(
-        //     Lines::from_str("some text \\[ with escapes \\]")?[0][0].parts,
-        //     vec![Parts::Text("some text [ with escapes ]".to_string())]
-        // );
-
         let lines = Lines::from_str("[some text](Red)")?;
         assert_eq!(
             lines[0][0].parts,
             vec![Parts::Text("some text".to_string())]
         );
-        // Line(vec![LineBlock {
-        //     parts: vec![Parts::Text("some text".to_string())],
-        //     style: Style::default().fg(Color::Red).into(),
-        //     to_colorize: false,
-        // }])
         assert_eq!(
             lines[0][0].style.get_style(&task, &Styles::default()),
             TextStyle::default().fg(Color::red())
@@ -246,11 +239,6 @@ mod tests {
             lines[0][1].parts,
             vec![Parts::Text(" and another text".to_string())]
         );
-
-        // TODO failed
-        // let lines = Lines::from_str("[some text]\\[ and escaped text \\]")?;
-        // assert_eq!(lines[0][0].parts, vec![Parts::Text("some text".to_string())]);
-        // assert_eq!(lines[0][1].parts, vec![Parts::Text("[ and escaped text ]".to_string())]);
 
         let lines = Lines::from_str("[some text]")?;
         assert_eq!(
@@ -286,25 +274,23 @@ mod tests {
                 .modifier(crate::config::TextModifier::Bold)
         );
 
-        // TODO failed
-        // let lines = Lines::from_str("[some text](priority:A)")?;
-        // assert_eq!(
-        //     lines[0][0].parts,
-        //     vec![Parts::Text("some text".to_string())]
-        // );
-        // assert_eq!(
-        //     lines[0][0].style.get_style(&task, &Styles::default()),
-        //     TextStyle::default().fg(Color::red())
-        // );
+        let lines = Lines::from_str("[some text](priority:A)")?;
+        assert_eq!(
+            lines[0][0].parts,
+            vec![Parts::Text("some text".to_string())]
+        );
+        assert_eq!(
+            lines[0][0].style.get_style(&task, &Styles::default()),
+            TextStyle::default().fg(Color::red())
+        );
 
         let lines = Lines::from_str("some text\nnew line")?;
         assert_eq!(lines.len(), 2);
-        assert_eq!(lines[0][0].parts,
+        assert_eq!(
+            lines[0][0].parts,
             vec![Parts::Text("some text".to_string())]
         );
-        assert_eq!(lines[1][0].parts,
-            vec![Parts::Text("new line".to_string())]
-        );
+        assert_eq!(lines[1][0].parts, vec![Parts::Text("new line".to_string())]);
 
         Ok(())
     }

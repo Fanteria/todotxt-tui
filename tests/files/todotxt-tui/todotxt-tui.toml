@@ -9,6 +9,8 @@ file_watcher = true
 list_shift = 4
 pending_sort = "Priority"
 done_sort = "Reverse"
+pending_format = "[$subject](! priority, skip_projects, skip_contexts)"
+done_format = "[$subject](! priority)"
 preview_format = """
 Pending: $pending Done: $done
 Subject: $subject

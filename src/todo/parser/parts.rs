@@ -6,7 +6,7 @@ use crate::{
     ToDoError,
 };
 use pest::iterators::Pairs;
-use todo_txt::Task;
+use todo_txt::{Priority as TaskPriority, Task};
 
 #[derive(Default, Clone, Copy, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -14,6 +14,7 @@ pub enum PartStyleValue {
     Const(TextStyle),
     #[default]
     Priority,
+    SpecificPriority(u8),
     CustomCategory,
     Projects,
     Contexts,
@@ -46,7 +47,11 @@ impl PartStyleValue {
             Self::Priority => styles
                 .priority_style
                 .get_text_style(task.priority.clone().into()),
-            _ => unimplemented!(),
+            Self::SpecificPriority(p) => styles.priority_style.get_text_style(*p),
+            Self::Projects => styles.projects_style,
+            Self::Contexts => styles.contexts_style,
+            Self::Hashtags => styles.hashtags_style,
+            Self::Category => styles.category_style,
         }
     }
 }
@@ -54,11 +59,11 @@ impl PartStyleValue {
 #[derive(Default, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct PartStyle {
-    pub style: Vec<PartStyleValue>, // TODO add modifiers
+    pub style: Vec<PartStyleValue>,
     pub to_colorize: bool,
-    // pub skip_projects: bool, // TODO add this
-    // pub skip_contexts: bool, // TODO add this
-    // pub skip_hashtags: bool, // TODO add this
+    pub skip_projects: bool,
+    pub skip_contexts: bool,
+    pub skip_hashtags: bool,
 }
 
 impl PartStyle {
@@ -80,12 +85,15 @@ impl TryFrom<Pairs<'_, Rule>> for PartStyle {
             use PartStyleValue::*;
             match value.as_rule() {
                 Rule::bang => s.to_colorize = true,
-                Rule::style_named_priority => s.style.push(Priority),
-                Rule::style_named_custom_category => s.style.push(CustomCategory),
-                Rule::style_named_projects => s.style.push(Projects),
-                Rule::style_named_contexts => s.style.push(Contexts),
-                Rule::style_named_hashtags => s.style.push(Hashtags),
-                Rule::style_named_category => s.style.push(Category),
+                Rule::style_specific_priority => s.style.push(SpecificPriority(
+                    TaskPriority::try_from(value.as_str().chars().last().unwrap())?.into(),
+                )),
+                Rule::style_priority => s.style.push(Priority),
+                Rule::style_custom_category => s.style.push(CustomCategory),
+                Rule::style_projects => s.style.push(Projects),
+                Rule::style_contexts => s.style.push(Contexts),
+                Rule::style_hashtags => s.style.push(Hashtags),
+                Rule::style_category => s.style.push(Category),
                 Rule::style_color => {
                     let mut it = value.into_inner().rev();
                     let name = it.next().unwrap().as_str();
@@ -101,6 +109,9 @@ impl TryFrom<Pairs<'_, Rule>> for PartStyle {
                         ));
                     }
                 }
+                Rule::style_skip_projects => s.skip_projects = true,
+                Rule::style_skip_contexts => s.skip_contexts = true,
+                Rule::style_skip_hashtags => s.skip_hashtags = true,
                 _ => unreachable!(),
             }
         }

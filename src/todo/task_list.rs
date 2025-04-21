@@ -9,7 +9,10 @@ use tui::{
     widgets::{List, ListItem},
 };
 
-use super::{search::{Search, Searchable}, Parser, ToDo};
+use super::{
+    search::{Search, Searchable},
+    Parser, ToDo,
+};
 
 type Item<'a> = (usize, &'a Task);
 

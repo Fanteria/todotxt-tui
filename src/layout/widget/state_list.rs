@@ -1,10 +1,7 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
     config::Config,
-    todo::{
-        search::Searchable,
-        Parser, ToDo, ToDoData,
-    },
+    todo::{search::Searchable, Parser, ToDo, ToDoData},
     ui::UIEvent,
     Result,
 };
