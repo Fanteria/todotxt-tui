@@ -33,7 +33,7 @@ pub fn autocomplete(todo: &ToDo, input: &str) -> Option<String> {
         return None;
     }
 
-    let mut new_act = list[0].as_str();
+    let mut new_act = list[0];
     if list.len() != 1 {
         list.iter()
             .skip(1)

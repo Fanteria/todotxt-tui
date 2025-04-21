@@ -62,6 +62,7 @@ nanos = 0
 fg = "LightBlue"
 
 [projects_style]
+fg = "Green"
 
 [contexts_style]
 

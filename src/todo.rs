@@ -207,10 +207,7 @@ impl ToDo {
     ///
     /// A `TaskList` containing the filtered and sorted tasks.
     pub fn get_filtered_and_sorted(&self, data: ToDoData) -> TaskList {
-        let mut task_list = TaskList {
-            vec: self.get_filtered_tasks(data),
-            styles: &self.styles,
-        };
+        let mut task_list = TaskList::new(self.get_filtered_tasks(data), &self.styles);
         task_list.sort(data.get_sorting(&self.config));
         task_list
     }
