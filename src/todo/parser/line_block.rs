@@ -9,7 +9,7 @@ use todo_txt::Task;
 use tui::style::Style;
 
 static REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?:^|\s)([+@#].+)(?:$|\s)").unwrap());
+    LazyLock::new(|| Regex::new(r"(?:^|\s)([+@#][^\s]+)").unwrap());
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
