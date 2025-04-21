@@ -1,4 +1,4 @@
-use super::{FilterState, ToDo, ToDoCategory};
+use super::{search::Searchable, FilterState, ToDo, ToDoCategory};
 use crate::{config::Styles, todo::search::Search};
 use std::{
     collections::BTreeSet,
@@ -10,8 +10,8 @@ use tui::{
 };
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct CategoryState<'a> {
-    pub name: &'a String,
+struct CategoryState<'a> {
+    name: &'a str,
     state: Option<FilterState>,
 }
 
@@ -19,7 +19,7 @@ pub struct CategoryState<'a> {
 /// The `String` value represents name of category and the `bool` value represents
 /// whether the category is selected or not.
 pub struct CategoryList<'a> {
-    pub vec: Vec<CategoryState<'a>>,
+    vec: Vec<CategoryState<'a>>,
     styles: &'a Styles,
 }
 
@@ -74,7 +74,7 @@ impl<'a> CategoryList<'a> {
     /// # Returns
     ///
     /// A vector of references to the matching categories.
-    pub fn start_with(&self, pattern: &str) -> Vec<&String> {
+    pub fn start_with(&self, pattern: &str) -> Vec<&str> {
         self.vec
             .iter()
             .filter(|s| s.name.starts_with(pattern))
@@ -105,7 +105,7 @@ impl<'a> CategoryList<'a> {
     /// # Panics
     ///
     /// Panics if the index is out of bounds.
-    pub fn get_name(&self, index: usize) -> &String {
+    pub fn get_name(&self, index: usize) -> &str {
         self.vec[index].name
     }
 
@@ -144,12 +144,18 @@ impl<'a> CategoryList<'a> {
     }
 }
 
+impl Searchable for CategoryList<'_> {
+    fn search_through(&self) -> impl DoubleEndedIterator + ExactSizeIterator<Item = &str> {
+        self.vec.iter().map(|state| state.name)
+    }
+}
+
 impl<'a> From<CategoryView<'a>> for List<'a> {
     fn from(value: CategoryView<'a>) -> Self {
         List::new(value.vec.iter().map(|s| {
             use FilterState::*;
             ListItem::new(Line::from(Search::highlight(
-                s.name.as_str(),
+                s.name,
                 value.to_search,
                 value.styles,
                 match s.state {

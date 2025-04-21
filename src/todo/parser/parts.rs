@@ -56,9 +56,9 @@ impl PartStyleValue {
 pub struct PartStyle {
     pub style: Vec<PartStyleValue>, // TODO add modifiers
     pub to_colorize: bool,
-    pub skip_projects: bool, // TODO add this
-    pub skip_contexts: bool, // TODO add this
-    pub skip_hashtags: bool, // TODO add this
+    // pub skip_projects: bool, // TODO add this
+    // pub skip_contexts: bool, // TODO add this
+    // pub skip_hashtags: bool, // TODO add this
 }
 
 impl PartStyle {

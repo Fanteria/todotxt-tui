@@ -1,7 +1,7 @@
 use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::State};
 use crate::{
     config::{ActiveColorConfig, TextStyle},
-    todo::{search::Search, FilterState, ToDo, ToDoCategory},
+    todo::{search::Searchable, FilterState, ToDo, ToDoCategory},
     ui::UIEvent,
 };
 use crossterm::event::KeyEvent;
@@ -40,11 +40,12 @@ impl StateCategories {
         todo.get_categories(self.category).len()
     }
 
+    /// Toggles the filter state for a specific category.
     fn toggle_filter(&mut self, filter_state: FilterState, todo: &mut ToDo) {
         let name = todo
             .get_categories(self.category)
             .get_name(self.base.act())
-            .clone();
+            .to_string();
         todo.toggle_filter(self.category, &name, filter_state);
     }
 }
@@ -59,16 +60,10 @@ impl State for StateCategories {
             UIEvent::Remove => self.toggle_filter(FilterState::Remove, todo),
             UIEvent::NextSearch => {
                 if let Some(to_search) = &self.base.to_search {
-                    let next = {
-                        let data = todo.get_categories(self.category);
-                        let next = Search::find(
-                            data.vec.iter().skip(self.base.index() + 1).enumerate(),
-                            to_search,
-                            |c| c.1.name,
-                        );
-                        next.map(|next| next.0)
-                    };
-                    if let Some(next) = next {
+                    if let Some(next) = todo
+                        .get_categories(self.category)
+                        .next_search_index(to_search, self.base.index() + 1)
+                    {
                         log::debug!("Search next: {} times down", next);
                         for _ in 0..next + 1 {
                             self.base.down(self.len(todo))
@@ -78,20 +73,10 @@ impl State for StateCategories {
             }
             UIEvent::PrevSearch => {
                 if let Some(to_search) = &self.base.to_search {
-                    let prev = {
-                        let data = todo.get_categories(self.category);
-                        let prev = Search::find(
-                            data.vec
-                                .iter()
-                                .rev()
-                                .skip(data.vec.len() - self.base.index())
-                                .enumerate(),
-                            to_search,
-                            |t| t.1.name,
-                        );
-                        prev.map(|prev| prev.0)
-                    };
-                    if let Some(prev) = prev {
+                    if let Some(prev) = todo
+                        .get_categories(self.category)
+                        .prev_search_index(to_search, self.base.index())
+                    {
                         log::debug!("Search prev: {} times up", prev);
                         for _ in 0..prev + 1 {
                             self.base.up()
