@@ -12,7 +12,7 @@ pub use self::{
     options::{
         PasteBehavior, SavePolicy, SetFinalDateType, TaskSort, TextModifier, WidgetBorderType,
     },
-    styles::{CustomCategoryStyle, StylesValue},
+    styles::CustomCategoryStyle,
     text_style::{TextStyle, TextStyleList},
     traits::{Conf, ConfMerge, ConfigDefaults},
 };
@@ -25,9 +25,9 @@ use crate::{
 };
 use clap::{builder::styling::AnsiColor, FromArgMatches};
 use crossterm::event::{KeyCode, KeyModifiers};
-use std::{env::var, path::PathBuf, str::FromStr, time::Duration};
+use std::{env::var, path::PathBuf, time::Duration};
 use todotxt_tui_macros::{Conf, ConfMerge};
-use tui::style::{Color as tuiColor, Style};
+use tui::style::Color as tuiColor;
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct FileWorkerConfig {
@@ -233,10 +233,16 @@ pub struct UiConfig {
     /// Path to save the application's state (currently unused).
     #[arg(short = 'S')]
     pub save_state_path: Option<PathBuf>,
-    /// The layout configuration for the user interface.
-    /// This can be customized using a layout string.
-    #[arg(short = 'l')]
-    pub layout: String, // TODO describe layout language
+    /// The layout setting allows you to define a custom layout for the application using blocks `[]`. You can specify the orientation of the blocks as either `Direction: Vertical` or `Direction: Horizontal`, along with the size of each block as a percentage or value. Within these blocks, you can include various widgets, such as:
+    ///
+    /// - `List`: The main list of tasks.
+    /// - `Preview`: The task preview section.
+    /// - `Done`: The list of completed tasks.
+    /// - `Projects`: The list of projects.
+    /// - `Contexts`: The list of contexts.
+    /// - `Hashtags`: The list of hashtags.
+    #[arg(short = 'l', verbatim_doc_comment)]
+    pub layout: String,
     /// Determines how pasted content is processed.
     ///
     /// Option as-keys simulates typing the pasted content as if entered via the keyboard.
@@ -364,17 +370,17 @@ pub struct Styles {
     /// A list of text styles applied to tasks based on their priority levels.
     pub priority_style: TextStyleList,
     /// Specifies the text style used for displaying projects within task lists.
-    projects_style: TextStyle,
+    pub projects_style: TextStyle,
     /// Specifies the text style used for displaying contexts (e.g., @home, @work)
     /// within task lists.
-    contexts_style: TextStyle,
+    pub contexts_style: TextStyle,
     /// Specifies the text style used for displaying hashtags within task lists.
     /// Note: This style is overridden by custom styles defined for specific categories.
-    hashtags_style: TextStyle,
+    pub hashtags_style: TextStyle,
     /// Defines the default text style for displaying projects, contexts,
     /// and hashtags within task lists.
     /// Note: This style is overridden by specific styles for individual categories.
-    category_style: TextStyle,
+    pub category_style: TextStyle,
     /// Specifies the text style applied to categories when they are selected for filtering.
     pub category_select_style: TextStyle,
     /// Specifies the text style applied to categories that are filtered out from the view.
@@ -389,42 +395,6 @@ pub struct Styles {
 }
 
 impl Styles {
-    /// Retrieves the style configuration for a given name, which can be one of several predefined types such as "priority", "custom_category", or specific categories like projects, contexts, and hashtags. If the name is prefixed with "priority:" or "custom_category:", it attempts to extract and return the corresponding priority or custom category style; otherwise, it interprets the name directly into a text style if possible, defaulting to a base configuration if not found.
-    pub fn get_style(&self, name: &str) -> Result<StylesValue> {
-        use StylesValue::*;
-        Ok(match name {
-            "priority" => Priority,
-            "custom_category" => CustomCategory,
-            "projects" => Const(self.projects_style.get_style()),
-            "contexts" => Const(self.contexts_style.get_style()),
-            "hashtags" => Const(self.hashtags_style.get_style()),
-            "category" => Const(self.category_style.get_style()),
-            _ if name.starts_with("priority:") => {
-                if let Some(priority) = name.get("priority:".len()..) {
-                    return Ok(Const(
-                        match self
-                            .priority_style
-                            .get_style_from_str(&priority.to_uppercase())
-                        {
-                            Some(style) => style.get_style(),
-                            None => Style::default(),
-                        },
-                    ));
-                }
-                Const(TextStyle::from_str(name)?.get_style())
-            }
-            _ if name.starts_with("custom_category:") => {
-                if let Some(custom_category) = name.get("custom_category:".len()..) {
-                    if let Some(custom_category) = self.custom_category_style.get(custom_category) {
-                        return Ok(Const(custom_category.get_style()));
-                    }
-                }
-                Const(TextStyle::from_str(name)?.get_style())
-            }
-            _ => Const(TextStyle::from_str(name)?.get_style()),
-        })
-    }
-
     /// Retrieves the text style for a specified category. If a custom style
     /// has been defined for the category, it will be used; otherwise,
     /// the base style for that category is employed.

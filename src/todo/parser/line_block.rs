@@ -8,8 +8,7 @@ use std::sync::LazyLock;
 use todo_txt::Task;
 use tui::style::Style;
 
-static REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?:^|\s)([+@#][^\s]+)").unwrap());
+static REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?:^|\s)([+@#][^\s]+)").unwrap());
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -44,10 +43,21 @@ impl LineBlock {
                 .flat_map(|m| {
                     let start = last_index;
                     last_index = m.end();
-                    let category = string[m.start()..m.end()].to_string(); let category_style = styles.get_category_style(&category).get_style();
-                    [
+                    let category = string[m.start()..m.end()].to_string();
+                    if (self.style.skip_projects && category.starts_with('+'))
+                        || (self.style.skip_contexts && category.starts_with('@'))
+                        || (self.style.skip_hashtags && category.starts_with('#'))
+                    {
+                        return vec![(string[start..m.start()].to_string(), style)];
+                    }
+                    vec![
                         (string[start..m.start()].to_string(), style),
-                        (category, category_style),
+                        if self.style.to_colorize {
+                            let category_style = styles.get_category_style(&category).get_style();
+                            (category, category_style)
+                        } else {
+                            (category, style)
+                        },
                     ]
                 })
                 .collect::<Vec<_>>()
