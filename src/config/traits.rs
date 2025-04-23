@@ -1,5 +1,5 @@
 use crate::{Result, ToDoError};
-use clap::builder::Styles;
+use clap::{builder::Styles, ArgMatches};
 use std::{
     ffi::OsString,
     fs::File,
@@ -38,7 +38,11 @@ pub trait ConfMerge: Sized + ConfigDefaults + Conf {
         Ok(())
     }
 
+    fn configured_toml(path: impl AsRef<Path>, matches: &ArgMatches) -> Result<String>;
+
     fn default_toml() -> Result<String>;
+
+    fn autocomplete(writer: &mut impl std::io::Write) -> Result<()>;
 }
 
 pub trait ConfigDefaults {

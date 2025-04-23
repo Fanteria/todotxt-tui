@@ -1,6 +1,9 @@
 use proc_macro2::Ident;
 use proc_macro2::TokenStream;
 use quote::quote;
+use syn::punctuated::Punctuated;
+use syn::token::Comma;
+use syn::Field;
 
 pub fn from_reader() -> TokenStream {
     quote! {
@@ -69,5 +72,15 @@ pub fn find_ident(path: &syn::TypePath) -> Option<&syn::Ident> {
         }
     } else {
         Some(&last.ident)
+    }
+}
+
+pub fn get_fields(ast: &syn::DeriveInput) -> &Punctuated<Field, Comma> {
+    match &ast.data {
+        syn::Data::Struct(data) => match &data.fields {
+            syn::Fields::Named(named) => &named.named,
+            _ => panic!("Must have all fields named"),
+        },
+        _ => panic!("Can be derived only for structs"),
     }
 }
