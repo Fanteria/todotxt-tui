@@ -50,3 +50,7 @@ pub trait ConfigDefaults {
 
     fn help_colors() -> Styles;
 }
+
+pub trait ExportConf {
+    fn export(&self, config_path: impl AsRef<Path>, matches: &ArgMatches) -> Result<()>;
+}

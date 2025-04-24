@@ -3,11 +3,42 @@ use crate::impl_conf_functions;
 use core::panic;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
+use syn::Meta;
 
 pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
     let name_conf = format_ident!("{}{CONF_OPTION}", ast.ident);
     let name = &ast.ident;
-    let attrs = &ast.attrs;
+    // Structure used for exporting auto complete or configuration.
+    let export_struct = ast.attrs.iter().find_map(|attr| {
+        if attr.path().is_ident("export_option") {
+            Some(match &attr.meta {
+                Meta::List(meta_list) => meta_list
+                    .tokens
+                    .clone()
+                    .into_iter()
+                    .find_map(|f| match f {
+                        proc_macro2::TokenTree::Ident(ident) => Some(ident),
+                        _ => None,
+                    })
+                    .expect("Struct implementing Export trait must be set."),
+                _ => panic!("Struct implementing Export trait must be set."),
+            })
+        } else {
+            None
+        }
+    }).expect("Struct implementing Export trait must be set.");
+    // Remove `export_option` from attributes
+    let attrs: Vec<_> = ast
+        .attrs
+        .iter()
+        .filter(|attr| {
+            if attr.path().is_ident("export_option") {
+                false
+            } else {
+                true
+            }
+        })
+        .collect();
     let fields = impl_conf_functions::get_fields(ast);
 
     let mut fields_vec = Vec::new();
@@ -52,7 +83,7 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
 
             #[serde(skip)]
             #[command(flatten)]
-            export: Export,
+            export: #export_struct,
 
             /// Path to configuration file.
             #[clap(short, long)]
@@ -76,7 +107,7 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
             fn from(value: #name) -> Self {
                 #name_conf {
                     #(#fields_from_trait)*
-                    export: Export::default(),
+                    export: #export_struct::default(),
                     config_path: None,
                 }
             }
