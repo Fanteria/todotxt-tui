@@ -9,24 +9,28 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
     let name_conf = format_ident!("{}{CONF_OPTION}", ast.ident);
     let name = &ast.ident;
     // Structure used for exporting auto complete or configuration.
-    let export_struct = ast.attrs.iter().find_map(|attr| {
-        if attr.path().is_ident("export_option") {
-            Some(match &attr.meta {
-                Meta::List(meta_list) => meta_list
-                    .tokens
-                    .clone()
-                    .into_iter()
-                    .find_map(|f| match f {
-                        proc_macro2::TokenTree::Ident(ident) => Some(ident),
-                        _ => None,
-                    })
-                    .expect("Struct implementing Export trait must be set."),
-                _ => panic!("Struct implementing Export trait must be set."),
-            })
-        } else {
-            None
-        }
-    }).expect("Struct implementing Export trait must be set.");
+    let export_struct = ast
+        .attrs
+        .iter()
+        .find_map(|attr| {
+            if attr.path().is_ident("export_option") {
+                Some(match &attr.meta {
+                    Meta::List(meta_list) => meta_list
+                        .tokens
+                        .clone()
+                        .into_iter()
+                        .find_map(|f| match f {
+                            proc_macro2::TokenTree::Ident(ident) => Some(ident),
+                            _ => None,
+                        })
+                        .expect("Struct implementing Export trait must be set."),
+                    _ => panic!("Struct implementing Export trait must be set."),
+                })
+            } else {
+                None
+            }
+        })
+        .expect("Struct implementing Export trait must be set.");
     // Remove `export_option` from attributes
     let attrs: Vec<_> = ast
         .attrs
