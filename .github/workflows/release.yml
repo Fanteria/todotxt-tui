@@ -11,8 +11,8 @@ permissions:
   contents: write
 
 jobs:
-  build-and-upload:
-    name: Build and upload
+  build:
+    name: Build
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -28,7 +28,9 @@ jobs:
             os: windows-latest
             target: x86_64-pc-windows-gnu
 
-    continue-on-error: true
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
@@ -40,41 +42,65 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Get the release version from the tag
+        id: get_version
         shell: bash
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
 
       - name: Build
         run: cargo build --verbose --release --target ${{ matrix.target }}
 
       - name: Build archive
+        id: build_archive
         shell: bash
         run: |
           binary_name="todotxt-tui"
-          dirname="$binary_name-${{ env.VERSION }}-${{ matrix.target }}"
+          dirname="$binary_name-${{ steps.get_version.outputs.version }}-${{ matrix.target }}"
           mkdir -p "$dirname"
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv "target/${{ matrix.target }}/release/$binary_name.exe" "$dirname"
             7z a "$dirname.zip" "$dirname"
-            echo "ASSET=$dirname.zip" >> $GITHUB_ENV
+            echo "asset=$dirname.zip" >> "$GITHUB_OUTPUT"
           else
             mv "target/${{ matrix.target }}/release/$binary_name" "$dirname"
             tar -czf "$dirname.tar.gz" "$dirname"
-            echo "ASSET=$dirname.tar.gz" >> $GITHUB_ENV
+            echo "asset=$dirname.tar.gz" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Generate checksum
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            certutil -hashfile ${{ env.ASSET }} > "${{ env.ASSET }}.sha256"
+            certutil -hashfile ${{ steps.build_archive.outputs.asset }} > "${{ steps.build_archive.outputs.asset }}.sha256"
           else
-            shasum -a 256 "${{ env.ASSET }}" > "${{ env.ASSET }}.sha256"
+            shasum -a 256 "${{ steps.build_archive.outputs.asset }}" > "${{ steps.build_archive.outputs.asset }}.sha256"
           fi
 
-      - name: Upload the binaries
-        uses: softprops/action-gh-release@v2
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
+          name: ${{ matrix.target }}
+          path: |
+            ${{ steps.build_archive.outputs.asset }}
+            ${{ steps.build_archive.outputs.asset }}.sha256
+
+  upload:
+    name: Upload release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List the binaries
+        shell: bash
+        run: |
+          ls -R artifacts
+          
+      # - name: Upload the binaries
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     files: artifacts/**/*
 
