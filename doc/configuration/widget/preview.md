@@ -4,13 +4,14 @@ Defines the format string used to generate the preview pane, which provides a de
 
 **Formatting Rules**
 
-Text Colors: Enclose text in `[...]` and specify the style in parentheses. As style you can use any color definition from [Colors](../colors.md)
+Text Colors: Enclose text in `[...]` and specify the style in parentheses. As style you can use any color definition from [Colors](../colors.md). Additionally, you can use `skip_projects`, `skip_contexts`, or `skip_hashtags` to remove projects, contexts, or hashtags from the content.
 
 **Examples:**
 
 - `[some text](Red)` sets the text to have a red foreground.
 - `[some text](^Red)` sets the text to have a red background.
 - `[some text](Blue, Bold)` sets the text to have a bold, blue foreground.
+- `[some text +project](Green, skip_projects)` sets the text to have a green foreground and removes `+project` from it.
 
 Dynamic Variables: Insert task-specific values using $name. You can use the following variables to represent task attributes:
 
