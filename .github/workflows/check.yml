@@ -1,7 +1,6 @@
 name: Check
 on:
   push:
-  pull_request:
   workflow_dispatch:
 
 env:
@@ -49,3 +48,32 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets --all-features
 
+  macro-fmt:
+    name: Macro formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: rustfmt
+      - name: Macro formatting
+        working-directory: ./todotxt-tui-macros
+        run: cargo fmt --all -- --check
+
+  macro-clippy:
+    name: Macro clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
+      - name: Macro clippy
+        working-directory: ./todotxt-tui-macros
+        run: cargo clippy --all-targets --all-features

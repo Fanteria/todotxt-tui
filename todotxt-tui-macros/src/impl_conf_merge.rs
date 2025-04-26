@@ -35,13 +35,7 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
     let attrs: Vec<_> = ast
         .attrs
         .iter()
-        .filter(|attr| {
-            if attr.path().is_ident("export_option") {
-                false
-            } else {
-                true
-            }
-        })
+        .filter(|attr| !attr.path().is_ident("export_option"))
         .collect();
     let fields = impl_conf_functions::get_fields(ast);
 
