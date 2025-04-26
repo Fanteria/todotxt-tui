@@ -97,11 +97,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Publish macro
-        working-directory: ./todotxt-tui-macros
-        shell: bash
-        run: |
-          git diff --quiet "$(git describe --tags --abbrev=0 HEAD~1)" HEAD . || cargo publish
+      # - name: Publish macro
+      #   working-directory: ./todotxt-tui-macros
+      #   shell: bash
+      #   run: |
+      #     git diff --quiet "$(git describe --tags --abbrev=0 HEAD~1)" HEAD . || cargo publish
       - name: Publish
         shell: bash
         run: |
