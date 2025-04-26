@@ -10,7 +10,7 @@ Text Colors: Enclose text in `[...]` and specify the style in parentheses. As st
 
 - `[some text](Red)` sets the text to have a red foreground.
 - `[some text](^Red)` sets the text to have a red background.
-- `[some text](Blue Bold)` sets the text to have a bold, blue foreground.
+- `[some text](Blue, Bold)` sets the text to have a bold, blue foreground.
 
 Dynamic Variables: Insert task-specific values using $name. You can use the following variables to represent task attributes:
 
