@@ -83,9 +83,27 @@ jobs:
             ${{ steps.build_archive.outputs.asset }}
             ${{ steps.build_archive.outputs.asset }}.sha256
 
+  publish:
+    name: Publish on crates.io
+    runs-on: ubuntu-latest
+    # TODO wait for build to be done
+    # needs: build
+
+    steps:
+      - name: Login
+        shell: bash
+        run: |
+          echo "${{ secrets.CRATES_IO_API_TOKEN }}" | cargo login
+      - name: Publish
+        shell: bash
+        run: |
+          cargo publish --dry-run
+
   upload:
     name: Upload release
-    needs: build
+    needs: 
+      - build
+      - publish
     runs-on: ubuntu-latest
 
     steps:
@@ -94,6 +112,7 @@ jobs:
         with:
           path: artifacts
 
+      # TODO remove this and use real upload.
       - name: List the binaries
         shell: bash
         run: |
