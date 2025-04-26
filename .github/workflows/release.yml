@@ -86,8 +86,7 @@ jobs:
   publish:
     name: Publish on crates.io
     runs-on: ubuntu-latest
-    # TODO wait for build to be done
-    # needs: build
+    needs: build
 
     steps:
       - name: Login
@@ -102,11 +101,11 @@ jobs:
         working-directory: ./todotxt-tui-macros
         shell: bash
         run: |
-          git diff --quiet "$(git describe --tags --abbrev=0 HEAD~1)" HEAD . || cargo publish --dry-run
+          git diff --quiet "$(git describe --tags --abbrev=0 HEAD~1)" HEAD . || cargo publish
       - name: Publish
         shell: bash
         run: |
-          cargo publish --dry-run
+          cargo publish
 
   upload:
     name: Upload release
@@ -121,14 +120,7 @@ jobs:
         with:
           path: artifacts
 
-      # TODO remove this and use real upload.
-      - name: List the binaries
-        shell: bash
-        run: |
-          ls -R artifacts
-          
-      # - name: Upload the binaries
-      #   uses: softprops/action-gh-release@v2
-      #   with:
-      #     files: artifacts/**/*
-
+      - name: Upload the binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
