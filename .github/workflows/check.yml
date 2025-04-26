@@ -60,7 +60,7 @@ jobs:
           toolchain: stable
           components: rustfmt
       - name: Macro formatting
-        working-directory: ./todotyt-tui-macros
+        working-directory: ./todotxt-tui-macros
         run: cargo fmt --all -- --check
 
   macro-clippy:
@@ -75,5 +75,5 @@ jobs:
           toolchain: stable
           components: clippy
       - name: Macro clippy
-        working-directory: ./todotyt-tui-macros
+        working-directory: ./todotxt-tui-macros
         run: cargo clippy --all-targets --all-features
