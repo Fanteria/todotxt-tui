@@ -96,6 +96,8 @@ jobs:
           echo "${{ secrets.CRATES_IO_API_TOKEN }}" | cargo login
       - name: Clone repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Publish macro
         working-directory: ./todotxt-tui-macros
         shell: bash
