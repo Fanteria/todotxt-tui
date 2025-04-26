@@ -100,7 +100,7 @@ jobs:
         working-directory: ./todotxt-tui-macros
         shell: bash
         run: |
-          git diff --quiet "$(git describe --tags --abbrev=0 @~1)" @ . || cargo publish --dry-run
+          git diff --quiet "$(git describe --tags --abbrev=0 HEAD~1)" HEAD . || cargo publish --dry-run
       - name: Publish
         shell: bash
         run: |
