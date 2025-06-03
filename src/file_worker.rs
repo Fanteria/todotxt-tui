@@ -5,7 +5,7 @@ use crate::{
     ToDoError,
 };
 use notify::{
-    event::{AccessKind, AccessMode, EventKind},
+    event::{AccessKind, AccessMode, EventKind, RemoveKind},
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
 };
 use std::{
@@ -241,19 +241,29 @@ impl FileWorker {
         log::trace!("Start file watcher");
         let (tx_handle, rx_handle) = std::sync::mpsc::channel();
         let mut watcher: RecommendedWatcher = Watcher::new(tx_handle, NotifyConfig::default())?;
-        watcher.watch(Path::new(path), RecursiveMode::NonRecursive)?;
-        let path = path.to_path_buf();
+        watcher.watch(path, RecursiveMode::NonRecursive)?;
         thread::spawn(move || {
             for res in rx_handle {
+                use EventKind::*;
                 match res {
                     Ok(event) => match event.kind {
-                        EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
-                            log::trace!("File {} changed", path.to_string_lossy());
-                            if tx.send(FileWorkerCommands::Load).is_err() {
-                                break;
-                            };
+                        Access(AccessKind::Close(AccessMode::Write)) => {
+                            for p in event.paths {
+                                log::trace!("File {} changed", p.to_string_lossy());
+                                if tx.send(FileWorkerCommands::Load).is_err() {
+                                    return;
+                                };
+                            }
                         }
-                        _ => log::debug!("Change: {event:?}"),
+                        Remove(RemoveKind::File) => {
+                            event.paths.into_iter().for_each(|p| {
+                                match watcher.watch(&p, RecursiveMode::NonRecursive) {
+                                    Ok(_) => log::debug!("Rename file {p:?}"),
+                                    Err(e) => log::error!("Failed to watch: {e:?}"),
+                                }
+                            });
+                        }
+                        _ => log::debug!("Change: kind={:?}, paths={:?}", event.kind, event.paths),
                     },
                     Err(error) => log::error!("Error: {error:?}"),
                 }
