@@ -9,9 +9,11 @@ use notify::{
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
 };
 use std::{
+    error,
     fs::File,
     io::{BufRead, BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
+    result,
     str::FromStr,
     sync::{
         mpsc::{self, Sender},
@@ -250,18 +252,24 @@ impl FileWorker {
                         Access(AccessKind::Close(AccessMode::Write)) => {
                             for p in event.paths {
                                 log::trace!("File {} changed", p.to_string_lossy());
-                                if tx.send(FileWorkerCommands::Load).is_err() {
+                                if let Err(e) = tx.send(FileWorkerCommands::Load) {
+                                    log::error!("Failed to load file {e}");
                                     return;
                                 };
                             }
                         }
                         Remove(RemoveKind::File) => {
-                            event.paths.into_iter().for_each(|p| {
-                                match watcher.watch(&p, RecursiveMode::NonRecursive) {
-                                    Ok(_) => log::debug!("Rename file {p:?}"),
-                                    Err(e) => log::error!("Failed to watch: {e:?}"),
-                                }
-                            });
+                            if let Err(e) = event.paths.into_iter().try_for_each(
+                                |p| -> result::Result<(), Box<dyn error::Error>> {
+                                    watcher.watch(&p, RecursiveMode::NonRecursive)?;
+                                    log::debug!("Rename file {p:?}");
+                                    tx.send(FileWorkerCommands::Load)?;
+                                    Ok(())
+                                },
+                            ) {
+                                log::error!("Failed to load file {e}");
+                                return;
+                            }
                         }
                         _ => log::debug!("Change: kind={:?}, paths={:?}", event.kind, event.paths),
                     },
