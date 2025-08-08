@@ -1,5 +1,7 @@
 # Todo.txt TUI
 
+[![codecov](https://codecov.io/gh/Fanteria/todotxt-tui/graph/badge.svg?token=O1EXFD44YY)](https://codecov.io/gh/Fanteria/todotxt-tui)
+
 Todo.txt TUI is a highly customizable, terminal-based application for managing your tasks. It adheres to the Todo.txt format and provides a wide range of configuration options to meet your specific needs. Please note that the application is still under development and may contain bugs.
 
 For detailed instructions on [installation](https://fanteria.github.io/todotxt-tui/installation.html) and [configuration](https://fanteria.github.io/todotxt-tui/configuration/index.html), refer to the [documentation](https://fanteria.github.io/todotxt-tui/about.html).
