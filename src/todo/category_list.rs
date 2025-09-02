@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_categeries_list() -> Result<(), Box<dyn Error>> {
-        fn create_vec(items: &[String]) -> Vec<CategoryState> {
+        fn create_vec(items: &'_ [String]) -> Vec<CategoryState<'_>> {
             let mut vec = Vec::new();
             items.iter().for_each(|name| {
                 vec.push(CategoryState { name, state: None });

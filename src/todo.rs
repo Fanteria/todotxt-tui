@@ -118,7 +118,7 @@ impl ToDo {
     /// # Returns
     ///
     /// A `CategoryList` containing the filtered categories and their selection status.
-    pub fn get_categories(&self, category: ToDoCategory) -> CategoryList {
+    pub fn get_categories(&self, category: ToDoCategory) -> CategoryList<'_> {
         CategoryList::new(self, category)
     }
 
@@ -206,7 +206,7 @@ impl ToDo {
     /// # Returns
     ///
     /// A `TaskList` containing the filtered and sorted tasks.
-    pub fn get_filtered_and_sorted(&self, data: ToDoData) -> TaskList {
+    pub fn get_filtered_and_sorted(&self, data: ToDoData) -> TaskList<'_> {
         let mut task_list = TaskList::new(self.get_filtered_tasks(data), &self.styles);
         task_list.sort(data.get_sorting(&self.config));
         task_list
@@ -228,7 +228,7 @@ impl ToDo {
             task_str = new_task;
         }
         let mut task = Task::from_str(&task_str)?;
-        if task.create_date.is_none() {
+        if task.create_date.is_none() && self.config.set_created_date {
             task.create_date = Some(Self::get_actual_date());
         }
         if task.finished {
@@ -752,5 +752,29 @@ mod tests {
         todo.done[0].finish_date = date;
         todo.move_task(ToDoData::Done, 0);
         assert_eq!(todo.pending.last().unwrap().finish_date, date);
+    }
+
+    #[test]
+    fn set_created_date() -> Result<()> {
+        let mut todo = example_todo();
+
+        todo.config.set_created_date = false;
+        todo.new_task("Test")?;
+        assert_eq!(todo.pending.last().unwrap().create_date, None);
+
+        todo.new_task("2025-09-02 Test")?;
+        assert_eq!(
+            todo.pending.last().unwrap().create_date,
+            NaiveDate::from_ymd_opt(2025, 9, 2)
+        );
+
+        todo.config.set_created_date = true;
+        todo.new_task("Test")?;
+        assert_eq!(
+            todo.pending.last().unwrap().create_date,
+            Some(Utc::now().naive_utc().date())
+        );
+
+        Ok(())
     }
 }

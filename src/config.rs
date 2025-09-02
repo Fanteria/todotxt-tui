@@ -209,6 +209,10 @@ pub struct ToDoConfig {
     /// Configures how the final date is handled when a task is marked as completed.
     /// Options include overriding the date, only adding it if missing, or never setting it.
     pub set_final_date: SetFinalDateType,
+    /// Specifies whether to set the creation date when a new task is added.
+    /// If the user provides their own creation date, it will still be added
+    /// regardless of this setting.
+    pub set_created_date: bool,
 }
 
 impl Default for ToDoConfig {
@@ -219,6 +223,7 @@ impl Default for ToDoConfig {
             done_sort: TaskSort::default(),
             delete_final_date: true,
             set_final_date: SetFinalDateType::default(),
+            set_created_date: true,
         }
     }
 }
