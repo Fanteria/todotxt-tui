@@ -69,3 +69,13 @@ Configures how the final date is handled when a task is marked as completed.
 </dd>
 <br>
 
+
+<dt><b>Flag:</b> <code>--set-created-date</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_SET_CREATED_DATE</code></dt>
+<dt><b>Conf:</b> <code>set_created_date</code></dt>
+<dd>
+Specifies whether to set the creation date when a new task is added. If the user provides their own creation date, it will still be added regardless of this setting.
+
+- **Default:** `true`
+</dd>
+<br>
