@@ -33,7 +33,7 @@ pub trait State: Debug {
     fn get_base_mut(&mut self) -> &mut WidgetBase;
 
     // Retrieves the block (border and title) for rendering the widget.
-    fn get_block(&self) -> Block {
+    fn get_block(&self) -> Block<'_> {
         let base = self.get_base();
         let mut block = Block::default()
             .borders(Borders::ALL)
