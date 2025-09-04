@@ -44,9 +44,17 @@ impl PartStyleValue {
 
                 text_style
             }
-            Self::Priority => styles
-                .priority_style
-                .get_text_style(task.priority.clone().into()),
+            Self::Priority => {
+                let priority = if task.priority.is_lowest() && task.finished {
+                    // For completed tasks, get priority from pri: tag
+                    task.tags.get("pri")
+                        .and_then(|p| todo_txt::Priority::try_from(p.chars().next().unwrap_or('Z')).ok())
+                        .unwrap_or_else(|| task.priority.clone())
+                } else {
+                    task.priority.clone()
+                };
+                styles.priority_style.get_text_style(priority.into())
+            }
             Self::SpecificPriority(p) => styles.priority_style.get_text_style(*p),
             Self::Projects => styles.projects_style,
             Self::Contexts => styles.contexts_style,
@@ -154,7 +162,12 @@ impl Parts {
             Subject => Some(task.subject.clone()),
             Priority => {
                 if task.priority.is_lowest() {
-                    None
+                    // For completed tasks, check pri: tag
+                    if task.finished {
+                        task.tags.get("pri").cloned()
+                    } else {
+                        None
+                    }
                 } else {
                     Some(task.priority.to_string())
                 }
@@ -233,6 +246,9 @@ mod tests {
 
         let task = Task::from_str("(A) task").unwrap();
         assert_eq!(Parts::Priority.fill(&task, &todo), Some(String::from("A")));
+
+        let task = Task::from_str("x task pri:B").unwrap();
+        assert_eq!(Parts::Priority.fill(&task, &todo), Some(String::from("B")));
 
         let task = Task::from_str("2023-11-12 task").unwrap();
         assert_eq!(

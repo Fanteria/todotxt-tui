@@ -154,6 +154,20 @@ impl ToDo {
                     }
                     _ => {}
                 }
+                
+                // Convert priority from (A) format to pri:A format when completing task
+                if !task.priority.is_lowest() {
+                    let priority_letter = task.priority.to_string();
+                    task.tags.insert("pri".to_string(), priority_letter);
+                    task.priority = todo_txt::Priority::lowest();
+                }
+            } else {
+                // Convert priority from pri:A format to (A) format when uncompleting task
+                if let Some(priority_value) = task.tags.remove("pri") {
+                    if let Ok(priority) = todo_txt::Priority::try_from(priority_value.chars().next().unwrap_or('Z')) {
+                        task.priority = priority;
+                    }
+                }
             }
             task.finished = !task.finished;
             to.push(task)
@@ -775,6 +789,96 @@ mod tests {
             Some(Utc::now().naive_utc().date())
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn priority_conversion_on_complete() -> Result<()> {
+        let mut todo = ToDo::default();
+        
+        // Add a task with priority (A)
+        todo.new_task("(A) High priority task")?;
+        assert_eq!(todo.pending.len(), 1);
+        assert_eq!(todo.pending[0].priority, todo_txt::Priority::from(0)); // Priority A
+        assert!(!todo.pending[0].tags.contains_key("pri"));
+        
+        // Complete the task (move from pending to done)
+        todo.move_task(ToDoData::Pending, 0);
+        
+        // Check that the task was moved to done list
+        assert_eq!(todo.pending.len(), 0);
+        assert_eq!(todo.done.len(), 1);
+        
+        // Check that priority was converted to pri:A format
+        assert!(todo.done[0].priority.is_lowest());
+        assert_eq!(todo.done[0].tags.get("pri"), Some(&"A".to_string()));
+        
+        Ok(())
+    }
+
+    #[test]
+    fn priority_conversion_reverse_on_uncomplete() -> Result<()> {
+        let mut todo = ToDo::default();
+        
+        // Add a task with priority (A) and complete it
+        todo.new_task("(A) High priority task")?;
+        todo.move_task(ToDoData::Pending, 0);
+        
+        // Verify it was converted to pri:A format
+        assert_eq!(todo.done.len(), 1);
+        assert!(todo.done[0].priority.is_lowest());
+        assert_eq!(todo.done[0].tags.get("pri"), Some(&"A".to_string()));
+        
+        // Move it back to pending (uncomplete)
+        todo.move_task(ToDoData::Done, 0);
+        
+        // Check that pri:A was converted back to (A) format
+        assert_eq!(todo.pending.len(), 1);
+        assert_eq!(todo.done.len(), 0);
+        assert_eq!(todo.pending[0].priority, todo_txt::Priority::from(0)); // Priority A
+        assert!(!todo.pending[0].tags.contains_key("pri")); // pri tag should be removed
+        
+        Ok(())
+    }
+
+    #[test]
+    fn priority_conversion_manual_pri_tag() -> Result<()> {
+        let mut todo = ToDo::default();
+        
+        // Manually add a completed task with pri:B tag
+        todo.new_task("x Completed task pri:B")?;
+        assert_eq!(todo.done.len(), 1);
+        assert!(todo.done[0].priority.is_lowest());
+        assert_eq!(todo.done[0].tags.get("pri"), Some(&"B".to_string()));
+        
+        // Move from done back to pending
+        todo.move_task(ToDoData::Done, 0);
+        
+        // Check that pri:B was converted to (B) priority
+        assert_eq!(todo.pending.len(), 1);
+        assert_eq!(todo.done.len(), 0);
+        assert_eq!(todo.pending[0].priority, todo_txt::Priority::from(1)); // Priority B
+        assert!(!todo.pending[0].tags.contains_key("pri"));
+        
+        Ok(())
+    }
+
+    #[test]
+    fn debug_task_string_representation() -> Result<()> {
+        let mut todo = ToDo::default();
+        
+        // Add a task with projects and contexts
+        todo.new_task("(A) Test task +project @context")?;
+        println!("Original task: {}", todo.pending[0].to_string());
+        
+        // Complete the task
+        todo.move_task(ToDoData::Pending, 0);
+        println!("Completed task: {}", todo.done[0].to_string());
+        
+        // Uncomplete the task
+        todo.move_task(ToDoData::Done, 0);
+        println!("Uncompleted task: {}", todo.pending[0].to_string());
+        
         Ok(())
     }
 }
