@@ -44,8 +44,9 @@ impl StateCategories {
     fn toggle_filter(&mut self, filter_state: FilterState, todo: &mut ToDo) {
         let name = todo
             .get_categories(self.category)
-            .get_name(self.base.act())
+            .get_name(self.base.index())
             .to_string();
+        log::debug!("Toggle filter '{name}'");
         todo.toggle_filter(self.category, &name, filter_state);
     }
 }
