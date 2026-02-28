@@ -4,12 +4,15 @@ use std::sync::mpsc::Sender;
 
 type VersionNum = usize;
 
+/// Snapshot of version numbers for both pending and done data.
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Versions {
     pending: VersionNum,
     done: VersionNum,
 }
 
+/// Tracks data version numbers for pending and done lists to detect changes.
+/// Optionally sends save signals to the file worker when data is modified.
 #[derive(Default, Debug)]
 pub struct Version {
     versions: Versions,
@@ -17,6 +20,7 @@ pub struct Version {
 }
 
 impl Version {
+    /// Creates a new `Version` with default version numbers and the given save channel.
     pub fn new(tx: Sender<FileWorkerCommands>) -> Self {
         Self {
             versions: Versions::default(),
@@ -24,6 +28,7 @@ impl Version {
         }
     }
 
+    /// Increments both pending and done version numbers and signals a save.
     pub fn update_all(&mut self) {
         self.versions.pending += 1;
         self.versions.done += 1;
@@ -34,6 +39,7 @@ impl Version {
         }
     }
 
+    /// Increments the version number for the given data type and signals a save.
     pub fn update(&mut self, data_type: &ToDoData) {
         match data_type {
             ToDoData::Pending => {
@@ -48,6 +54,7 @@ impl Version {
         }
     }
 
+    /// Returns `true` if the given version number matches the current version for the data type.
     pub fn is_actual(&self, version: VersionNum, data_type: &ToDoData) -> bool {
         version
             == match data_type {
@@ -56,10 +63,12 @@ impl Version {
             }
     }
 
+    /// Returns `true` if both pending and done versions match the given snapshot.
     pub fn is_actual_all(&self, versions: Versions) -> bool {
         self.versions.pending == versions.pending && self.versions.done == versions.done
     }
 
+    /// Returns the current version number for the given data type.
     pub fn get_version(&self, data_type: &ToDoData) -> VersionNum {
         match data_type {
             ToDoData::Pending => self.versions.pending,
@@ -67,6 +76,7 @@ impl Version {
         }
     }
 
+    /// Returns a snapshot of all current version numbers.
     pub fn get_version_all(&self) -> Versions {
         self.versions
     }

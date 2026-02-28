@@ -2,14 +2,17 @@ use crate::config::Styles;
 use std::{borrow::Cow, ops::Deref};
 use tui::text::Span;
 
+/// Provides case-insensitive search and match highlighting for task text.
 pub struct Search;
 
+/// Iterator over case-insensitive match positions within a subject string.
 struct SearchMatches<'a, 'b> {
     subject: Cow<'a, str>,
     to_search: Cow<'b, str>,
     act: Option<usize>,
 }
 
+/// Walks through a source string splitting it into matched and unmatched segments.
 struct SearchVisitor<'a, 'b> {
     source: &'a str,
     it: SearchMatches<'a, 'b>,

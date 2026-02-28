@@ -6,14 +6,23 @@ use std::{
     process::Command,
 };
 
+/// Types of hooks that can be triggered before or after task operations.
 pub enum HookTypes {
+    /// Runs before a new task is created.
     PreNew,
+    /// Runs after a new task is created.
     PostNew,
+    /// Runs before a task is removed.
     PreRemove,
+    /// Runs after a task is removed.
     PostRemove,
+    /// Runs before a task is moved between lists.
     PreMove,
+    /// Runs after a task is moved between lists.
     PostMove,
+    /// Runs before a task is updated.
     PreUpdate,
+    /// Runs after a task is updated.
     PostUpdate,
 }
 
@@ -32,17 +41,21 @@ impl Display for HookTypes {
     }
 }
 
+/// Manages execution of user-defined hook scripts for task lifecycle events.
 #[derive(Default)]
 pub struct Hooks {
     paths: HookPaths,
 }
 
 impl Hooks {
+    /// Creates a new `Hooks` instance with the given script paths.
     pub fn new(paths: HookPaths) -> Self {
         log::debug!("Hooks: {paths:#?}");
         Self { paths }
     }
 
+    /// Executes a hook script at the given path with the task string as an argument.
+    /// Returns the script's stdout on success, or an error if the command fails.
     fn run_command(path: &Path, task: &str) -> Result<String> {
         let mut cmd = Command::new("bash");
         let path = fs::canonicalize(path)?;
@@ -60,6 +73,8 @@ impl Hooks {
         String::from_utf8(output.stdout).map_err(ToDoError::HookFailedToParseStdout)
     }
 
+    /// Runs a hook command and logs the result using the given hook name.
+    /// Returns `Some(stdout)` on success, or `None` on failure.
     fn run_command_with_name(path: &Path, task: &str, name: &str) -> Option<String> {
         log::info!("{name} hook: {path:?} {task}");
         match Self::run_command(path, task) {
@@ -74,6 +89,7 @@ impl Hooks {
         }
     }
 
+    /// Returns the configured script path for the given hook type, if any.
     fn get_path(&self, hook_type: &HookTypes) -> Option<&PathBuf> {
         match hook_type {
             HookTypes::PreNew => self.paths.pre_new_task.as_ref(),
@@ -87,6 +103,8 @@ impl Hooks {
         }
     }
 
+    /// Runs the hook for the given type with the provided task string.
+    /// Returns `Some(stdout)` if the hook is configured and succeeds, `None` otherwise.
     pub fn run(&self, hook_type: HookTypes, task: impl AsRef<str>) -> Option<String> {
         Self::run_command_with_name(
             self.get_path(&hook_type)?,
@@ -95,6 +113,8 @@ impl Hooks {
         )
     }
 
+    /// Runs the hook for the given type, lazily evaluating the task string only
+    /// if the hook is configured. Returns `Some(stdout)` on success, `None` otherwise.
     pub fn run_lazy(&self, hook_type: HookTypes, task: impl Fn() -> String) -> Option<String> {
         Self::run_command_with_name(
             self.get_path(&hook_type)?,

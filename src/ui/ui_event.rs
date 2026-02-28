@@ -3,6 +3,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{de, Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, str::FromStr};
 
+/// Represents a keyboard shortcut as a key code combined with modifier keys.
 #[derive(Clone, PartialEq, Eq, Copy, Debug, Hash)]
 pub struct KeyShortcut {
     pub key: KeyCode,
@@ -10,6 +11,7 @@ pub struct KeyShortcut {
 }
 
 impl KeyShortcut {
+    /// Creates a new key shortcut from the given key code and modifiers.
     pub fn new(key: KeyCode, modifiers: KeyModifiers) -> Self {
         Self { key, modifiers }
     }
@@ -134,32 +136,55 @@ impl<'de> Deserialize<'de> for KeyShortcut {
 /// Enum representing various UI events that can be triggered.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Debug)]
 pub enum UIEvent {
-    Quit, // Window
+    /// Exits the application and saves the UI state.
+    Quit,
+    /// Forces a save of the todo list to disk.
     Save,
+    /// Loads the todo list from disk.
     Load,
+    /// Moves focus to the left widget in the horizontal direction.
     MoveLeft,
+    /// Moves focus to the right widget in the horizontal direction.
     MoveRight,
+    /// Moves focus to the above widget in the vertical direction.
     MoveUp,
+    /// Moves focus to the below widget in the vertical direction.
     MoveDown,
+    /// Enters input mode to create a new task.
     InsertMode,
+    /// Enters edit mode to modify the currently selected task.
     EditMode,
+    /// Enters search mode to filter and highlight items.
     SearchMode,
 
+    /// Clears the search query.
     CleanSearch,
+    /// Moves to the next search result within the current list.
     NextSearch,
+    /// Moves to the previous search result within the current list.
     PrevSearch,
-    ListDown, // Widget list
+    /// Moves the selection down one item in the list widget.
+    ListDown,
+    /// Moves the selection up one item in the list widget.
     ListUp,
+    /// Moves the selection to the first item in the list widget.
     ListFirst,
+    /// Moves the selection to the last item in the list widget.
     ListLast,
-    SwapUpItem, // State list
+    /// Swaps the selected task with the one above it.
+    SwapUpItem,
+    /// Swaps the selected task with the one below it.
     SwapDownItem,
+    /// Deletes the currently selected task.
     RemoveItem,
+    /// Moves the selected task between pending and done lists.
     MoveItem,
-    Select, // State categories + State list
-    Remove, // State categories
-    // State preview
-    None, // without bind
+    /// Selects the current item (toggles filter in categories, selects task in lists).
+    Select,
+    /// Toggles the remove filter state for the selected category.
+    Remove,
+    /// Represents an unmapped key with no action.
+    None,
 }
 
 impl FromStr for UIEvent {

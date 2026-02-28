@@ -1,11 +1,13 @@
-pub mod config;
-pub mod error;
-pub mod file_worker;
-pub mod layout;
-pub mod todo;
-pub mod ui;
+mod config;
+mod error;
+mod file_worker;
+mod layout;
+mod todo;
+mod ui;
 
+pub use config::{ConfMerge, Config};
 pub use error::*;
+pub use ui::UI;
 
 #[macro_use]
 extern crate enum_dispatch;

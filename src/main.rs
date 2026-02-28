@@ -6,11 +6,7 @@ use log4rs::{
     Config as LogConfig,
 };
 use std::{env, error::Error, io::stdin, path::PathBuf, process::exit};
-use todotxt_tui::{
-    config::{ConfMerge, Config},
-    ui::UI,
-    ToDoError,
-};
+use todotxt_tui::{ConfMerge, Config, ToDoError, UI};
 
 /// Initializes the logging system.
 ///
@@ -42,6 +38,12 @@ fn log_init() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Handles missing configuration file errors by prompting the user.
+///
+/// If the provided error is a `ToDoError::IOoperationFailed` with a `NotFound` error kind,
+/// prompts the user to initialize the configuration with default settings. If the user agrees,
+/// exports the default configuration and exits. If the user declines, exits with an error code.
+/// If the error is not a missing configuration file error, returns it unchanged.
 fn ask_to_create_config(err: ToDoError) -> ToDoError {
     fn ask() -> bool {
         let mut s = String::new();

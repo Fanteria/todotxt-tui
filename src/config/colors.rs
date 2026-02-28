@@ -7,55 +7,73 @@ use std::{
 };
 use tui::style::Color as tuiColor;
 
+/// Wrapper around [`tui::style::Color`] that adds parsing, serialization,
+/// and convenient constructor methods for terminal colors.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Color(pub tuiColor);
 
 impl Color {
+    /// Returns the black color.
     pub fn black() -> Self {
         Self(tuiColor::Black)
     }
+    /// Returns the red color.
     pub fn red() -> Self {
         Self(tuiColor::Red)
     }
+    /// Returns the green color.
     pub fn green() -> Self {
         Self(tuiColor::Green)
     }
+    /// Returns the yellow color.
     pub fn yellow() -> Self {
         Self(tuiColor::Yellow)
     }
+    /// Returns the blue color.
     pub fn blue() -> Self {
         Self(tuiColor::Blue)
     }
+    /// Returns the magenta color.
     pub fn magenta() -> Self {
         Self(tuiColor::Magenta)
     }
+    /// Returns the cyan color.
     pub fn cyan() -> Self {
         Self(tuiColor::Cyan)
     }
+    /// Returns the gray color.
     pub fn gray() -> Self {
         Self(tuiColor::Gray)
     }
+    /// Returns the dark gray color.
     pub fn darkgray() -> Self {
         Self(tuiColor::DarkGray)
     }
+    /// Returns the light red color.
     pub fn lightred() -> Self {
         Self(tuiColor::LightRed)
     }
+    /// Returns the light green color.
     pub fn lightgreen() -> Self {
         Self(tuiColor::LightGreen)
     }
+    /// Returns the light yellow color.
     pub fn lightyellow() -> Self {
         Self(tuiColor::LightYellow)
     }
+    /// Returns the light blue color.
     pub fn lightblue() -> Self {
         Self(tuiColor::LightBlue)
     }
+    /// Returns the light magenta color.
     pub fn lightmagenta() -> Self {
         Self(tuiColor::LightMagenta)
     }
+    /// Returns the light cyan color.
     pub fn lightcyan() -> Self {
         Self(tuiColor::LightCyan)
     }
+    /// Returns the white color.
     pub fn white() -> Self {
         Self(tuiColor::White)
     }
