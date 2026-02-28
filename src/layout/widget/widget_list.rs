@@ -173,10 +173,12 @@ impl WidgetList {
         }
     }
 
+    /// Sets the active search query used to filter or highlight list items.
     pub fn set_search(&mut self, to_search: String) {
         self.to_search = Some(to_search)
     }
 
+    /// Clears the active search query.
     pub fn clear_search(&mut self) {
         self.to_search = None
     }
@@ -190,10 +192,13 @@ impl WidgetList {
         (self.first, self.first + self.size)
     }
 
+    /// Maps a key event to the corresponding [`UIEvent`] using the list keybindings.
     pub fn get_event(&self, event: &KeyEvent) -> UIEvent {
         self.config.list_keybind.get_event(event)
     }
 
+    /// Handles a [`UIEvent`] by dispatching to the appropriate navigation or search method.
+    /// Returns `true` if the event was handled, `false` otherwise.
     pub fn handle_event(&mut self, event: UIEvent, len: usize) -> bool {
         match event {
             UIEvent::ListDown => self.down(len),
@@ -206,6 +211,7 @@ impl WidgetList {
         true
     }
 
+    /// Selects the list item at the given screen row on mouse click.
     pub fn click(&mut self, _column: usize, row: usize, len: usize) {
         let index = row - usize::from(self.base.chunk.y) - 1;
         if index < len {

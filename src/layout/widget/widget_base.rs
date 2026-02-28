@@ -18,15 +18,6 @@ pub struct WidgetBase {
 
 impl WidgetBase {
     /// Creates a new `WidgetBase` instance for a specific widget type.
-    ///
-    /// # Parameters
-    ///
-    /// - `widget_type`: The type of widget.
-    /// - `data`: A reference-counted mutex for the `ToDo` data.
-    ///
-    /// # Returns
-    ///
-    /// A new `WidgetBase` instance.
     pub fn new(widget_type: &WidgetType, config: &Config) -> Self {
         let event_handler = match widget_type {
             WidgetType::List => config.widget_base_config.tasks_keybind.clone(),

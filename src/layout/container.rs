@@ -31,31 +31,38 @@ pub struct Container {
 }
 
 impl Container {
+    /// Adds a widget to this container.
     pub fn add_widget(&mut self, widget: Box<dyn State>) {
         self.items.push(It::Item(widget));
     }
 
+    /// Adds a nested container reference (by index) to this container.
     pub fn add_cont(&mut self, container_index: usize) {
         self.items.push(It::Cont(container_index));
     }
 
+    /// Sets the layout direction and updates the underlying TUI layout.
     pub fn set_direction(&mut self, direction: Direction) {
         self.direction = direction;
         self.layout = self.layout.clone().direction(direction);
     }
 
+    /// Returns a reference to the container's layout direction.
     pub fn get_direction(&self) -> &Direction {
         &self.direction
     }
 
+    /// Sets the layout constraints for splitting the container area.
     pub fn set_constraints(&mut self, constraints: Vec<Constraint>) {
         self.layout = self.layout.clone().constraints(constraints);
     }
 
+    /// Returns the currently active item index.
     pub fn get_index(&self) -> usize {
         self.act_index
     }
 
+    /// Sets the active item index. Returns `true` if the index is valid, `false` otherwise.
     pub fn set_index(&mut self, index: usize) -> bool {
         if self.items.len() > index {
             self.act_index = index;
@@ -65,6 +72,7 @@ impl Container {
         }
     }
 
+    /// Returns a reference to the widget at the given index, or `None` if the item is a container.
     pub fn get_widget(&self, index: usize) -> Option<&dyn State> {
         match &self.items[index] {
             It::Item(w) => Some(w.as_ref()),
@@ -72,6 +80,7 @@ impl Container {
         }
     }
 
+    /// Returns a mutable reference to the widget at the given index, or `None` if the item is a container.
     pub fn get_widget_mut(&mut self, index: usize) -> Option<&mut dyn State> {
         match &mut self.items[index] {
             It::Item(w) => Some(w.as_mut()),
@@ -118,6 +127,8 @@ impl Container {
         layout.act = find_actual(layout);
     }
 
+    /// Updates the active index of each parent container in the hierarchy
+    /// so that it points toward the currently active container.
     pub fn actualize_parents(layout: &mut Layout) {
         let mut child_index = layout.act;
         while let Some(parent) = layout.containers[child_index].parent {
@@ -178,10 +189,12 @@ impl Container {
         }
     }
 
+    /// Returns the [`WidgetType`] of the currently active widget, if any.
     pub fn get_active_type(&self) -> Option<WidgetType> {
         Some(self.actual()?.widget_type())
     }
 
+    /// Renders this container and all its items (widgets and nested containers) to the frame.
     pub fn render(&self, f: &mut Frame, containers: &Vec<Self>, todo: &ToDo) {
         self.items.iter().for_each(|cont| match cont {
             It::Cont(index) => containers[*index].render(f, containers, todo),
@@ -189,6 +202,8 @@ impl Container {
         });
     }
 
+    /// Recursively splits the given area according to layout constraints and
+    /// updates the chunk of each widget and nested container.
     pub fn update_chunk(chunk: Rect, containers: &mut Vec<Self>, index: usize) {
         let chunks = containers[index].layout.split(chunk);
         for i in 0..containers[index].items.len() {
@@ -203,6 +218,7 @@ impl Container {
         }
     }
 
+    /// Returns a mutable iterator over all widgets directly held by this container.
     pub fn get_widgets_mut(&mut self) -> impl IntoIterator<Item = &mut Box<dyn State>> {
         self.items.iter_mut().filter_map(|item| {
             if let It::Item(w) = item {

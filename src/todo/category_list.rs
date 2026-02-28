@@ -9,6 +9,7 @@ use tui::{
     widgets::{List, ListItem},
 };
 
+/// A category entry with its name and optional filter state.
 #[derive(Debug, PartialEq, Eq)]
 struct CategoryState<'a> {
     name: &'a str,
@@ -66,14 +67,6 @@ impl<'a> CategoryList<'a> {
     }
 
     /// Returns a vector of references to categories that start with the specified pattern.
-    ///
-    /// # Arguments
-    ///
-    /// * `pattern` - The pattern to match the categories with.
-    ///
-    /// # Returns
-    ///
-    /// A vector of references to the matching categories.
     pub fn start_with(&self, pattern: &str) -> Vec<&str> {
         self.vec
             .iter()
@@ -93,14 +86,6 @@ impl<'a> CategoryList<'a> {
     }
 
     /// Gets the name of the category at the specified index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index` - The index of the category to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// A reference to the name of the category.
     ///
     /// # Panics
     ///
