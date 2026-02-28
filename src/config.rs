@@ -1,6 +1,5 @@
 mod colors;
 mod export;
-mod keycode;
 mod options;
 mod parsers;
 mod styles;
@@ -9,7 +8,6 @@ mod traits;
 
 pub use self::{
     colors::Color,
-    keycode::KeyCodeDef,
     options::{
         PasteBehavior, SavePolicy, SetFinalDateType, TaskSort, TextModifier, WidgetBorderType,
     },
