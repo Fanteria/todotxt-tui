@@ -46,17 +46,18 @@ fn log_init() -> Result<(), Box<dyn Error>> {
 /// If the error is not a missing configuration file error, returns it unchanged.
 fn ask_to_create_config(err: ToDoError) -> ToDoError {
     fn ask() -> bool {
-        let mut s = String::new();
         println!("Do you want to initialize it with default configuration? [y/N]");
-        stdin()
-            .read_line(&mut s)
-            .expect("Did not enter a correct string");
-        match s.trim().to_lowercase().as_str() {
-            "y" | "yes" => true,
-            "n" | "no" | "" => false,
-            _ => {
-                println!("You must say y or n");
-                ask()
+        loop {
+            let mut s = String::new();
+            stdin()
+                .read_line(&mut s)
+                .expect("Did not enter a correct string");
+            match s.trim().to_lowercase().as_str() {
+                "y" | "yes" => return true,
+                "n" | "no" | "" => return false,
+                _ => {
+                    println!("You must say y or n")
+                }
             }
         }
     }

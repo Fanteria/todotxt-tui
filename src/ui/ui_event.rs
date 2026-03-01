@@ -216,7 +216,7 @@ impl Display for UIEvent {
             UIEvent::Select => "Select / toggle filter",
             UIEvent::Remove => "Remove filter",
             UIEvent::ShowHelp => "Show keybindings help",
-            UIEvent::None => "",
+            UIEvent::None => "No event is set",
         };
         write!(f, "{}", s)
     }
@@ -240,6 +240,8 @@ impl FromStr for UIEvent {
             "searchmode" => SearchMode,
 
             "cleansearch" => CleanSearch,
+            "nextsearch" => NextSearch,
+            "prevsearch" => PrevSearch,
             "listdown" => ListDown,
             "listup" => ListUp,
             "listfirst" => ListFirst,

@@ -490,7 +490,7 @@ mod tests {
         Ok(())
     }
 
-    /// Render tests helpe
+    /// Render tests helper
     fn assert_rendered(template: &str, width: u16, height: u16, tasks: &[&str], expected: &[&str]) {
         let mut todo = ToDo::default();
         for task in tasks {
