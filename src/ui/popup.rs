@@ -1,13 +1,14 @@
 use crate::config::WidgetBorderType;
 use tui::{
     layout::{Constraint, Flex, Layout, Rect},
-    widgets::{Block, Clear, Paragraph},
+    widgets::{Block, Clear, Paragraph, Wrap},
     Frame,
 };
 
 pub struct Popup {
     border_type: WidgetBorderType,
     message: Option<String>,
+    help: Option<String>,
 }
 
 impl Popup {
@@ -15,6 +16,7 @@ impl Popup {
         Self {
             border_type,
             message: None,
+            help: None,
         }
     }
 
@@ -29,7 +31,20 @@ impl Popup {
     }
 
     pub fn render_popup(&mut self, frame: &mut Frame) {
-        if let Some(message) = self.message.take() {
+        if let Some(help) = &self.help {
+            let area = Self::center_popup_area(frame.area(), 80, 80);
+            frame.render_widget(Clear, area);
+            frame.render_widget(
+                Paragraph::new(help.as_str())
+                    .wrap(Wrap { trim: false })
+                    .block(
+                        Block::bordered()
+                            .border_type(self.border_type.into())
+                            .title("Keybindings (? or Esc to close)"),
+                    ),
+                area,
+            );
+        } else if let Some(message) = self.message.take() {
             let area = Self::center_popup_area(frame.area(), 50, 25);
             frame.render_widget(Clear, area);
             frame.render_widget(
@@ -45,6 +60,18 @@ impl Popup {
 
     pub fn add_message(&mut self, message: String) {
         self.message = Some(message);
+    }
+
+    pub fn show_help(&mut self, content: String) {
+        self.help = Some(content);
+    }
+
+    pub fn hide_help(&mut self) {
+        self.help = None;
+    }
+
+    pub fn is_help_visible(&self) -> bool {
+        self.help.is_some()
     }
 }
 

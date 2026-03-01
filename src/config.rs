@@ -300,6 +300,7 @@ impl Default for UiConfig {
                     UIEvent::EditMode,
                 ),
                 (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
+                (KeyShortcut::from(KeyCode::Char('?')), UIEvent::ShowHelp),
             ]),
             list_refresh_rate: Duration::from_secs(5),
             save_state_path: None,
@@ -711,6 +712,7 @@ mod tests {
                 UIEvent::EditMode,
             ),
             (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
+            (KeyShortcut::from(KeyCode::Char('?')), UIEvent::ShowHelp),
         ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(10);
         expected.active_color_config.list_active_color = TextStyle::default().bg(Color::green());
@@ -879,6 +881,7 @@ mod tests {
                 UIEvent::EditMode,
             ),
             (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
+            (KeyShortcut::from(KeyCode::Char('?')), UIEvent::ShowHelp),
         ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(15);
         expected.active_color_config.list_active_color =

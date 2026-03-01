@@ -183,8 +183,43 @@ pub enum UIEvent {
     Select,
     /// Toggles the remove filter state for the selected category.
     Remove,
+    /// Opens or closes the keybindings help popup.
+    ShowHelp,
     /// Represents an unmapped key with no action.
     None,
+}
+
+impl Display for UIEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            UIEvent::Quit => "Quit",
+            UIEvent::Save => "Save",
+            UIEvent::Load => "Load",
+            UIEvent::MoveLeft => "Move focus left",
+            UIEvent::MoveRight => "Move focus right",
+            UIEvent::MoveUp => "Move focus up",
+            UIEvent::MoveDown => "Move focus down",
+            UIEvent::InsertMode => "Insert mode (new task)",
+            UIEvent::EditMode => "Edit mode",
+            UIEvent::SearchMode => "Search mode",
+            UIEvent::CleanSearch => "Clear search",
+            UIEvent::NextSearch => "Next search result",
+            UIEvent::PrevSearch => "Previous search result",
+            UIEvent::ListDown => "List down",
+            UIEvent::ListUp => "List up",
+            UIEvent::ListFirst => "Go to first",
+            UIEvent::ListLast => "Go to last",
+            UIEvent::SwapUpItem => "Swap up",
+            UIEvent::SwapDownItem => "Swap down",
+            UIEvent::RemoveItem => "Remove",
+            UIEvent::MoveItem => "Move to done/pending",
+            UIEvent::Select => "Select / toggle filter",
+            UIEvent::Remove => "Remove filter",
+            UIEvent::ShowHelp => "Show keybindings help",
+            UIEvent::None => "",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl FromStr for UIEvent {
@@ -215,6 +250,7 @@ impl FromStr for UIEvent {
             "moveitem" => MoveItem,
             "select" => Select,
             "remove" => Remove,
+            "showhelp" => ShowHelp,
             "none" => None,
 
             _ => {
@@ -263,6 +299,13 @@ impl EventHandlerUI {
     /// Iterator of the key shortcuts.
     pub fn keys(&self) -> impl Iterator<Item = &KeyShortcut> {
         self.0.keys()
+    }
+
+    /// Returns all key-event pairs sorted by the string representation of the key.
+    pub fn entries(&self) -> Vec<(&KeyShortcut, &UIEvent)> {
+        let mut entries: Vec<_> = self.0.iter().collect();
+        entries.sort_by_key(|(k, _)| k.to_string());
+        entries
     }
 }
 

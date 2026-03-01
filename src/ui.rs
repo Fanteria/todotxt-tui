@@ -63,6 +63,7 @@ pub struct UI {
     config: UiConfig,
     border_type: WidgetBorderType,
     popup: Popup,
+    help_text: String,
 }
 
 impl UI {
@@ -92,7 +93,42 @@ impl UI {
             config: config.ui_config.clone(),
             border_type: config.widget_base_config.border_type,
             popup: Popup::new(config.widget_base_config.border_type),
+            help_text: Self::build_help_text(config),
         }
+    }
+
+    fn build_help_text(config: &Config) -> String {
+        fn section(text: &mut String, title: &str, handler: &EventHandlerUI) {
+            if handler.is_empty() {
+                return;
+            }
+            text.push_str(&format!(" {title}:\n"));
+            for (key, event) in handler.entries() {
+                if *event != UIEvent::None {
+                    text.push_str(&format!("  {:<12} {event}\n", key.to_string()));
+                }
+            }
+            text.push('\n');
+        }
+
+        let mut text = String::new();
+        section(&mut text, "Window", &config.ui_config.window_keybinds);
+        section(
+            &mut text,
+            "List navigation",
+            &config.list_config.list_keybind,
+        );
+        section(
+            &mut text,
+            "Task actions",
+            &config.widget_base_config.tasks_keybind,
+        );
+        section(
+            &mut text,
+            "Category actions",
+            &config.widget_base_config.category_keybind,
+        );
+        text
     }
 
     /// Builds a new `UI` instance using the provided configuration.
@@ -416,7 +452,9 @@ impl UI {
             },
             (Event::Key(event), Mode::Normal) => {
                 log::debug!("Handle event: {:?}", event);
-                if !self.handle(event) {
+                if self.popup.is_help_visible() && event.code == KeyCode::Esc {
+                    self.popup.hide_help();
+                } else if !self.handle(event) && !self.popup.is_help_visible() {
                     self.layout
                         .handle_key(event, &mut self.data.lock().unwrap());
                 }
@@ -480,6 +518,13 @@ impl UI {
                 self.tinput.reset();
                 self.mode = Mode::Search;
                 self.layout.unfocus();
+            }
+            ShowHelp => {
+                if self.popup.is_help_visible() {
+                    self.popup.hide_help();
+                } else {
+                    self.popup.show_help(self.help_text.clone());
+                }
             }
             _ => {
                 return false;
