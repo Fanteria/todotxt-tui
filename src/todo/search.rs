@@ -45,7 +45,7 @@ pub trait Searchable {
         let it = self.search_through();
         let len = it.len();
         it.rev()
-            .skip(len - skip)
+            .skip(len.saturating_sub(skip))
             .enumerate()
             .find(|(_, s)| Search::matches(s, to_search))
     }

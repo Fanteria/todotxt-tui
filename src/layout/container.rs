@@ -73,16 +73,32 @@ impl Container {
     }
 
     /// Returns a reference to the widget at the given index, or `None` if the item is a container.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the index is out of bounds.
     pub fn get_widget(&self, index: usize) -> Option<&dyn State> {
-        match &self.items[index] {
+        match &self
+            .items
+            .get(index)
+            .expect("Invalid state of widget container")
+        {
             It::Item(w) => Some(w.as_ref()),
             It::Cont(_) => None,
         }
     }
 
     /// Returns a mutable reference to the widget at the given index, or `None` if the item is a container.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the index is out of bounds.
     pub fn get_widget_mut(&mut self, index: usize) -> Option<&mut dyn State> {
-        match &mut self.items[index] {
+        match self
+            .items
+            .get_mut(index)
+            .expect("Invalid state of mut widget container")
+        {
             It::Item(w) => Some(w.as_mut()),
             It::Cont(_) => None,
         }
@@ -204,6 +220,10 @@ impl Container {
 
     /// Recursively splits the given area according to layout constraints and
     /// updates the chunk of each widget and nested container.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the index is out of bounds.
     pub fn update_chunk(chunk: Rect, containers: &mut Vec<Self>, index: usize) {
         let chunks = containers[index].layout.split(chunk);
         for i in 0..containers[index].items.len() {

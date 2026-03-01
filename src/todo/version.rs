@@ -28,13 +28,14 @@ impl Version {
         }
     }
 
-    /// Increments both pending and done version numbers and signals a save.
+    /// Increments the pending and done version numbers and signals a save.
     pub fn update_all(&mut self) {
         self.versions.pending += 1;
         self.versions.done += 1;
         if let Some(tx) = &self.tx {
             if let Err(e) = tx.send(FileWorkerCommands::Save) {
                 log::error!("Error while send signal to save todo list from update all: {e}");
+                self.tx = None;
             }
         }
     }
@@ -50,6 +51,7 @@ impl Version {
         if let Some(tx) = &self.tx {
             if let Err(e) = tx.send(FileWorkerCommands::Save) {
                 log::error!("Error while send signal to save todo list from update: {e}");
+                self.tx = None;
             }
         }
     }
@@ -112,7 +114,7 @@ mod tests {
         };
         v.update_all();
         new_v.update_all();
-        v.is_actual_all(new_v.get_version_all());
+        assert!(v.is_actual_all(new_v.get_version_all()));
     }
 
     #[test]
@@ -121,6 +123,9 @@ mod tests {
         let mut v = Version::new(tx);
 
         v.update(&ToDoData::Pending);
+        assert!(matches!(rx.try_recv(), Ok(FileWorkerCommands::Save)));
+
+        v.update(&ToDoData::Done);
         assert!(matches!(rx.try_recv(), Ok(FileWorkerCommands::Save)));
 
         v.update_all();

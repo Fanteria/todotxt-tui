@@ -76,14 +76,14 @@ impl Hooks {
     /// Runs a hook command and logs the result using the given hook name.
     /// Returns `Some(stdout)` on success, or `None` on failure.
     fn run_command_with_name(path: &Path, task: &str, name: &str) -> Option<String> {
-        log::info!("{name} hook: {path:?} {task}");
+        log::info!("{name} hook: {path:?} task len: {}", task.len());
         match Self::run_command(path, task) {
             Ok(stdout) => {
                 log::debug!("Hook {name} return {stdout}");
                 Some(stdout)
             }
             Err(e) => {
-                log::error!("Hook post move task failed: {e}");
+                log::error!("Hook {name} failed: {e}");
                 None
             }
         }
@@ -109,7 +109,7 @@ impl Hooks {
         Self::run_command_with_name(
             self.get_path(&hook_type)?,
             task.as_ref(),
-            &format!("pre {hook_type}"),
+            &hook_type.to_string(),
         )
     }
 
@@ -119,7 +119,7 @@ impl Hooks {
         Self::run_command_with_name(
             self.get_path(&hook_type)?,
             task().as_ref(),
-            &format!("pre {hook_type}"),
+            &hook_type.to_string(),
         )
     }
 }
