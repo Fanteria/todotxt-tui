@@ -337,6 +337,22 @@ pub struct WidgetBaseConfig {
     pub category_keybind: EventHandlerUI,
     /// The type of border style to use for the UI widgets.
     pub border_type: WidgetBorderType,
+    /// The title label displayed on the pending tasks widget border.
+    pub pending_widget_name: String,
+    /// The title label displayed on the done tasks widget border.
+    pub done_widget_name: String,
+    /// The title label displayed on the projects category widget border.
+    pub project_widget_name: String,
+    /// The title label displayed on the contexts category widget border.
+    pub context_widget_name: String,
+    /// The title label displayed on the hashtags category widget border.
+    pub hashtag_widget_name: String,
+    /// The title label displayed on the preview widget border.
+    pub preview_widget_name: String,
+    /// The title label displayed on the pending live preview widget border.
+    pub pending_live_preview_widget_name: String,
+    /// The title label displayed on the done live preview widget border.
+    pub done_live_preview_widget_name: String,
 }
 
 impl Default for WidgetBaseConfig {
@@ -370,6 +386,14 @@ impl Default for WidgetBaseConfig {
                 ),
             ]),
             border_type: WidgetBorderType::default(),
+            pending_widget_name: String::from("list"),
+            done_widget_name: String::from("done"),
+            project_widget_name: String::from("project"),
+            context_widget_name: String::from("context"),
+            hashtag_widget_name: String::from("hashtag"),
+            preview_widget_name: String::from("preview"),
+            pending_live_preview_widget_name: String::from("pending live preview"),
+            done_live_preview_widget_name: String::from("done live preview"),
         }
     }
 }
