@@ -489,4 +489,345 @@ mod tests {
 
         Ok(())
     }
+
+    /// Render tests helpe
+    fn assert_rendered(template: &str, width: u16, height: u16, tasks: &[&str], expected: &[&str]) {
+        let mut todo = ToDo::default();
+        for task in tasks {
+            todo.new_task(task).unwrap();
+        }
+        let config = Config::default();
+        let mut layout = Layout::from_str(template, &todo, &config).unwrap();
+        layout.update_chunk(Rect::new(0, 0, width, height));
+
+        let backend = tui::backend::TestBackend::new(width, height);
+        let mut terminal = tui::Terminal::new(backend).unwrap();
+        terminal.draw(|f| layout.render(f, &todo)).unwrap();
+        let buf = terminal.backend().buffer();
+        // Extract text-only lines from a terminal buffer (ignoring styles).
+        let actual: Vec<String> = (0..buf.area.height)
+            .map(|y| {
+                (0..buf.area.width)
+                    .map(|x| buf.cell((x, y)).unwrap().symbol().to_string())
+                    .collect()
+            })
+            .collect();
+        let expected: Vec<String> = expected.iter().map(|s| s.to_string()).collect();
+        assert_eq!(actual, expected, "\nactual:\n{}", actual.join("\n"));
+    }
+
+    #[test]
+    fn render_single_list() {
+        assert_rendered(
+            "[List]",
+            20,
+            5,
+            &[],
+            &[
+                "╭list──────────────╮",
+                "│                  │",
+                "╰──────────────────╯",
+                "                    ",
+                "                    ",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_single_done() {
+        assert_rendered(
+            "[Done]",
+            20,
+            5,
+            &[],
+            &[
+                "╭done──────────────╮",
+                "│                  │",
+                "╰──────────────────╯",
+                "                    ",
+                "                    ",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_single_preview() {
+        assert_rendered(
+            "[Preview]",
+            20,
+            5,
+            &[],
+            &[
+                "╭preview───────────╮",
+                "│                  │",
+                "╰──────────────────╯",
+                "                    ",
+                "                    ",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_two_widgets_vertical() {
+        assert_rendered(
+            "[List, Done]",
+            20,
+            8,
+            &[],
+            &[
+                "╭list──────────────╮",
+                "│                  │",
+                "│                  │",
+                "╰──────────────────╯",
+                "╭done──────────────╮",
+                "│                  │",
+                "│                  │",
+                "╰──────────────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_two_widgets_horizontal() {
+        assert_rendered(
+            "[Direction: Horizontal, List, Done]",
+            20,
+            5,
+            &[],
+            &[
+                "╭list────╮╭done────╮",
+                "│        ││        │",
+                "│        ││        │",
+                "│        ││        │",
+                "╰────────╯╰────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_three_widgets_vertical() {
+        assert_rendered(
+            "[List, Done, Preview]",
+            20,
+            9,
+            &[],
+            &[
+                "╭list──────────────╮",
+                "│                  │",
+                "╰──────────────────╯",
+                "╭done──────────────╮",
+                "│                  │",
+                "╰──────────────────╯",
+                "╭preview───────────╮",
+                "│                  │",
+                "╰──────────────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_three_widgets_horizontal() {
+        assert_rendered(
+            "[Direction: Horizontal, List, Done, Projects]",
+            30,
+            5,
+            &[],
+            &[
+                "╭list────╮╭done────╮╭project─╮",
+                "│        ││        ││        │",
+                "│        ││        ││        │",
+                "│        ││        ││        │",
+                "╰────────╯╰────────╯╰────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_nested_horizontal_in_vertical() {
+        let template = "[List, [Direction: Horizontal, Done, Projects]]";
+        assert_rendered(
+            template,
+            20,
+            8,
+            &[],
+            &[
+                "╭list──────────────╮",
+                "│                  │",
+                "│                  │",
+                "╰──────────────────╯",
+                "╭done────╮╭project─╮",
+                "│        ││        │",
+                "│        ││        │",
+                "╰────────╯╰────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_nested_vertical_in_horizontal() {
+        let template = "[Direction: Horizontal, List, [Direction: Vertical, Done, Preview]]";
+        assert_rendered(
+            template,
+            20,
+            8,
+            &[],
+            &[
+                "╭list────╮╭done────╮",
+                "│        ││        │",
+                "│        ││        │",
+                "│        │╰────────╯",
+                "│        │╭preview─╮",
+                "│        ││        │",
+                "│        ││        │",
+                "╰────────╯╰────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_with_percentage_sizes() {
+        let template = "[Direction: Horizontal, List: 30%, Done: 70%]";
+        assert_rendered(
+            template,
+            20,
+            5,
+            &[],
+            &[
+                "╭list╮╭done────────╮",
+                "│    ││            │",
+                "│    ││            │",
+                "│    ││            │",
+                "╰────╯╰────────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_with_raw_sizes() {
+        let template = "[Direction: Horizontal, List: 8, Done: 12]";
+        assert_rendered(
+            template,
+            20,
+            5,
+            &[],
+            &[
+                "╭list──╮╭done──────╮",
+                "│      ││          │",
+                "│      ││          │",
+                "│      ││          │",
+                "╰──────╯╰──────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_all_category_widgets() {
+        let template = "[Direction: Horizontal, Contexts, Projects, Hashtags]";
+        assert_rendered(
+            template,
+            30,
+            5,
+            &[],
+            &[
+                "╭context─╮╭project─╮╭hashtag─╮",
+                "│        ││        ││        │",
+                "│        ││        ││        │",
+                "│        ││        ││        │",
+                "╰────────╯╰────────╯╰────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_list_with_tasks() {
+        assert_rendered(
+            "[List]",
+            20,
+            5,
+            &["Alpha", "Beta"],
+            &[
+                "╭list──────────────╮",
+                "│Alpha             │",
+                "╰──────────────────╯",
+                "                    ",
+                "                    ",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_horizontal_list_and_done_with_tasks() {
+        assert_rendered(
+            "[Direction: Horizontal, List, Done]",
+            30,
+            5,
+            &["Pending task", "x Done task"],
+            &[
+                "╭list─────────╮╭done─────────╮",
+                "│Pending task ││Done task    │",
+                "│             ││             │",
+                "│             ││             │",
+                "╰─────────────╯╰─────────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_categories_with_tasks() {
+        assert_rendered(
+            "[Direction: Horizontal, Projects, Contexts]",
+            24,
+            5,
+            &["Buy milk +shopping @home", "Code +dev @work"],
+            &[
+                "╭project───╮╭context───╮",
+                "│dev       ││home      │",
+                "│shopping  ││work      │",
+                "│          ││          │",
+                "╰──────────╯╰──────────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_deeply_nested() {
+        assert_rendered(
+            "[Direction: Horizontal, List, [Done, [Direction: Horizontal, Contexts, Projects]]]",
+            30,
+            8,
+            &[],
+            &[
+                "╭list─────────╮╭done─────────╮",
+                "│             ││             │",
+                "│             ││             │",
+                "│             │╰─────────────╯",
+                "│             │╭contex╮╭proje╮",
+                "│             ││      ││     │",
+                "│             ││      ││     │",
+                "╰─────────────╯╰──────╯╰─────╯",
+            ],
+        );
+    }
+
+    #[test]
+    fn render_complex_layout() {
+        assert_rendered(
+            "[Direction: Horizontal, Size: 50%, [List, Preview], [Direction: Vertical, Done, [Contexts, Projects]]]",
+            40,
+            10,
+            &[],
+            &[
+                "╭list──────────────╮╭done──────────────╮",
+                "│                  ││                  │",
+                "│                  ││                  │",
+                "│                  ││                  │",
+                "╰──────────────────╯╰──────────────────╯",
+                "╭preview───────────╮╭context─╮╭project─╮",
+                "│                  ││        ││        │",
+                "│                  ││        ││        │",
+                "│                  ││        ││        │",
+                "╰──────────────────╯╰────────╯╰────────╯",
+            ],
+        );
+    }
 }

@@ -174,3 +174,120 @@ impl State for StateList {
         self.data_type.into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::layout::{widget::widget_type::WidgetType, Render};
+    use test_log::test;
+    use tui::{backend::TestBackend, prelude::Rect, Terminal};
+
+    fn make_list(data_type: ToDoData) -> (StateList, Config) {
+        let config = Config::default();
+        let base = WidgetList::new(
+            &match data_type {
+                ToDoData::Pending => WidgetType::List,
+                ToDoData::Done => WidgetType::Done,
+            },
+            &config,
+        );
+        let list = StateList::new(base, data_type, &config).unwrap();
+        (list, config)
+    }
+
+    #[test]
+    fn render_empty_pending_list() -> Result<()> {
+        let (mut list, _) = make_list(ToDoData::Pending);
+        let area = Rect::new(0, 0, 20, 5);
+        list.update_chunk(area);
+
+        let todo = ToDo::default();
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&list, f, &todo))?;
+
+        terminal.backend().assert_buffer_lines([
+            "╭list──────────────╮",
+            "│                  │",
+            "│                  │",
+            "│                  │",
+            "╰──────────────────╯",
+        ]);
+        Ok(())
+    }
+
+    #[test]
+    fn render_pending_tasks() -> Result<()> {
+        let (mut list, _) = make_list(ToDoData::Pending);
+        let area = Rect::new(0, 0, 20, 5);
+        list.update_chunk(area);
+
+        let mut todo = ToDo::default();
+        todo.new_task("Alpha")?;
+        todo.new_task("Beta")?;
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&list, f, &todo))?;
+
+        terminal.backend().assert_buffer_lines([
+            "╭list──────────────╮",
+            "│Alpha             │",
+            "│Beta              │",
+            "│                  │",
+            "╰──────────────────╯",
+        ]);
+        Ok(())
+    }
+
+    #[test]
+    fn render_done_tasks() -> Result<()> {
+        let (mut list, _) = make_list(ToDoData::Done);
+        let area = Rect::new(0, 0, 20, 5);
+        list.update_chunk(area);
+
+        let mut todo = ToDo::default();
+        todo.new_task("x Finished")?;
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&list, f, &todo))?;
+
+        terminal.backend().assert_buffer_lines([
+            "╭done──────────────╮",
+            "│Finished          │",
+            "│                  │",
+            "│                  │",
+            "╰──────────────────╯",
+        ]);
+        Ok(())
+    }
+
+    #[test]
+    fn render_focused_highlights_selected() -> Result<()> {
+        let (mut list, _) = make_list(ToDoData::Pending);
+        let area = Rect::new(0, 0, 20, 5);
+        list.update_chunk(area);
+
+        let mut todo = ToDo::default();
+        todo.new_task("Alpha")?;
+        todo.new_task("Beta")?;
+        list.focus(&ToDo::default());
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&list, f, &todo))?;
+
+        // When focused, the first item should have a highlight style applied.
+        // Check that the content is still there; the highlight is a style
+        // attribute on the buffer cells.
+        let buf = terminal.backend().buffer();
+        // Row 1 (first item inside border) should have the active color style
+        let cell = buf.cell((1, 1)).unwrap();
+        assert_eq!(cell.symbol(), "A");
+        assert_eq!(cell.bg, tui::style::Color::LightRed);
+        assert_eq!(cell.fg, tui::style::Color::Reset);
+        Ok(())
+    }
+}

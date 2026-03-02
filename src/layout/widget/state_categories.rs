@@ -150,17 +150,156 @@ impl State for StateCategories {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::Config, layout::widget::widget_type::WidgetType, todo::ToDo};
-    use std::str::FromStr;
+    use crate::{
+        config::Config,
+        layout::{widget::widget_type::WidgetType, Render},
+        todo::ToDo,
+        Result,
+    };
+    use std::{io, str::FromStr};
+    use test_log::test;
+    use tui::{backend::TestBackend, prelude::Rect, Terminal};
 
     #[test]
-    fn handle_event_state() {
+    fn render_empty_projects() -> io::Result<()> {
+        let config = Config::default();
+        let base = WidgetList::new(&WidgetType::Project, &config);
+        let mut cat =
+            StateCategories::new(base, ToDoCategory::Projects, &config.active_color_config);
+        let area = Rect::new(0, 0, 20, 5);
+        cat.update_chunk(area);
+
+        let todo = ToDo::default();
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&cat, f, &todo))?;
+
+        terminal.backend().assert_buffer_lines([
+            "╭project───────────╮",
+            "│                  │",
+            "│                  │",
+            "│                  │",
+            "╰──────────────────╯",
+        ]);
+        Ok(())
+    }
+
+    #[test]
+    fn render_projects_with_tasks() -> io::Result<()> {
+        let config = Config::default();
+        let base = WidgetList::new(&WidgetType::Project, &config);
+        let mut cat =
+            StateCategories::new(base, ToDoCategory::Projects, &config.active_color_config);
+        let area = Rect::new(0, 0, 20, 5);
+        cat.update_chunk(area);
+
+        let mut todo = ToDo::default();
+        todo.add_task(todo_txt::Task::from_str("Task +alpha").unwrap());
+        todo.add_task(todo_txt::Task::from_str("Task +beta").unwrap());
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&cat, f, &todo))?;
+
+        terminal.backend().assert_buffer_lines([
+            "╭project───────────╮",
+            "│alpha             │",
+            "│beta              │",
+            "│                  │",
+            "╰──────────────────╯",
+        ]);
+        Ok(())
+    }
+
+    #[test]
+    fn render_contexts() -> io::Result<()> {
+        let config = Config::default();
+        let base = WidgetList::new(&WidgetType::Context, &config);
+        let mut cat =
+            StateCategories::new(base, ToDoCategory::Contexts, &config.active_color_config);
+        let area = Rect::new(0, 0, 20, 5);
+        cat.update_chunk(area);
+
+        let mut todo = ToDo::default();
+        todo.add_task(todo_txt::Task::from_str("Task @home").unwrap());
+        todo.add_task(todo_txt::Task::from_str("Task @work").unwrap());
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&cat, f, &todo))?;
+
+        terminal.backend().assert_buffer_lines([
+            "╭context───────────╮",
+            "│home              │",
+            "│work              │",
+            "│                  │",
+            "╰──────────────────╯",
+        ]);
+        Ok(())
+    }
+
+    #[test]
+    fn render_hashtags() -> Result<()> {
+        let config = Config::default();
+        let base = WidgetList::new(&WidgetType::Hashtag, &config);
+        let mut cat =
+            StateCategories::new(base, ToDoCategory::Hashtags, &config.active_color_config);
+        let area = Rect::new(0, 0, 20, 5);
+        cat.update_chunk(area);
+
+        let mut todo = ToDo::default();
+        todo.add_task(todo_txt::Task::from_str("Task #urgent")?);
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&cat, f, &todo))?;
+
+        terminal.backend().assert_buffer_lines([
+            "╭hashtag───────────╮",
+            "│urgent            │",
+            "│                  │",
+            "│                  │",
+            "╰──────────────────╯",
+        ]);
+        Ok(())
+    }
+
+    #[test]
+    fn render_focused_highlights_selected() -> Result<()> {
+        let config = Config::default();
+        let base = WidgetList::new(&WidgetType::Project, &config);
+        let mut cat =
+            StateCategories::new(base, ToDoCategory::Projects, &config.active_color_config);
+        let area = Rect::new(0, 0, 20, 5);
+        cat.update_chunk(area);
+
+        let mut todo = ToDo::default();
+        todo.add_task(todo_txt::Task::from_str("Task +alpha")?);
+        todo.add_task(todo_txt::Task::from_str("Task +beta")?);
+        cat.focus(&todo);
+
+        let backend = TestBackend::new(20, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|f| State::render(&cat, f, &todo))?;
+
+        let buf = terminal.backend().buffer();
+        // Row 1 (first item) should have a style applied when focused
+        let cell = buf.cell((1, 1)).unwrap();
+        assert_eq!(cell.symbol(), "a");
+        assert_eq!(cell.fg, tui::style::Color::Reset);
+        assert_eq!(cell.bg, tui::style::Color::LightRed);
+        Ok(())
+    }
+
+    #[test]
+    fn handle_event_state() -> Result<()> {
         let config = Config::default();
         let mut todo = ToDo::default();
-        todo.add_task(todo_txt::Task::from_str("Task +project1").unwrap());
-        todo.add_task(todo_txt::Task::from_str("Task +project1").unwrap());
-        todo.add_task(todo_txt::Task::from_str("Task +project2").unwrap());
-        todo.add_task(todo_txt::Task::from_str("Task +project3").unwrap());
+        todo.add_task(todo_txt::Task::from_str("Task +project1")?);
+        todo.add_task(todo_txt::Task::from_str("Task +project1")?);
+        todo.add_task(todo_txt::Task::from_str("Task +project2")?);
+        todo.add_task(todo_txt::Task::from_str("Task +project3")?);
 
         let mut c = StateCategories::new(
             WidgetList::new(&WidgetType::Project, &config),
@@ -208,5 +347,6 @@ mod tests {
 
         // Do nothing on unknown event
         assert!(!c.handle_event_state(UIEvent::Quit, &mut todo));
+        Ok(())
     }
 }
