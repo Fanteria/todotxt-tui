@@ -225,6 +225,40 @@ mod tests {
     }
 
     #[test]
+    fn run_lazy_skips_closure_when_no_path() {
+        let hooks = Hooks::new(HookPaths::default());
+        let called = std::cell::Cell::new(false);
+        let result = hooks.run_lazy(HookTypes::PreNew, || {
+            called.set(true);
+            String::from("should not be evaluated")
+        });
+        assert_eq!(result, None);
+        assert!(
+            !called.get(),
+            "closure should not be called when no hook path is configured"
+        );
+    }
+
+    #[test]
+    fn run_lazy_evaluates_closure_when_path_configured() {
+        let path = PathBuf::from(var("TODO_TUI_TEST_DIR").unwrap()).join("hook.sh");
+        let hooks = Hooks::new(HookPaths {
+            pre_new_task: Some(path),
+            ..HookPaths::default()
+        });
+        let called = std::cell::Cell::new(false);
+        let result = hooks.run_lazy(HookTypes::PreNew, || {
+            called.set(true);
+            String::from("lazy task")
+        });
+        assert!(
+            called.get(),
+            "closure should be called when hook path is configured"
+        );
+        assert_eq!(result, Some(String::from("hook: lazy task")));
+    }
+
+    #[test]
     fn invalid_path() {
         let path = PathBuf::from("/this/path/is/not/valid");
         assert!(Hooks::run_command(&path, "").is_err());

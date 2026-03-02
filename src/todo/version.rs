@@ -85,6 +85,7 @@ impl Version {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::mpsc;
 
     #[test]
     fn behaviour() {
@@ -112,5 +113,17 @@ mod tests {
         v.update_all();
         new_v.update_all();
         v.is_actual_all(new_v.get_version_all());
+    }
+
+    #[test]
+    fn sends_save_signal_on_updates() {
+        let (tx, rx) = mpsc::channel();
+        let mut v = Version::new(tx);
+
+        v.update(&ToDoData::Pending);
+        assert!(matches!(rx.try_recv(), Ok(FileWorkerCommands::Save)));
+
+        v.update_all();
+        assert!(matches!(rx.try_recv(), Ok(FileWorkerCommands::Save)));
     }
 }
