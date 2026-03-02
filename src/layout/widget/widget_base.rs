@@ -26,6 +26,8 @@ impl WidgetBase {
             WidgetType::Context => config.widget_base_config.category_keybind.clone(),
             WidgetType::Hashtag => config.widget_base_config.category_keybind.clone(),
             WidgetType::Preview => EventHandlerUI::default(),
+            WidgetType::PendingLivePreview => EventHandlerUI::default(),
+            WidgetType::DoneLivePreview => EventHandlerUI::default(),
         };
         Self {
             title: widget_type.to_string(),

@@ -8,6 +8,3 @@ mod ui;
 pub use config::{ConfMerge, Config};
 pub use error::*;
 pub use ui::UI;
-
-#[macro_use]
-extern crate enum_dispatch;

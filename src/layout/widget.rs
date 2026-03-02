@@ -8,7 +8,10 @@ mod widget_type;
 
 use crate::{
     config::Config,
-    layout::widget::widget_list::WidgetList,
+    layout::widget::{
+        state_preview::{ActivePreview, DoneActualPreview, PendingActualPreview},
+        widget_list::WidgetList,
+    },
     todo::{ToDoCategory, ToDoData},
     Result,
 };
@@ -47,7 +50,15 @@ pub fn new_widget(widget_type: WidgetType, config: &Config) -> Result<Box<dyn St
             ToDoCategory::Hashtags,
             &config.active_color_config,
         )),
-        Preview => Box::new(StatePreview::new(
+        Preview => Box::new(StatePreview::<ActivePreview>::new(
+            WidgetBase::new(&widget_type, config),
+            config,
+        )?),
+        PendingLivePreview => Box::new(StatePreview::<PendingActualPreview>::new(
+            WidgetBase::new(&widget_type, config),
+            config,
+        )?),
+        DoneLivePreview => Box::new(StatePreview::<DoneActualPreview>::new(
             WidgetBase::new(&widget_type, config),
             config,
         )?),

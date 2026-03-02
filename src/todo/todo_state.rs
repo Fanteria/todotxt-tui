@@ -80,6 +80,8 @@ pub enum FilterState {
 #[derive(Default, Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct ToDoState {
     pub active: Option<(ToDoData, usize)>,
+    pub actual_pending: Option<usize>,
+    pub actual_done: Option<usize>,
     pub project_filters: BTreeMap<String, FilterState>,
     pub context_filters: BTreeMap<String, FilterState>,
     pub hashtag_filters: BTreeMap<String, FilterState>,
