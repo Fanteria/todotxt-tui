@@ -48,3 +48,91 @@ Defines the style of borders used in the application's user interface. Options i
 **default:** `Rounded`
 </dd>
 <br>
+
+<dt><b>Flag:</b> <code>--pending-widget-name</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_PENDING_WIDGET_NAME</code></dt>
+<dt><b>Conf:</b> <code>pending_widget_name</code></dt>
+<dd>
+
+The title label displayed on the pending tasks widget border.
+
+**default:** `"list"`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--done-widget-name</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_DONE_WIDGET_NAME</code></dt>
+<dt><b>Conf:</b> <code>done_widget_name</code></dt>
+<dd>
+
+The title label displayed on the done tasks widget border.
+
+**default:** `"done"`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--project-widget-name</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_PROJECT_WIDGET_NAME</code></dt>
+<dt><b>Conf:</b> <code>project_widget_name</code></dt>
+<dd>
+
+The title label displayed on the projects category widget border.
+
+**default:** `"project"`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--context-widget-name</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_CONTEXT_WIDGET_NAME</code></dt>
+<dt><b>Conf:</b> <code>context_widget_name</code></dt>
+<dd>
+
+The title label displayed on the contexts category widget border.
+
+**default:** `"context"`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--hashtag-widget-name</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_HASHTAG_WIDGET_NAME</code></dt>
+<dt><b>Conf:</b> <code>hashtag_widget_name</code></dt>
+<dd>
+
+The title label displayed on the hashtags category widget border.
+
+**default:** `"hashtag"`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--preview-widget-name</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_PREVIEW_WIDGET_NAME</code></dt>
+<dt><b>Conf:</b> <code>preview_widget_name</code></dt>
+<dd>
+
+The title label displayed on the preview widget border.
+
+**default:** `"preview"`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--pending-live-preview-widget-name</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_PENDING_LIVE_PREVIEW_WIDGET_NAME</code></dt>
+<dt><b>Conf:</b> <code>pending_live_preview_widget_name</code></dt>
+<dd>
+
+The title label displayed on the pending live preview widget border.
+
+**default:** `"pending live preview"`
+</dd>
+<br>
+
+<dt><b>Flag:</b> <code>--done-live-preview-widget-name</code></dt>
+<dt><b>Env:</b> <code>$TODOTXT_TUI_DONE_LIVE_PREVIEW_WIDGET_NAME</code></dt>
+<dt><b>Conf:</b> <code>done_live_preview_widget_name</code></dt>
+<dd>
+
+The title label displayed on the done live preview widget border.
+
+**default:** `"done live preview"`
+</dd>
+<br>
