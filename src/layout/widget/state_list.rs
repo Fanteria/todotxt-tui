@@ -67,6 +67,7 @@ impl State for StateList {
     fn handle_event_state(&mut self, event: UIEvent, todo: &mut ToDo) -> bool {
         log::trace!("StateList handle event {event:?}");
         if self.base.handle_event(event, todo.len(self.data_type)) {
+            todo.set_actual(self.data_type, self.base.index());
             return true;
         }
         match event {

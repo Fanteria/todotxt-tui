@@ -9,7 +9,7 @@ directory_vertical = { ^"vertical" }
 size_key = _{ ^"size" ~ ":" ~ value }
 
 widget = { name ~ (":" ~ value)? }
-name = { ^"list" | ^"done" | ^"contexts" | ^"projects" | ^"preview" | ^"hashtags" }
+name = { ^"list" | ^"done" | ^"contexts" | ^"projects" | ^"preview" | ^"live-preview-pending" | ^"live-preview-done" | ^"hashtags" }
 value = _{ percentage | size_raw }
 size_raw = {ASCII_DIGIT+}
 percentage = _{ size_percentage ~ percentage_sign }

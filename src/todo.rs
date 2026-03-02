@@ -311,16 +311,49 @@ impl ToDo {
     ///
     /// An `Option` containing a reference to the active `Task`, or `None` if no task is active.
     pub fn get_active(&self) -> Option<&Task> {
-        match self.state.active {
-            Some((data, index)) => {
-                let list = data.get_data(self);
-                if index >= list.len() {
-                    list.last()
-                } else {
-                    list.get(index)
-                }
+        let (data, index) = self.state.active?;
+        let list = data.get_data(self);
+        if index >= list.len() {
+            list.last()
+        } else {
+            list.get(index)
+        }
+    }
+
+    /// Sets a task as the actual task.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The type of ToDo data where the task is located.
+    /// * `index` - The index of the task to be set as active in the specified data.
+    pub fn set_actual(&mut self, data: ToDoData, index: usize) {
+        if let Some(index) = self.get_actual_index(data, index) {
+            match data {
+                ToDoData::Pending => self.state.actual_pending = Some(index),
+                ToDoData::Done => self.state.actual_done = Some(index),
             }
-            None => None,
+        } else {
+            log::warn!("Layout::get_actual_index is None");
+        }
+    }
+
+    /// Gets the actual task.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a reference to the active `Task`, or `None`
+    ///  if there is no actual task (only on the start of the program).
+    pub fn get_actual(&self, data: ToDoData) -> Option<&Task> {
+        let list = data.get_data(self);
+        match data {
+            ToDoData::Pending => match self.state.actual_pending {
+                Some(i) => list.get(i),
+                None => list.first(),
+            },
+            ToDoData::Done => match self.state.actual_done {
+                Some(i) => list.get(i),
+                None => list.first(),
+            },
         }
     }
 

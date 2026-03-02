@@ -1,25 +1,55 @@
 use super::{widget_base::WidgetBase, widget_trait::State, widget_type::WidgetType};
 use crate::{
     config::Config,
-    todo::{Parser, ToDo},
+    todo::{Parser, ToDo, ToDoData},
     ui::UIEvent,
     Result,
 };
+use todo_txt::Task;
 use tui::{
     text::{Line, Span},
     widgets::{Paragraph, Wrap},
     Frame,
 };
 
+pub trait Previewable: std::fmt::Debug {
+    fn get_task(todo: &ToDo) -> Option<&Task>;
+}
+
 /// Represents the state for a preview widget that displays task details.
 #[derive(Debug)]
-pub struct StatePreview {
+pub struct StatePreview<P: Previewable> {
     base: WidgetBase,
     parser: Parser,
     wrap_preview: bool,
+    _phantom: std::marker::PhantomData<P>,
 }
 
-impl StatePreview {
+#[derive(Debug)]
+pub struct ActivePreview;
+impl Previewable for ActivePreview {
+    fn get_task(todo: &ToDo) -> Option<&Task> {
+        todo.get_active()
+    }
+}
+
+#[derive(Debug)]
+pub struct PendingActualPreview;
+impl Previewable for PendingActualPreview {
+    fn get_task(todo: &ToDo) -> Option<&Task> {
+        todo.get_actual(ToDoData::Pending)
+    }
+}
+
+#[derive(Debug)]
+pub struct DoneActualPreview;
+impl Previewable for DoneActualPreview {
+    fn get_task(todo: &ToDo) -> Option<&Task> {
+        todo.get_actual(ToDoData::Done)
+    }
+}
+
+impl<P: Previewable> StatePreview<P> {
     /// Creates a new `StatePreview` instance.
     ///
     /// # Parameters
@@ -31,21 +61,22 @@ impl StatePreview {
     ///
     /// A new `StatePreview` instance.
     pub fn new(base: WidgetBase, config: &Config) -> Result<Self> {
-        Ok(StatePreview {
+        Ok(Self {
             base,
             parser: Parser::new(&config.preview_config.preview_format, config.styles.clone())?,
             wrap_preview: config.preview_config.wrap_preview,
+            _phantom: std::marker::PhantomData,
         })
     }
 }
 
-impl State for StatePreview {
+impl<P: Previewable> State for StatePreview<P> {
     fn handle_event_state(&mut self, _: UIEvent, _todo: &mut ToDo) -> bool {
         false
     }
 
     fn render(&self, f: &mut Frame, todo: &ToDo) {
-        let lines = match todo.get_active() {
+        let lines = match P::get_task(todo) {
             Some(act_task) => self.parser.fill(act_task, todo),
             None => vec![],
         };
@@ -92,7 +123,7 @@ mod tests {
     use test_log::test;
     use tui::{backend::TestBackend, prelude::Rect, Terminal};
 
-    fn make_preview(format: &str) -> (StatePreview, Config) {
+    fn make_preview(format: &str) -> (StatePreview<ActivePreview>, Config) {
         let mut config = Config::default();
         config.preview_config.preview_format = String::from(format);
         let base = WidgetBase::new(&WidgetType::Preview, &config);

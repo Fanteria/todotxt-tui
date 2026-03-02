@@ -18,6 +18,8 @@ pub enum WidgetType {
     Context,
     Hashtag,
     Preview,
+    PendingLivePreview,
+    DoneLivePreview,
 }
 
 impl fmt::Display for WidgetType {
@@ -58,6 +60,8 @@ impl FromStr for WidgetType {
             "contexts" => Context,
             "hashtags" => Hashtag,
             "preview" => Preview,
+            "live-preview-pending" => PendingLivePreview,
+            "live-preview-done" => DoneLivePreview,
             _ => return Err(ToDoError::ParseWidgetType(s.to_string())),
         })
     }

@@ -13,7 +13,6 @@ use tui::{
     Frame,
 };
 
-#[enum_dispatch]
 pub trait State: Debug {
     /// Handles a UI event specific to the state and returns a boolean indicating
     /// whether the event was handled successfully.
