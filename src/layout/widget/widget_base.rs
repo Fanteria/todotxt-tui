@@ -19,18 +19,25 @@ pub struct WidgetBase {
 impl WidgetBase {
     /// Creates a new `WidgetBase` instance for a specific widget type.
     pub fn new(widget_type: &WidgetType, config: &Config) -> Self {
-        let event_handler = match widget_type {
-            WidgetType::List => config.widget_base_config.tasks_keybind.clone(),
-            WidgetType::Done => config.widget_base_config.tasks_keybind.clone(),
-            WidgetType::Project => config.widget_base_config.category_keybind.clone(),
-            WidgetType::Context => config.widget_base_config.category_keybind.clone(),
-            WidgetType::Hashtag => config.widget_base_config.category_keybind.clone(),
-            WidgetType::Preview => EventHandlerUI::default(),
-            WidgetType::PendingLivePreview => EventHandlerUI::default(),
-            WidgetType::DoneLivePreview => EventHandlerUI::default(),
+        let c = &config.widget_base_config;
+        let (event_handler, title) = match widget_type {
+            WidgetType::List => (c.tasks_keybind.clone(), c.pending_widget_name.clone()),
+            WidgetType::Done => (c.tasks_keybind.clone(), c.done_widget_name.clone()),
+            WidgetType::Project => (c.category_keybind.clone(), c.project_widget_name.clone()),
+            WidgetType::Context => (c.category_keybind.clone(), c.context_widget_name.clone()),
+            WidgetType::Hashtag => (c.category_keybind.clone(), c.hashtag_widget_name.clone()),
+            WidgetType::Preview => (EventHandlerUI::default(), c.preview_widget_name.clone()),
+            WidgetType::PendingLivePreview => (
+                EventHandlerUI::default(),
+                c.pending_live_preview_widget_name.clone(),
+            ),
+            WidgetType::DoneLivePreview => (
+                EventHandlerUI::default(),
+                c.done_live_preview_widget_name.clone(),
+            ),
         };
         Self {
-            title: widget_type.to_string(),
+            title,
             active_color: *config.styles.active_color,
             focus: false,
             chunk: Rect::default(),
