@@ -12,10 +12,8 @@ pub use self::{
     todo_state::*,
 };
 
-use crate::{
-    config::{HookPaths, SetFinalDateType, Styles, ToDoConfig},
-    Result,
-};
+use crate::config::{HookPaths, SetFinalDateType, Styles, ToDoConfig};
+use anyhow::Result;
 use chrono::{NaiveDate, Utc};
 use hooks::{HookTypes, Hooks};
 use std::str::FromStr;
@@ -327,13 +325,12 @@ impl ToDo {
     /// * `data` - The type of ToDo data where the task is located.
     /// * `index` - The index of the task to be set as active in the specified data.
     pub fn set_actual(&mut self, data: ToDoData, index: usize) {
-        if let Some(index) = self.get_actual_index(data, index) {
-            match data {
-                ToDoData::Pending => self.state.actual_pending = Some(index),
-                ToDoData::Done => self.state.actual_done = Some(index),
-            }
-        } else {
-            log::warn!("Layout::get_actual_index is None");
+        match self.get_actual_index(data, index) {
+            Some(i) => match data {
+                ToDoData::Pending => self.state.actual_pending = Some(i),
+                ToDoData::Done => self.state.actual_done = Some(i),
+            },
+            None => log::warn!("Layout::get_actual_index is None"),
         }
     }
 
@@ -809,5 +806,46 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn get_actual_returns_first_when_not_set() {
+        let mut todo = ToDo::default();
+        todo.add_task(Task::from_str("first pending").unwrap());
+        todo.add_task(Task::from_str("second pending").unwrap());
+
+        let task = todo.get_actual(ToDoData::Pending).unwrap();
+        assert_eq!(task.subject, "first pending");
+    }
+
+    #[test]
+    fn get_actual_returns_none_when_empty() {
+        let todo = ToDo::default();
+        assert!(todo.get_actual(ToDoData::Pending).is_none());
+        assert!(todo.get_actual(ToDoData::Done).is_none());
+    }
+
+    #[test]
+    fn set_actual_pending() {
+        let mut todo = ToDo::default();
+        todo.add_task(Task::from_str("task 0").unwrap());
+        todo.add_task(Task::from_str("task 1").unwrap());
+        todo.add_task(Task::from_str("task 2").unwrap());
+
+        todo.set_actual(ToDoData::Pending, 2);
+        let task = todo.get_actual(ToDoData::Pending).unwrap();
+        assert_eq!(task.subject, "task 2");
+    }
+
+    #[test]
+    fn set_actual_done() {
+        let mut todo = ToDo::default();
+        todo.config.use_done = true;
+        todo.add_task(Task::from_str("x done 0").unwrap());
+        todo.add_task(Task::from_str("x done 1").unwrap());
+
+        todo.set_actual(ToDoData::Done, 1);
+        let task = todo.get_actual(ToDoData::Done).unwrap();
+        assert_eq!(task.subject, "done 1");
     }
 }

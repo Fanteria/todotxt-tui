@@ -7,7 +7,7 @@ use syn::Field;
 
 pub fn from_reader() -> TokenStream {
     quote! {
-            fn from_reader<R>(mut reader: R) -> crate::Result<Self>
+            fn from_reader<R>(mut reader: R) -> anyhow::Result<Self>
             where
                 R: std::io::Read
             {
@@ -35,7 +35,7 @@ pub fn from_iter() -> TokenStream {
 pub fn impl_conf_trait(name: &Ident, name_conf: &Ident) -> TokenStream {
     quote! {
         impl crate::config::Conf for #name {
-            fn from_reader<R>(mut reader: R) -> crate::Result<Self>
+            fn from_reader<R>(mut reader: R) -> anyhow::Result<Self>
             where
                 R: std::io::Read
             {
@@ -45,7 +45,7 @@ pub fn impl_conf_trait(name: &Ident, name_conf: &Ident) -> TokenStream {
                 ))
             }
 
-            fn parse<Iter, T, R>(iter: Iter, reader: R) -> crate::Result<Self>
+            fn parse<Iter, T, R>(iter: Iter, reader: R) -> anyhow::Result<Self>
             where
                 Iter: IntoIterator<Item = T>,
                 T: Into<std::ffi::OsString> + Clone,

@@ -30,12 +30,12 @@ layout = """
     [ Direction: Vertical,
       Done: 40%,
       Size: 40%,
-      [ 
+      [
         Contexts,
         Projects,
       ],
-      Preview: 10%,
-      Preview: 10%,
+      Live-Preview-Pending: 10%,
+      Live-Preview-Done: 10%,
     ],
 ]
 """
@@ -72,4 +72,3 @@ fg = "Green"
 
 [custom_category_style."+todo-tui"]
 fg = "LightRed"
-

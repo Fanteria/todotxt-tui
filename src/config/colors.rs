@@ -1,4 +1,4 @@
-use crate::ToDoError;
+use anyhow::anyhow;
 use serde::{de, Deserialize, Serialize};
 use std::{
     fmt::Display,
@@ -110,14 +110,13 @@ impl From<tuiColor> for Color {
 }
 
 impl FromStr for Color {
-    type Err = ToDoError;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parse_hex = |hex: &str| -> Result<u8, Self::Err> {
             u8::from_str_radix(hex, 16)
-                .map_err(|_e| ToDoError::ColorSerializationFailed(s.to_string()))
+                .map_err(|_| anyhow!("String '{}' is not valid hex color.", s))
         };
-
         if let Ok(index) = s.parse::<u8>() {
             return Ok(Self(tuiColor::Indexed(index)));
         }
@@ -145,7 +144,7 @@ impl FromStr for Color {
                 parse_hex(&lower[3..5])?,
                 parse_hex(&lower[5..7])?,
             ),
-            _ => return Err(ToDoError::ColorSerializationFailed(s.to_string())),
+            _ => return Err(anyhow!("String '{}' is not valid color.", s)),
         }))
     }
 }
@@ -172,7 +171,7 @@ impl<'de> Deserialize<'de> for Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Result;
+    use anyhow::Result;
 
     #[test]
     fn from_str() -> Result<()> {

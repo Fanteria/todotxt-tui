@@ -1,7 +1,5 @@
-use crate::{
-    todo::{ToDoCategory, ToDoData},
-    ToDoError,
-};
+use crate::todo::{ToDoCategory, ToDoData};
+use anyhow::{anyhow, Error};
 use clap::ValueEnum;
 use core::fmt;
 use serde::{Deserialize, Serialize};
@@ -50,7 +48,7 @@ impl From<ToDoData> for WidgetType {
 }
 
 impl FromStr for WidgetType {
-    type Err = ToDoError;
+    type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use WidgetType::*;
         Ok(match s.to_lowercase().as_str() {
@@ -62,7 +60,7 @@ impl FromStr for WidgetType {
             "preview" => Preview,
             "live-preview-pending" => PendingLivePreview,
             "live-preview-done" => DoneLivePreview,
-            _ => return Err(ToDoError::ParseWidgetType(s.to_string())),
+            _ => return Err(anyhow!("Unknown widget type: {s}")),
         })
     }
 }

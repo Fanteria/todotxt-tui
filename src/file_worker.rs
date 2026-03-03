@@ -1,9 +1,8 @@
 use crate::{
     config::{FileWorkerConfig, SavePolicy},
-    error::Result,
     todo::ToDo,
-    ToDoError,
 };
+use anyhow::{Context, Result};
 use notify::{
     event::{AccessKind, AccessMode, EventKind, RemoveKind},
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
@@ -47,7 +46,7 @@ impl FileWorker {
         if let Some(todo_path) = config.todo_path.to_str() {
             config.todo_path = PathBuf::from(
                 shellexpand::env(todo_path)
-                    .map_err(|e| ToDoError::path_exapand(&config.todo_path, e))?
+                    .with_context(|| format!("Failed to expand path {:?}", config.todo_path))?
                     .to_string(),
             );
         }
@@ -55,7 +54,9 @@ impl FileWorker {
             if let Some(archive_path) = archive_path.to_str() {
                 config.archive_path = Some(PathBuf::from(
                     shellexpand::env(archive_path)
-                        .map_err(|e| ToDoError::path_exapand(&config.todo_path, e))?
+                        .with_context(|| {
+                            format!("Failed to expand path {:?}", config.archive_path)
+                        })?
                         .to_string(),
                 ));
             }
@@ -75,7 +76,7 @@ impl FileWorker {
         let mut todo = ToDo::default(); // TODO this can be improved
         Self::load_tasks(
             File::open(&self.config.todo_path)
-                .map_err(|e| ToDoError::io_operation_failed(&self.config.todo_path, e))?,
+                .with_context(|| format!("{:?}", self.config.todo_path))?,
             &mut todo,
         )?;
         log::info!(
@@ -85,7 +86,7 @@ impl FileWorker {
         if let Some(path) = &self.config.archive_path {
             log::info!("Load tasks from achive file {}", path.to_string_lossy());
             Self::load_tasks(
-                File::open(path).map_err(|e| ToDoError::io_operation_failed(path, e))?,
+                File::open(path).with_context(|| format!("{path:?}"))?,
                 &mut todo,
             )?;
         }
@@ -116,7 +117,7 @@ impl FileWorker {
     /// This method saves data to the main todo list file and optionally to an archive file.
     fn save(&self) -> Result<()> {
         let mut f = File::create(&self.config.todo_path)
-            .map_err(|e| ToDoError::io_operation_failed(&self.config.todo_path, e))?;
+            .with_context(|| format!("{:?}", self.config.todo_path))?;
         let todo = self.todo.lock().unwrap();
         log::info!(
             "Saving todo task to {}{}",
@@ -130,7 +131,7 @@ impl FileWorker {
         Self::save_tasks(&mut f, &todo.pending)?;
         match &self.config.archive_path {
             Some(s) => Self::save_tasks(
-                &mut File::create(s).map_err(|err| ToDoError::io_operation_failed(s, err))?,
+                &mut File::create(s).with_context(|| format!("{s:?}"))?,
                 &todo.done,
             ),
             None => Self::save_tasks(&mut f, &todo.done),

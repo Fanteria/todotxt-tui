@@ -11,6 +11,7 @@ description = "Todo.txt TUI is a highly customizable terminal-based application 
 repository = "https://github.com/Fanteria/todotxt-tui"
 
 [dependencies]
+anyhow = "1.0"
 chrono = "0.4"
 clap = { version = "4.4", features = ["derive", "wrap_help", "env"] }
 clap_complete = "4.4"
@@ -36,4 +37,3 @@ twelf = { version = "0.15", default-features = false, features = ["toml", "env",
 env_logger = "0.11"
 pretty_assertions = "1.4"
 test-log = "0.2"
-

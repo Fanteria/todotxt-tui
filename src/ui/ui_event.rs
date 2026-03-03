@@ -1,4 +1,4 @@
-use crate::{Result, ToDoError};
+use anyhow::{anyhow, Error, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{de, Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, str::FromStr};
@@ -58,7 +58,7 @@ impl Serialize for KeyShortcut {
 }
 
 impl FromStr for KeyShortcut {
-    type Err = crate::ToDoError;
+    type Err = Error;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let mut splitted = s.split('+').rev();
@@ -68,12 +68,10 @@ impl FromStr for KeyShortcut {
                 "s" | "shift" => Ok(KeyModifiers::SHIFT),
                 "c" | "ctrl" => Ok(KeyModifiers::CONTROL),
                 "a" | "alt" => Ok(KeyModifiers::ALT),
-                _ => Err(ToDoError::CannotParseEventEntry(
-                    "Unknown modifier".to_string(),
-                )),
+                _ => Err(anyhow!("Cannot parse event entry: Unknown modifier")),
             })
             .try_fold(KeyModifiers::NONE, |acc, modifier| {
-                Ok::<_, ToDoError>(acc | modifier?)
+                Ok::<_, Error>(acc | modifier?)
             })?;
         Ok(match s.to_lowercase().as_str() {
             "backspace" => Self::new(KeyCode::Backspace, modifiers),
@@ -105,7 +103,7 @@ impl FromStr for KeyShortcut {
             _ if s.len() == 1 => Self::new(
                 KeyCode::Char(
                     (s).parse::<char>()
-                        .map_err(|e| ToDoError::CannotParseEventEntry(format!("{}", e)))?
+                        .map_err(|e| anyhow!("Cannot parse event entry: {e}"))?
                         .to_ascii_lowercase(),
                 ),
                 modifiers,
@@ -114,11 +112,11 @@ impl FromStr for KeyShortcut {
                 KeyCode::F(
                     (s[1..])
                         .parse()
-                        .map_err(|e| ToDoError::CannotParseEventEntry(format!("{}", e)))?,
+                        .map_err(|e| anyhow!("Cannot parse event entry: {e}"))?,
                 ),
                 modifiers,
             ),
-            _ => return Err(ToDoError::CannotParseEventEntry("Unknown key".to_string())),
+            _ => return Err(anyhow!("Cannot parse event entry: Unknown key")),
         })
     }
 }
@@ -223,7 +221,7 @@ impl Display for UIEvent {
 }
 
 impl FromStr for UIEvent {
-    type Err = ToDoError;
+    type Err = Error;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         use UIEvent::*;
@@ -255,11 +253,7 @@ impl FromStr for UIEvent {
             "showhelp" => ShowHelp,
             "none" => None,
 
-            _ => {
-                return Err(ToDoError::CannotParseUIEvent(format!(
-                    "Unknown keyword {s}"
-                )))
-            }
+            _ => return Err(anyhow!("Cannot parse UI event: Unknown keyword")),
         })
     }
 }
@@ -312,7 +306,7 @@ impl EventHandlerUI {
 }
 
 impl FromStr for EventHandlerUI {
-    type Err = crate::ToDoError;
+    type Err = Error;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let s = s.trim();
@@ -320,7 +314,7 @@ impl FromStr for EventHandlerUI {
         let data = s
             .strip_prefix('[')
             .and_then(|s| s.strip_suffix(']'))
-            .ok_or_else(|| ToDoError::CannotParseUIEvent("Value must be in []".to_string()))?
+            .ok_or_else(|| anyhow!("Cannot parse UI event: Value must be in []"))?
             .trim();
 
         Ok(EventHandlerUI(if data.is_empty() {
@@ -328,9 +322,9 @@ impl FromStr for EventHandlerUI {
         } else {
             data.split(',')
                 .map(|s| {
-                    let (key, event) = s.split_once(':').ok_or_else(|| {
-                        ToDoError::CannotParseEventEntry("Missing separator :".to_string())
-                    })?;
+                    let (key, event) = s
+                        .split_once(':')
+                        .ok_or_else(|| anyhow!("Cannot parse event entry: Missing separator"))?;
                     Ok((KeyShortcut::from_str(key)?, UIEvent::from_str(event)?))
                 })
                 .collect::<Result<HashMap<_, _>>>()?

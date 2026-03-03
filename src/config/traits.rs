@@ -1,4 +1,4 @@
-use crate::{Result, ToDoError};
+use anyhow::{Context, Result};
 use clap::{builder::Styles, ArgMatches};
 use std::{
     ffi::OsString,
@@ -10,7 +10,7 @@ use std::{
 pub trait Conf: Sized + Default {
     fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         Self::from_reader(
-            File::open(path.as_ref()).map_err(|e| ToDoError::io_operation_failed(path, e))?,
+            File::open(path.as_ref()).with_context(|| format!("{:?}", path.as_ref()))?,
         )
     }
 
@@ -32,8 +32,8 @@ pub trait ConfMerge: Sized + ConfigDefaults + Conf {
         T: Into<OsString> + Clone;
 
     fn export_default(path: impl AsRef<Path>) -> Result<()> {
-        let mut output = std::fs::File::create(path.as_ref())
-            .map_err(|e| crate::ToDoError::io_operation_failed(path, e))?;
+        let mut output =
+            std::fs::File::create(path.as_ref()).with_context(|| format!("{:?}", path.as_ref()))?;
         write!(output, "{}", Self::default_toml()?)?;
         Ok(())
     }

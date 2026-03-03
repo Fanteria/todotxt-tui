@@ -1,11 +1,8 @@
-use std::str::FromStr;
-
 use super::{Rule, ToDo, ToDoData};
-use crate::{
-    config::{Color, Styles, TextModifier, TextStyle},
-    ToDoError,
-};
+use crate::config::{Color, Styles, TextModifier, TextStyle};
+use anyhow::Error;
 use pest::iterators::Pairs;
+use std::str::FromStr;
 use todo_txt::{Priority as TaskPriority, Task};
 
 #[derive(Default, Clone, Copy, Debug)]
@@ -77,7 +74,7 @@ impl PartStyle {
 }
 
 impl TryFrom<Pairs<'_, Rule>> for PartStyle {
-    type Error = ToDoError;
+    type Error = Error;
 
     fn try_from(pairs: Pairs<'_, Rule>) -> Result<Self, Self::Error> {
         let mut s = Self::default();
@@ -195,10 +192,9 @@ impl From<String> for Parts {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use super::*;
-    use crate::error::Result;
+    use anyhow::Result;
+    use std::str::FromStr;
 
     #[test]
     fn fill() -> Result<()> {

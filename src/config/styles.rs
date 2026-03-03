@@ -1,5 +1,5 @@
 use super::TextStyle;
-use crate::{Result, ToDoError};
+use anyhow::{Context, Error, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -25,15 +25,13 @@ impl DerefMut for CustomCategoryStyle {
 }
 
 impl FromStr for CustomCategoryStyle {
-    type Err = ToDoError;
+    type Err = Error;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         fn parse(item: &str) -> Result<(String, TextStyle)> {
-            let (key, value) =
-                item.split_once('=')
-                    .ok_or(ToDoError::CustomCategoryStyleParseFailed(
-                        "Key and value must be separated by =",
-                    ))?;
+            let (key, value) = item.split_once('=').context(
+                "Cannot parse custom category style: Key and value must be separated by =",
+            )?;
             Ok((key.to_string(), TextStyle::from_str(value)?))
         }
         Ok(CustomCategoryStyle(

@@ -1,8 +1,8 @@
 use crate::{
     layout::{widget::WidgetType, Layout},
     todo::{ToDo, ToDoState},
-    Result, ToDoError,
 };
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -28,9 +28,7 @@ impl UIState {
     /// Saves the current state of the UI to a file at the specified path by serializing
     /// it to TOML format and writing it to a newly created file handle.
     pub fn save(&self, path: &Path) -> Result<()> {
-        self.serialize(
-            &mut File::create(path).map_err(|err| ToDoError::io_operation_failed(path, err))?,
-        )
+        self.serialize(&mut File::create(path).with_context(|| format!("{path:?}"))?)
     }
 
     /// Serializes the current `UIState` to a writer using TOML format for easy
@@ -43,7 +41,7 @@ impl UIState {
     /// Loads a `UIState` from the specified file path by opening the file
     /// and deserializing it from TOML format.
     pub fn load(path: &Path) -> Result<Self> {
-        let file = File::open(path).map_err(|err| ToDoError::io_operation_failed(path, err))?;
+        let file = File::open(path).with_context(|| format!("{path:?}"))?;
         Ok(UIState::deserialize(file))
     }
 
@@ -74,23 +72,15 @@ mod tests {
 
     #[test]
     fn non_existing_state_file() {
-        if let ToDoError::IOoperationFailed(path, _) =
-            UIState::load(&PathBuf::from("/this/path/does/not/exists"))
-                .expect_err("This file should not exists.")
-        {
-            assert_eq!(path, PathBuf::from("/this/path/does/not/exists"))
-        } else {
-            panic!("Load returns unexpected error");
-        }
+        let path = PathBuf::from("/this/path/does/not/exists");
 
-        if let ToDoError::IOoperationFailed(path, _) = UIState::default()
-            .save(&PathBuf::from("/this/path/does/not/exists"))
-            .expect_err("This file should not exists.")
-        {
-            assert_eq!(path, PathBuf::from("/this/path/does/not/exists"))
-        } else {
-            panic!("Load returns unexpected error");
-        }
+        let err = UIState::load(&path).expect_err("This file should not exist.");
+        assert!(err.to_string().contains("does/not/exists"), "{err}");
+
+        let err = UIState::default()
+            .save(&path)
+            .expect_err("This file should not exist.");
+        assert!(err.to_string().contains("does/not/exists"), "{err}");
     }
 
     #[test]

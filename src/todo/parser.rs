@@ -3,7 +3,8 @@ mod line_block;
 mod parts;
 
 use super::{ToDo, ToDoData};
-use crate::{config::Styles, Result};
+use crate::config::Styles;
+use anyhow::Result;
 use line::Lines;
 use line_block::LineBlock;
 use std::str::FromStr;

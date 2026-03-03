@@ -1,4 +1,4 @@
-use crate::ToDoError;
+use anyhow::{anyhow, Error};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};
@@ -72,14 +72,14 @@ pub enum TextModifier {
 }
 
 impl FromStr for TextModifier {
-    type Err = ToDoError;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "bold" => Ok(Self::Bold),
             "italic" => Ok(Self::Italic),
             "underline" => Ok(Self::Underlined),
-            _ => Err(ToDoError::ParseTextModifier(s.to_string())),
+            _ => Err(anyhow!("Modifier '{s}' is invalid.")),
         }
     }
 }
@@ -128,7 +128,7 @@ impl From<WidgetBorderType> for BorderType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Result;
+    use anyhow::Result;
 
     #[test]
     fn set_final_date_type_display() {

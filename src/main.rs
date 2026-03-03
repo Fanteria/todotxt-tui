@@ -6,7 +6,7 @@ use log4rs::{
     Config as LogConfig,
 };
 use std::{env, error::Error, io::stdin, path::PathBuf, process::exit};
-use todotxt_tui::{ConfMerge, Config, ToDoError, UI};
+use todotxt_tui::{ConfMerge, Config, UI};
 
 /// Initializes the logging system.
 ///
@@ -40,11 +40,11 @@ fn log_init() -> Result<(), Box<dyn Error>> {
 
 /// Handles missing configuration file errors by prompting the user.
 ///
-/// If the provided error is a `ToDoError::IOoperationFailed` with a `NotFound` error kind,
-/// prompts the user to initialize the configuration with default settings. If the user agrees,
-/// exports the default configuration and exits. If the user declines, exits with an error code.
+/// If the underlying error is an IO `NotFound` error, prompts the user to initialize
+/// the configuration with default settings. If the user agrees, exports the default
+/// configuration and exits. If the user declines, exits with an error code.
 /// If the error is not a missing configuration file error, returns it unchanged.
-fn ask_to_create_config(err: ToDoError) -> ToDoError {
+fn ask_to_create_config(err: anyhow::Error) -> anyhow::Error {
     fn ask() -> bool {
         println!("Do you want to initialize it with default configuration? [y/N]");
         loop {
@@ -62,11 +62,14 @@ fn ask_to_create_config(err: ToDoError) -> ToDoError {
         }
     }
 
-    if let ToDoError::IOoperationFailed(file, error) = &err {
-        if std::io::ErrorKind::NotFound == error.kind() {
-            println!("Configuration file: {} does not exists.", file.display());
+    // Check if the root cause is an IO NotFound error
+    if let Some(io_err) = err.root_cause().downcast_ref::<std::io::Error>() {
+        if io_err.kind() == std::io::ErrorKind::NotFound {
+            // Extract path from the context message (format: "\"path\"")
+            let path = Config::config_folder().join(concat!(env!("CARGO_PKG_NAME"), ".toml"));
+            println!("Configuration file: {} does not exist.", path.display());
             if ask() {
-                if let Err(e) = Config::export_default(file) {
+                if let Err(e) = Config::export_default(&path) {
                     return e;
                 }
                 println!("Configuration exported, please update todo_path.");

@@ -5,8 +5,8 @@ use super::{
 use crate::{
     config::Styles,
     todo::parser::{ParserGrammar, Rule},
-    ToDoError,
 };
+use anyhow::Context;
 use pest::{iterators::Pairs, Parser};
 use std::{ops::Deref, str::FromStr};
 use todo_txt::Task;
@@ -53,7 +53,7 @@ impl Deref for Lines {
 }
 
 impl FromStr for Lines {
-    type Err = ToDoError;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         fn parse_parts(parts: Pairs<'_, Rule>, style: Option<PartStyle>) -> Vec<LineBlock> {
@@ -95,7 +95,7 @@ impl FromStr for Lines {
             blocks
         }
         let lines = ParserGrammar::parse(Rule::lines, s)
-            .map_err(|e| ToDoError::FailedToParseParser(Box::new(e)))?
+            .context("Failed to parse parser")?
             .next()
             .unwrap() // Safe. Already parsed by pest.
             .into_inner()
@@ -116,8 +116,8 @@ impl FromStr for Lines {
 mod tests {
     use super::*;
     use crate::config::{Color, TextStyle};
-    use crate::error::Result;
     use crate::todo::ToDoData;
+    use anyhow::Result;
     use std::str::FromStr;
 
     #[test]
