@@ -2,7 +2,7 @@ use super::ToDo;
 use crate::config::{TaskSort, ToDoConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use todo_txt::Task;
+use todo_txt::task::Simple as Task;
 
 /// Enum to represent the state of ToDo data (pending or done).
 #[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -58,8 +58,8 @@ impl ToDoCategory {
     pub fn get_data<'a>(&self, task: &'a Task) -> &'a [String] {
         use ToDoCategory::*;
         match self {
-            Projects => task.projects(),
-            Contexts => task.contexts(),
+            Projects => &task.projects,
+            Contexts => &task.contexts,
             Hashtags => &task.hashtags,
         }
     }
@@ -119,8 +119,8 @@ impl ToDoState {
                 }
             })
         }
-        filter(&self.project_filters, task.projects())
-            && filter(&self.context_filters, task.contexts())
+        filter(&self.project_filters, &task.projects)
+            && filter(&self.context_filters, &task.contexts)
             && filter(&self.hashtag_filters, &task.hashtags)
     }
 

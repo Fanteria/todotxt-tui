@@ -3,7 +3,7 @@ use std::{
     convert::From,
     ops::{Bound, Index, RangeBounds},
 };
-use todo_txt::Task;
+use todo_txt::task::Simple as Task;
 use tui::{
     text::{Line, Span},
     widgets::{List, ListItem},

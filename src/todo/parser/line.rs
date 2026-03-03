@@ -9,7 +9,7 @@ use crate::{
 use anyhow::Context;
 use pest::{iterators::Pairs, Parser};
 use std::{ops::Deref, str::FromStr};
-use todo_txt::Task;
+use todo_txt::task::Simple as Task;
 use tui::style::Style;
 
 #[derive(Default, Debug)]

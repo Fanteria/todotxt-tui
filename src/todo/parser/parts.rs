@@ -3,7 +3,7 @@ use crate::config::{Color, Styles, TextModifier, TextStyle};
 use anyhow::Error;
 use pest::iterators::Pairs;
 use std::str::FromStr;
-use todo_txt::{Priority as TaskPriority, Task};
+use todo_txt::{task::Simple as Task, Priority as TaskPriority};
 
 #[derive(Default, Clone, Copy, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -35,8 +35,8 @@ impl PartStyleValue {
                         }
                     });
                 };
-                process_projects("+", task.projects());
-                process_projects("@", task.contexts());
+                process_projects("+", &task.projects);
+                process_projects("@", &task.contexts);
                 process_projects("#", &task.hashtags);
 
                 text_style
@@ -161,8 +161,8 @@ impl Parts {
             Finished => Some(task.finished.to_string()),
             TresholdDate => task.threshold_date.map(|d| d.to_string()),
             DueDate => task.due_date.map(|d| d.to_string()),
-            Contexts => process_vec(task.contexts()),
-            Projects => process_vec(task.projects()),
+            Contexts => process_vec(&task.contexts),
+            Projects => process_vec(&task.projects),
             Hashtags => process_vec(&task.hashtags),
             Special(special) => task.tags.get(special).cloned(),
         }
