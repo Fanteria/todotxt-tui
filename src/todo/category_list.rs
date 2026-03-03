@@ -59,7 +59,7 @@ impl<'a> CategoryList<'a> {
                 .iter()
                 .map(|item| CategoryState {
                     name: item,
-                    state: selected.get(*item).cloned(),
+                    state: selected.get(item.as_str()).cloned(),
                 })
                 .collect(),
             styles: &todo.styles,
@@ -157,7 +157,7 @@ impl<'a> From<CategoryView<'a>> for List<'a> {
 mod tests {
     use std::{error::Error, str::FromStr};
 
-    use todo_txt::Task;
+    use todo_txt::task::Simple as Task;
 
     use crate::config::Config;
 

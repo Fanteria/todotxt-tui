@@ -5,7 +5,7 @@ use crate::{
     ui::UIEvent,
 };
 use anyhow::Result;
-use todo_txt::Task;
+use todo_txt::task::Simple as Task;
 use tui::{
     text::{Line, Span},
     widgets::{Paragraph, Wrap},
@@ -135,7 +135,7 @@ mod tests {
     use crate::{layout::Render, todo::ToDoData};
     use std::str::FromStr;
     use test_log::test;
-    use todo_txt::Task;
+    use todo_txt::task::Simple as Task;
     use tui::{backend::TestBackend, prelude::Rect, Terminal};
 
     fn make_preview<P: Previewable>(title: &str, format: &str) -> (StatePreview<P>, Config) {

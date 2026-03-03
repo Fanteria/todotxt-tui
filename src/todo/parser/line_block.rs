@@ -5,7 +5,7 @@ use super::{
 use crate::config::Styles;
 use regex::Regex;
 use std::sync::LazyLock;
-use todo_txt::Task;
+use todo_txt::task::Simple as Task;
 use tui::style::Style;
 
 static REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?:^|\s)([+@#][^\s]+)").unwrap());

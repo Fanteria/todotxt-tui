@@ -17,7 +17,7 @@ use anyhow::Result;
 use chrono::{NaiveDate, Utc};
 use hooks::{HookTypes, Hooks};
 use std::str::FromStr;
-use todo_txt::Task;
+use todo_txt::task::Simple as Task;
 use version::Version;
 
 /// Struct to manage ToDo tasks and theirs state.
@@ -496,8 +496,8 @@ mod tests {
         assert!(todo.done[0].finished);
         assert_eq!(todo.done[0].threshold_date, None);
         assert!(todo.done[0].due_date.is_some());
-        assert_eq!(todo.done[0].contexts().len(), 1);
-        assert_eq!(todo.done[0].projects().len(), 1);
+        assert_eq!(todo.done[0].contexts.len(), 1);
+        assert_eq!(todo.done[0].projects.len(), 1);
         assert_eq!(todo.done[0].hashtags.len(), 1);
 
         println!("{:#?}", todo.pending[0]);
@@ -508,8 +508,8 @@ mod tests {
         assert!(!todo.pending[0].finished);
         assert_eq!(todo.pending[0].threshold_date, None);
         assert!(todo.pending[0].due_date.is_some());
-        assert_eq!(todo.pending[0].contexts().len(), 1);
-        assert_eq!(todo.pending[0].projects().len(), 1);
+        assert_eq!(todo.pending[0].contexts.len(), 1);
+        assert_eq!(todo.pending[0].projects.len(), 1);
         assert_eq!(todo.pending[0].hashtags.len(), 0);
 
         assert_eq!(todo.pending[1].priority, 2);
@@ -518,8 +518,8 @@ mod tests {
         assert!(!todo.pending[1].finished);
         assert_eq!(todo.pending[1].threshold_date, None);
         assert!(todo.pending[1].due_date.is_some());
-        assert_eq!(todo.pending[1].contexts().len(), 1);
-        assert_eq!(todo.pending[1].projects().len(), 1);
+        assert_eq!(todo.pending[1].contexts.len(), 1);
+        assert_eq!(todo.pending[1].projects.len(), 1);
         assert_eq!(todo.pending[1].hashtags.len(), 0);
     }
 

@@ -21,7 +21,7 @@ use std::{
     thread,
     time::Duration,
 };
-use todo_txt::Task;
+use todo_txt::task::Simple as Task;
 
 /// Commands that can be sent to the `FileWorker` for various file-related operations.
 pub enum FileWorkerCommands {

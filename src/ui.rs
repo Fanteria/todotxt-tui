@@ -304,26 +304,28 @@ impl UI {
         if self.mode == Mode::Input || self.mode == Mode::Edit || self.mode == Mode::Search {
             block = block.border_style(Style::default().fg(self.active_color));
         }
-        terminal.draw(|f| {
-            f.render_widget(
-                Paragraph::new(self.tinput.value()).block(block),
-                self.input_chunk,
-            );
-            self.layout.render(f, &self.data.lock().unwrap());
+        terminal
+            .draw(|f| {
+                f.render_widget(
+                    Paragraph::new(self.tinput.value()).block(block),
+                    self.input_chunk,
+                );
+                self.layout.render(f, &self.data.lock().unwrap());
 
-            if self.mode == Mode::Input || self.mode == Mode::Edit {
-                let width = self.input_chunk.width.max(3) - 3;
-                let scroll = self.tinput.visual_scroll(width as usize);
-                f.set_cursor_position(Position {
-                    x: self.input_chunk.x
-                        + (self.tinput.visual_cursor().max(scroll) - scroll) as u16
-                        + 1,
-                    y: self.input_chunk.y + 1,
-                });
-            }
+                if self.mode == Mode::Input || self.mode == Mode::Edit {
+                    let width = self.input_chunk.width.max(3) - 3;
+                    let scroll = self.tinput.visual_scroll(width as usize);
+                    f.set_cursor_position(Position {
+                        x: self.input_chunk.x
+                            + (self.tinput.visual_cursor().max(scroll) - scroll) as u16
+                            + 1,
+                        y: self.input_chunk.y + 1,
+                    });
+                }
 
-            self.popup.render_popup(f);
-        })?;
+                self.popup.render_popup(f);
+            })
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
         Ok(())
     }
 

@@ -8,7 +8,7 @@ use anyhow::Result;
 use line::Lines;
 use line_block::LineBlock;
 use std::str::FromStr;
-use todo_txt::Task;
+use todo_txt::task::Simple as Task;
 use tui::style::Style;
 
 #[derive(pest_derive::Parser)]

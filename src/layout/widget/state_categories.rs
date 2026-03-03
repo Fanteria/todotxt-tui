@@ -152,12 +152,12 @@ mod tests {
     use super::*;
     use crate::{config::Config, layout::Render, todo::ToDo};
     use anyhow::Result;
-    use std::{io, str::FromStr};
+    use std::str::FromStr;
     use test_log::test;
     use tui::{backend::TestBackend, prelude::Rect, Terminal};
 
     #[test]
-    fn render_empty_projects() -> io::Result<()> {
+    fn render_empty_projects() -> Result<()> {
         let config = Config::default();
         let base = WidgetList::new(WidgetBase::new("project", &config), &config);
         let mut cat =
@@ -182,7 +182,7 @@ mod tests {
     }
 
     #[test]
-    fn render_projects_with_tasks() -> io::Result<()> {
+    fn render_projects_with_tasks() -> Result<()> {
         let config = Config::default();
         let base = WidgetList::new(WidgetBase::new("project", &config), &config);
         let mut cat =
@@ -191,8 +191,8 @@ mod tests {
         cat.update_chunk(area);
 
         let mut todo = ToDo::default();
-        todo.add_task(todo_txt::Task::from_str("Task +alpha").unwrap());
-        todo.add_task(todo_txt::Task::from_str("Task +beta").unwrap());
+        todo.add_task(todo_txt::task::Simple::from_str("Task +alpha").unwrap());
+        todo.add_task(todo_txt::task::Simple::from_str("Task +beta").unwrap());
 
         let backend = TestBackend::new(20, 5);
         let mut terminal = Terminal::new(backend)?;
@@ -209,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn render_contexts() -> io::Result<()> {
+    fn render_contexts() -> Result<()> {
         let config = Config::default();
         let base = WidgetList::new(WidgetBase::new("context", &config), &config);
         let mut cat =
@@ -218,8 +218,8 @@ mod tests {
         cat.update_chunk(area);
 
         let mut todo = ToDo::default();
-        todo.add_task(todo_txt::Task::from_str("Task @home").unwrap());
-        todo.add_task(todo_txt::Task::from_str("Task @work").unwrap());
+        todo.add_task(todo_txt::task::Simple::from_str("Task @home").unwrap());
+        todo.add_task(todo_txt::task::Simple::from_str("Task @work").unwrap());
 
         let backend = TestBackend::new(20, 5);
         let mut terminal = Terminal::new(backend)?;
@@ -245,7 +245,7 @@ mod tests {
         cat.update_chunk(area);
 
         let mut todo = ToDo::default();
-        todo.add_task(todo_txt::Task::from_str("Task #urgent")?);
+        todo.add_task(todo_txt::task::Simple::from_str("Task #urgent")?);
 
         let backend = TestBackend::new(20, 5);
         let mut terminal = Terminal::new(backend)?;
@@ -271,8 +271,8 @@ mod tests {
         cat.update_chunk(area);
 
         let mut todo = ToDo::default();
-        todo.add_task(todo_txt::Task::from_str("Task +alpha")?);
-        todo.add_task(todo_txt::Task::from_str("Task +beta")?);
+        todo.add_task(todo_txt::task::Simple::from_str("Task +alpha")?);
+        todo.add_task(todo_txt::task::Simple::from_str("Task +beta")?);
         cat.focus(&todo);
 
         let backend = TestBackend::new(20, 5);
@@ -292,10 +292,10 @@ mod tests {
     fn handle_event_state() -> Result<()> {
         let config = Config::default();
         let mut todo = ToDo::default();
-        todo.add_task(todo_txt::Task::from_str("Task +project1")?);
-        todo.add_task(todo_txt::Task::from_str("Task +project1")?);
-        todo.add_task(todo_txt::Task::from_str("Task +project2")?);
-        todo.add_task(todo_txt::Task::from_str("Task +project3")?);
+        todo.add_task(todo_txt::task::Simple::from_str("Task +project1")?);
+        todo.add_task(todo_txt::task::Simple::from_str("Task +project1")?);
+        todo.add_task(todo_txt::task::Simple::from_str("Task +project2")?);
+        todo.add_task(todo_txt::task::Simple::from_str("Task +project3")?);
 
         let mut c = StateCategories::new(
             WidgetList::new(WidgetBase::new("project", &config), &config),
