@@ -3,6 +3,7 @@ pub mod category_list;
 mod hooks;
 pub mod parser;
 pub mod search;
+pub mod task_container;
 pub mod task_list;
 pub mod todo_state;
 pub mod version;
