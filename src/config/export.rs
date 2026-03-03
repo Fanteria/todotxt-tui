@@ -1,5 +1,5 @@
 use super::{traits::ExportConf, ConfMerge, Config};
-use crate::error::Result;
+use anyhow::{Context, Result};
 use clap::ArgMatches;
 use std::{
     io::{stdout, Write},
@@ -34,10 +34,9 @@ impl ExportConf for Export {
     fn export(&self, config_path: impl AsRef<Path>, matches: &ArgMatches) -> Result<()> {
         let create_writer = |path: Option<&PathBuf>| -> Result<Box<dyn Write>> {
             Ok(match path {
-                Some(path) => Box::new(
-                    std::fs::File::create(path)
-                        .map_err(|e| crate::ToDoError::io_operation_failed(path, e))?,
-                ),
+                Some(path) => {
+                    Box::new(std::fs::File::create(path).with_context(|| format!("{path:?}"))?)
+                }
                 None => Box::new(stdout()),
             })
         };

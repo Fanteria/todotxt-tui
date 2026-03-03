@@ -1,4 +1,3 @@
-use super::widget_type::WidgetType;
 use crate::{
     config::{Config, WidgetBorderType},
     ui::EventHandlerUI,
@@ -18,31 +17,34 @@ pub struct WidgetBase {
 
 impl WidgetBase {
     /// Creates a new `WidgetBase` instance for a specific widget type.
-    pub fn new(widget_type: &WidgetType, config: &Config) -> Self {
-        let c = &config.widget_base_config;
-        let (event_handler, title) = match widget_type {
-            WidgetType::List => (c.tasks_keybind.clone(), c.pending_widget_name.clone()),
-            WidgetType::Done => (c.tasks_keybind.clone(), c.done_widget_name.clone()),
-            WidgetType::Project => (c.category_keybind.clone(), c.project_widget_name.clone()),
-            WidgetType::Context => (c.category_keybind.clone(), c.context_widget_name.clone()),
-            WidgetType::Hashtag => (c.category_keybind.clone(), c.hashtag_widget_name.clone()),
-            WidgetType::Preview => (EventHandlerUI::default(), c.preview_widget_name.clone()),
-            WidgetType::PendingLivePreview => (
-                EventHandlerUI::default(),
-                c.pending_live_preview_widget_name.clone(),
-            ),
-            WidgetType::DoneLivePreview => (
-                EventHandlerUI::default(),
-                c.done_live_preview_widget_name.clone(),
-            ),
-        };
+    pub fn new(title: impl Into<String>, config: &Config) -> Self {
         Self {
-            title,
+            title: title.into(),
             active_color: *config.styles.active_color,
             focus: false,
             chunk: Rect::default(),
-            event_handler,
+            event_handler: EventHandlerUI::default(),
             border_type: config.widget_base_config.border_type,
         }
+    }
+
+    pub fn events(mut self, events: EventHandlerUI) -> Self {
+        self.event_handler = events;
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[test]
+    fn events_builder_sets_handler_and_title() {
+        let config = Config::default();
+        let handler = config.widget_base_config.category_keybind.clone();
+        let base = WidgetBase::new("my widget", &config).events(handler.clone());
+        assert_eq!(base.title, "my widget");
+        assert_eq!(base.event_handler, handler);
     }
 }

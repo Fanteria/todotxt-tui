@@ -14,8 +14,8 @@ use crate::{
     file_worker::{FileWorker, FileWorkerCommands},
     layout::{Layout, Render},
     todo::{autocomplete, ToDo},
-    Result,
 };
+use anyhow::Result;
 use crossterm::{
     event::{
         self, read, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,

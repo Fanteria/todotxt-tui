@@ -3,8 +3,8 @@ use crate::{
     config::Config,
     todo::{search::Searchable, Parser, ToDo, ToDoData},
     ui::UIEvent,
-    Result,
 };
+use anyhow::Result;
 use crossterm::event::KeyEvent;
 use tui::{style::Style, widgets::List, Frame};
 
@@ -179,19 +179,17 @@ impl State for StateList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::layout::{widget::widget_type::WidgetType, Render};
+    use crate::layout::Render;
     use test_log::test;
     use tui::{backend::TestBackend, prelude::Rect, Terminal};
 
     fn make_list(data_type: ToDoData) -> (StateList, Config) {
         let config = Config::default();
-        let base = WidgetList::new(
-            &match data_type {
-                ToDoData::Pending => WidgetType::List,
-                ToDoData::Done => WidgetType::Done,
-            },
-            &config,
-        );
+        let title = match data_type {
+            ToDoData::Pending => "list",
+            ToDoData::Done => "done",
+        };
+        let base = WidgetList::new(WidgetBase::new(title, &config), &config);
         let list = StateList::new(base, data_type, &config).unwrap();
         (list, config)
     }

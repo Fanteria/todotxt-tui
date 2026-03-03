@@ -1,4 +1,4 @@
-use super::{WidgetBase, WidgetType};
+use super::WidgetBase;
 use crate::{
     config::{Config, ListConfig},
     ui::UIEvent,
@@ -30,9 +30,9 @@ impl WidgetList {
     /// # Returns
     ///
     /// A new `WidgetList` instance.
-    pub fn new(widget_type: &WidgetType, config: &Config) -> Self {
+    pub fn new(base: WidgetBase, config: &Config) -> Self {
         let mut def = Self {
-            base: WidgetBase::new(widget_type, config),
+            base,
             state: ListState::default(),
             first: 0,
             size: 0,
@@ -246,7 +246,8 @@ mod tests {
         for i in 1..len {
             todo.new_task(&format!("Task {}", i)).unwrap();
         }
-        let mut widget = WidgetList::new(&WidgetType::List, &Config::default());
+        let conf = Config::default();
+        let mut widget = WidgetList::new(WidgetBase::new("", &conf), &conf);
         widget.set_size(10);
         widget
     }

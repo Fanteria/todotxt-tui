@@ -20,7 +20,6 @@ use crate::{
     layout::widget::WidgetType,
     todo::{ToDoCategory, ToDoData},
     ui::{EventHandlerUI, KeyShortcut, UIEvent},
-    Result,
 };
 use clap::{builder::styling::AnsiColor, FromArgMatches};
 use crossterm::event::{KeyCode, KeyModifiers};
@@ -550,6 +549,7 @@ impl ConfigDefaults for Config {
 mod tests {
     use self::parsers::*;
     use super::*;
+    use anyhow::Result;
     use pretty_assertions::assert_eq;
     use std::{path::PathBuf, time::Duration};
     use test_log::test;

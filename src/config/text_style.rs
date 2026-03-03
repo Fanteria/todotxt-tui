@@ -1,5 +1,5 @@
 use super::{colors::Color, TextModifier};
-use crate::ToDoError;
+use anyhow::{anyhow, Error};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -152,7 +152,7 @@ impl Display for TextStyle {
 }
 
 impl FromStr for TextStyle {
-    type Err = ToDoError;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut ret = TextStyle::default();
@@ -160,7 +160,7 @@ impl FromStr for TextStyle {
             if let Some(stripped) = word.strip_prefix('^') {
                 match Color::from_str(stripped) {
                     Ok(c) => ret = ret.bg(c),
-                    Err(_) => return Err(ToDoError::ParseTextStyle(word.to_string())),
+                    Err(_) => return Err(anyhow!("Style '{word}' is invalid")),
                 }
             } else if let Ok(color) = Color::from_str(word) {
                 ret = ret.fg(color);
@@ -169,7 +169,7 @@ impl FromStr for TextStyle {
             } else {
                 match TextStyleList::default().0.get(word) {
                     Some(style) => ret = ret.combine(style),
-                    None => return Err(ToDoError::ParseTextStyle(word.to_string())),
+                    None => return Err(anyhow!("Style '{word}' is invalid")),
                 }
             }
         }
@@ -244,7 +244,7 @@ impl Display for TextStyleList {
 }
 
 impl FromStr for TextStyleList {
-    type Err = ToDoError;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut ret = HashMap::new();
@@ -259,7 +259,7 @@ impl FromStr for TextStyleList {
                         }
                     }
                 }
-                None => return Err(ToDoError::ParseTextStyle(s.to_string())),
+                None => return Err(anyhow!("Style '{s}' is invalid")),
             }
         }
 
@@ -269,7 +269,7 @@ impl FromStr for TextStyleList {
 
 #[cfg(test)]
 mod tests {
-    use crate::Result;
+    use anyhow::Result;
     use tui::style::Color as tuiColor;
 
     use super::*;
@@ -366,25 +366,25 @@ mod tests {
             TextStyle::from_str("invalid_color")
                 .unwrap_err()
                 .to_string(),
-            ToDoError::ParseTextStyle("invalid_color".to_string()).to_string()
+            "Style 'invalid_color' is invalid"
         );
         assert_eq!(
             TextStyle::from_str("^bg_invalid_color")
                 .unwrap_err()
                 .to_string(),
-            ToDoError::ParseTextStyle("^bg_invalid_color".to_string()).to_string()
+            "Style '^bg_invalid_color' is invalid"
         );
         assert_eq!(
             TextStyle::from_str("invalid_modifier")
                 .unwrap_err()
                 .to_string(),
-            ToDoError::ParseTextStyle("invalid_modifier".to_string()).to_string()
+            "Style 'invalid_modifier' is invalid"
         );
         assert_eq!(
             TextStyle::from_str("unknown_style")
                 .unwrap_err()
                 .to_string(),
-            ToDoError::ParseTextStyle("unknown_style".to_string()).to_string()
+            "Style 'unknown_style' is invalid"
         );
     }
 

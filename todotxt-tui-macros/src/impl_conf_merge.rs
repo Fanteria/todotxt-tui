@@ -112,18 +112,19 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
         }
 
         impl crate::config::ConfMerge for #name {
-            fn from_args<Iter, T>(iter: Iter) -> crate::error::Result<Self>
+            fn from_args<Iter, T>(iter: Iter) -> anyhow::Result<Self>
             where
                 Iter: IntoIterator<Item = T>,
                 T: Into<std::ffi::OsString> + Clone,
             {
                 use clap::CommandFactory;
+                use anyhow::Context;
                 let matches = #name_conf::command().get_matches_from(iter);
                 let path = match matches.get_one::<std::path::PathBuf>("config_path") {
                     Some(config_path) => config_path.to_owned(),
                     None => Self::config_path(),
                 };
-                let file = std::fs::File::open(&path).map_err(|e| crate::ToDoError::io_operation_failed(&path, e))?;
+                let file = std::fs::File::open(&path).with_context(|| format!("{path:?}"))?;
                 let from_matches = #name_conf::from_arg_matches(&matches).unwrap();
 
                 from_matches.export.export(path.as_path(), &matches)?;
@@ -135,8 +136,9 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                 Ok(#name_conf::merge(from_reader, from_matches))
             }
 
-            fn configured_toml(path: impl AsRef<Path>, matches: &clap::ArgMatches) -> Result<String> {
-                let file = std::fs::File::open(path.as_ref()).map_err(|e| crate::ToDoError::io_operation_failed(path.as_ref(), e))?;
+            fn configured_toml(path: impl AsRef<Path>, matches: &clap::ArgMatches) -> anyhow::Result<String> {
+                use anyhow::Context;
+                let file = std::fs::File::open(path.as_ref()).with_context(|| format!("{:?}", path.as_ref()))?;
                 let from_reader = #name_conf::merge(
                     Self::default(),
                     #name_conf::from_reader(file)?,
@@ -147,12 +149,12 @@ pub fn impl_conf_merge(ast: &syn::DeriveInput) -> TokenStream {
                 Ok(toml::to_string_pretty(&conf)?)
             }
 
-            fn default_toml() -> Result<String> {
+            fn default_toml() -> anyhow::Result<String> {
                 let mut default: #name_conf = Self::default().into();
                 Ok(toml::to_string_pretty(&default)?)
             }
 
-            fn autocomplete(writer: &mut impl std::io::Write) -> crate::error::Result<()> {
+            fn autocomplete(writer: &mut impl std::io::Write) -> anyhow::Result<()> {
                 use clap::CommandFactory;
                 clap_complete::generate(
                     clap_complete::shells::Bash,

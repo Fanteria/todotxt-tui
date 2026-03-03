@@ -1,4 +1,5 @@
-use crate::{config::HookPaths, Result, ToDoError};
+use crate::config::HookPaths;
+use anyhow::{anyhow, Context, Result};
 use std::{
     fmt::Display,
     fs,
@@ -65,12 +66,12 @@ impl Hooks {
         }
         let output = cmd.output()?;
         if !output.status.success() {
-            return Err(ToDoError::HookCommandFailed(
-                path.to_path_buf(),
-                String::from_utf8(output.stderr).map_err(ToDoError::HookFailedToParseError)?,
+            return Err(anyhow!(
+                "Failed to run hook {path:?}, stderr: {}",
+                String::from_utf8(output.stderr).context("Failed to parse hook stderr")?
             ));
         }
-        String::from_utf8(output.stdout).map_err(ToDoError::HookFailedToParseStdout)
+        String::from_utf8(output.stdout).context("Failed to parse hook stdout")
     }
 
     /// Runs a hook command and logs the result using the given hook name.

@@ -266,7 +266,8 @@ impl Default for Container {
 mod tests {
     use super::super::Layout;
     use super::*;
-    use crate::{config::Config, todo::ToDo, Result};
+    use crate::{config::Config, todo::ToDo};
+    use anyhow::Result;
     use WidgetType::*;
 
     fn testing_layout() -> Layout {

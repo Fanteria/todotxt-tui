@@ -27,7 +27,7 @@ impl StateCategories {
     ///
     /// A new `StateCategories` instance.
     pub fn new(base: WidgetList, category: ToDoCategory, active_color: &ActiveColorConfig) -> Self {
-        log::error!("{:?}", active_color.get_active_config_style(&category));
+        log::info!("{:?}", active_color.get_active_config_style(&category));
         Self {
             base,
             category,
@@ -150,12 +150,8 @@ impl State for StateCategories {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::Config,
-        layout::{widget::widget_type::WidgetType, Render},
-        todo::ToDo,
-        Result,
-    };
+    use crate::{config::Config, layout::Render, todo::ToDo};
+    use anyhow::Result;
     use std::{io, str::FromStr};
     use test_log::test;
     use tui::{backend::TestBackend, prelude::Rect, Terminal};
@@ -163,7 +159,7 @@ mod tests {
     #[test]
     fn render_empty_projects() -> io::Result<()> {
         let config = Config::default();
-        let base = WidgetList::new(&WidgetType::Project, &config);
+        let base = WidgetList::new(WidgetBase::new("project", &config), &config);
         let mut cat =
             StateCategories::new(base, ToDoCategory::Projects, &config.active_color_config);
         let area = Rect::new(0, 0, 20, 5);
@@ -188,7 +184,7 @@ mod tests {
     #[test]
     fn render_projects_with_tasks() -> io::Result<()> {
         let config = Config::default();
-        let base = WidgetList::new(&WidgetType::Project, &config);
+        let base = WidgetList::new(WidgetBase::new("project", &config), &config);
         let mut cat =
             StateCategories::new(base, ToDoCategory::Projects, &config.active_color_config);
         let area = Rect::new(0, 0, 20, 5);
@@ -215,7 +211,7 @@ mod tests {
     #[test]
     fn render_contexts() -> io::Result<()> {
         let config = Config::default();
-        let base = WidgetList::new(&WidgetType::Context, &config);
+        let base = WidgetList::new(WidgetBase::new("context", &config), &config);
         let mut cat =
             StateCategories::new(base, ToDoCategory::Contexts, &config.active_color_config);
         let area = Rect::new(0, 0, 20, 5);
@@ -242,7 +238,7 @@ mod tests {
     #[test]
     fn render_hashtags() -> Result<()> {
         let config = Config::default();
-        let base = WidgetList::new(&WidgetType::Hashtag, &config);
+        let base = WidgetList::new(WidgetBase::new("hashtag", &config), &config);
         let mut cat =
             StateCategories::new(base, ToDoCategory::Hashtags, &config.active_color_config);
         let area = Rect::new(0, 0, 20, 5);
@@ -268,7 +264,7 @@ mod tests {
     #[test]
     fn render_focused_highlights_selected() -> Result<()> {
         let config = Config::default();
-        let base = WidgetList::new(&WidgetType::Project, &config);
+        let base = WidgetList::new(WidgetBase::new("project", &config), &config);
         let mut cat =
             StateCategories::new(base, ToDoCategory::Projects, &config.active_color_config);
         let area = Rect::new(0, 0, 20, 5);
@@ -302,7 +298,7 @@ mod tests {
         todo.add_task(todo_txt::Task::from_str("Task +project3")?);
 
         let mut c = StateCategories::new(
-            WidgetList::new(&WidgetType::Project, &config),
+            WidgetList::new(WidgetBase::new("project", &config), &config),
             ToDoCategory::Projects,
             &config.active_color_config,
         );

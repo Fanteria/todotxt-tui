@@ -2,9 +2,8 @@ mod container;
 mod render_trait;
 pub mod widget;
 
-use crate::{
-    config::Config, layout::widget::State, todo::ToDo, ui::HandleEvent, Result, ToDoError,
-};
+use crate::{config::Config, layout::widget::State, todo::ToDo, ui::HandleEvent};
+use anyhow::{Context, Result};
 use container::Container;
 use core::panic;
 use crossterm::event::KeyEvent;
@@ -124,7 +123,7 @@ impl Layout {
             Ok(index)
         }
         let parsed = LayoutParser::parse(Rule::layout, template)
-            .map_err(|e| ToDoError::FailedToParseLayout(Box::new(e)))?
+            .context("Failed to parse layout")?
             .next()
             .unwrap(); // It is parsed by pest, its is safe to get first item
 
