@@ -27,7 +27,7 @@ serde = { version = "1.0", features = ["derive"] }
 shellexpand = "3.1"
 thiserror = "2.0"
 todo-txt = "4.1"
-todotxt-tui-macros = { version = "0.2", path = "todotxt-tui-macros/" }
+todotxt-tui-macros = { version = "0.2.1", path = "todotxt-tui-macros/" }
 toml = "1.0"
 tui = { package = "ratatui", version = "0.30", features = ["all-widgets", "crossterm"]}
 tui-input = { version = "0.15", features = ["crossterm"], default-features = false }
