@@ -12,6 +12,7 @@ repository = "https://github.com/Fanteria/todotxt-tui"
 
 [dependencies]
 anyhow = "1.0"
+base64 = "0.22"
 chrono = "0.4"
 clap = { version = "4.4", features = ["derive", "wrap_help", "env"] }
 clap_complete = "4.4"
@@ -31,6 +32,7 @@ todotxt-tui-macros = { version = "0.2.1", path = "todotxt-tui-macros/" }
 toml = "1.0"
 tui = { package = "ratatui", version = "0.30", features = ["all-widgets", "crossterm"]}
 tui-input = { version = "0.15", features = ["crossterm"], default-features = false }
+uuid = { version = "1", features = ["v4"] }
 twelf = { version = "0.15", default-features = false, features = ["toml", "env", "clap"] }
 
 [dev-dependencies]
