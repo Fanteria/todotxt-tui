@@ -1,7 +1,8 @@
 active_color = "Red"
 init_widget = "List"
 window_title = "ToDo tui"
-todo_path = "$TODO_TUI_TEST_DIR/todotxt-tui/todo.txt"
+#todo_path = "$TODO_TUI_TEST_DIR/todotxt-tui/todo.ics"
+todo_path = "/home/jirka/.local/share/vdirsyncer/todos/tasks/"
 # archive_path = "./tests/files/todotxt-tui/archive.txt"
 save_state_path = "$TODO_TUI_TEST_DIR/files/todotxt-tui/state.toml"
 wrap_preview = true
