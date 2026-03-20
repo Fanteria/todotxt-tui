@@ -2,10 +2,10 @@ mod file_format;
 
 use crate::{
     config::{FileWorkerConfig, SavePolicy},
+    file_worker::file_format::{new_file_format, FileFormatTrait},
     todo::ToDo,
 };
 use anyhow::{Context, Result};
-use file_format::FileFormat;
 use notify::{
     event::{AccessKind, AccessMode, EventKind, RemoveKind},
     Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher,
@@ -33,7 +33,7 @@ pub enum FileWorkerCommands {
 /// Manages file operations for the todo list and archive.
 pub struct FileWorker {
     config: FileWorkerConfig,
-    format: FileFormat,
+    format: Box<dyn FileFormatTrait>,
     todo: Arc<Mutex<ToDo>>,
 }
 
@@ -61,13 +61,6 @@ impl FileWorker {
                 ));
             }
         }
-        let format = FileFormat::from_path(&config.todo_path);
-        if let Some(archive_path) = &config.archive_path {
-            anyhow::ensure!(
-                FileFormat::matches(&config.todo_path, archive_path),
-                "Todo file and archive file must use the same format (both .txt or both .ics)"
-            );
-        }
         log::info!(
             "Init file worker: file: {:?}, archive: {:?}",
             config.todo_path,
@@ -75,7 +68,7 @@ impl FileWorker {
         );
         Ok(FileWorker {
             config,
-            format,
+            format: new_file_format()?,
             todo,
         })
     }
@@ -86,7 +79,8 @@ impl FileWorker {
     pub fn load(&self) -> Result<()> {
         let mut todo = ToDo::default(); // TODO this can be improved
         self.format
-            .load_tasks(&self.config.todo_path, &mut todo)
+            // TODO
+            .load_tasks(&mut todo)
             .with_context(|| format!("{:?}", self.config.todo_path))?;
         log::info!(
             "Load tasks from {}",
@@ -94,8 +88,9 @@ impl FileWorker {
         );
         if let Some(path) = &self.config.archive_path {
             log::info!("Load tasks from archive {}", path.to_string_lossy());
+            // TODO
             self.format
-                .load_tasks(path, &mut todo)
+                .load_tasks(&mut todo)
                 .with_context(|| format!("{path:?}"))?;
         }
         log::debug!("Loaded pending {}x tasks", todo.pending.len());
@@ -120,18 +115,8 @@ impl FileWorker {
                 .map_or(String::from(""), |p| String::from(" and ")
                     + &p.to_string_lossy()),
         );
-        match &self.config.archive_path {
-            Some(archive) => {
-                self.format
-                    .save_tasks(&self.config.todo_path, &todo.pending)?;
-                self.format.save_tasks(archive, &todo.done)
-            }
-            None => {
-                let mut all = todo.pending.clone();
-                all.extend_from_slice(&todo.done);
-                self.format.save_tasks(&self.config.todo_path, &all)
-            }
-        }
+        self.format.save_tasks(&todo)?;
+        Ok(())
     }
 
     /// Runs the `FileWorker` thread.

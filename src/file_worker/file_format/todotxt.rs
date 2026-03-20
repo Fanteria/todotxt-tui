@@ -1,7 +1,6 @@
 use crate::{config::FileWorkerConfig, file_worker::file_format::FileFormatTrait, todo::ToDo};
 use anyhow::{Context, Result};
 use std::{
-    arch,
     fs::File,
     io::{BufRead, BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
@@ -55,7 +54,7 @@ impl FileFormatTrait for TodoTxt {
         Ok(())
     }
 
-    fn save_tasks(&self, todo: &mut ToDo) -> Result<()> {
+    fn save_tasks(&self, todo: &ToDo) -> Result<()> {
         match &self.archive {
             Some(archive) => {
                 save_tasks(&self.path, &todo.pending)?;

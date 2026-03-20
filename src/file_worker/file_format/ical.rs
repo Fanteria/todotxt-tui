@@ -1,4 +1,4 @@
-use crate::todo::ToDo;
+use crate::{file_worker::file_format::FileFormatTrait, todo::ToDo};
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chrono::{NaiveDate, Utc};
@@ -289,7 +289,10 @@ fn update_vtodo_properties(raw: &str, task: &Task) -> String {
     remove_property(&mut lines, "DTSTART");
     if let Some(date) = task.create_date {
         if let Some(pos) = lines.iter().position(|l| l.trim() == "END:VTODO") {
-            lines.insert(pos, format!("DTSTART;VALUE=DATE:{}", format_ical_date(date)));
+            lines.insert(
+                pos,
+                format!("DTSTART;VALUE=DATE:{}", format_ical_date(date)),
+            );
         }
     }
 
@@ -400,6 +403,24 @@ fn increment_sequence(lines: &mut Vec<String>) {
     // No SEQUENCE found, add with value 1
     if let Some(pos) = lines.iter().position(|l| l.trim() == "END:VTODO") {
         lines.insert(pos, "SEQUENCE:1".to_string());
+    }
+}
+
+pub struct ICal {}
+
+impl ICal {
+    pub fn new() -> Self {
+        todo!()
+    }
+}
+
+impl FileFormatTrait for ICal {
+    fn load_tasks(&self, _todo: &mut ToDo) -> Result<()> {
+        todo!()
+    }
+
+    fn save_tasks(&self, _todo: &ToDo) -> Result<()> {
+        todo!()
     }
 }
 
