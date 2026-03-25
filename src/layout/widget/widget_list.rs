@@ -67,7 +67,7 @@ impl WidgetList {
     ///
     /// A clone of the list state.
     pub fn state(&self) -> ListState {
-        self.state.clone()
+        self.state
     }
 
     /// Sets the size of the list widget.
