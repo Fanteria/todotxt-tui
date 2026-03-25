@@ -35,10 +35,13 @@ use tui::style::Color as tuiColor;
 
 #[derive(Conf, Clone, Debug, PartialEq, Eq)]
 pub struct FileWorkerConfig {
-    /// The path to your `todo.txt` file, which stores your task list.
+    /// Path to the task storage. The format is selected automatically:
+    /// a directory or a file with extension `.ics`/`.ical` uses the iCalendar format
+    /// (vdirsyncer-style, one `.ics` file per task); any other file uses todo.txt format.
     pub todo_path: PathBuf,
-    /// The path to your `archive.txt` file, where completed tasks are stored.
-    /// If not provided, completed tasks will be archived within your `todo.txt` file.
+    /// Path to the archive file where completed tasks are stored separately.
+    /// If not provided, completed tasks are kept in the same storage as pending tasks.
+    /// Ignored when using the iCalendar format.
     pub archive_path: Option<PathBuf>,
     /// The duration (in seconds) between automatic saves of the `todo.txt` file.
     #[arg(short = 'd')]
