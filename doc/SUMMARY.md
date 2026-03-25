@@ -14,4 +14,5 @@
   - [Colors](./configuration/colors.md)
   - [Styles](./configuration/styles.md)
   - [Hooks](./configuration/hooks.md)
+- [File Formats](./file_formats.md)
 - [Synchronization](./synchronization.md)
