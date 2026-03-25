@@ -4,7 +4,13 @@
 <dt><b>Env:</b> <code>$TODOTXT_TUI_TODO_PATH</code></dt>
 <dt><b>Conf:</b> <code>todo_path</code></dt>
 <dd>
-Specifies the path to the `todo.txt` file that serves as the main task database. This file contains all your active tasks and is essential for managing your to-do list within the application.
+Specifies the path to the task storage. The storage format is selected automatically:
+
+- **Directory** — iCalendar format (vdirsyncer-style, one `.ics` file per task).
+- **File ending in `.ics` or `.ical`** — iCalendar format.
+- **Any other file** — todo.txt format.
+
+See [File Formats](../file_formats.md) for a detailed description of each format and its limitations.
 
 **default:** `$HOME/todo.txt`
 </dd>
@@ -14,7 +20,9 @@ Specifies the path to the `todo.txt` file that serves as the main task database.
 <dt><b>Env:</b> <code>$TODOTXT_TUI_ARCHIVE_PATH</code></dt>
 <dt><b>Conf:</b> <code>archive_path</code></dt>
 <dd>
-Specifies the path to the `archive.txt` file, where completed tasks are stored. If not provided, completed tasks are moved to the `todo.txt` file instead of being saved in a separate archive file.
+Specifies the path to the archive file, where completed tasks are stored separately. If not provided, completed tasks remain in the same storage as pending tasks.
+
+> **Note:** This option is only used by the todo.txt format. It is ignored when `todo_path` points to a directory or an `.ics`/`.ical` file.
 </dd>
 <br>
 

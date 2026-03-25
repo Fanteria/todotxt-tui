@@ -46,4 +46,25 @@ Data loss is another significant risk. Syncing while a file is being written, lo
 
 Performance may also suffer when synchronization runs too frequently. Executing a sync script after each change can slow down workflows, and network operations may block the application while they complete.
 
-A more robust alternative can be use CalDAV with VTODO support instead of todo.txt.
+A more robust alternative is to use CalDAV with VTODO support instead of todo.txt — which is partially supported, as described below.
+
+---
+
+## CalDAV via vdirsyncer
+
+Todo.txt TUI can read and write tasks stored in a [vdirsyncer](https://vdirsyncer.pimutils.org/) directory, where each task is a separate `.ics` file. vdirsyncer synchronizes that directory with any CalDAV server (_Nextcloud, Radicale, Fastmail, Google Tasks, etc._), handling conflict resolution properly. See [File Formats](./file_formats.md) for the full field mapping and limitations.
+
+### Example Setup
+
+1. Install and configure vdirsyncer to sync a CalDAV task collection to a local directory, for example `~/.local/share/vdirsyncer/todos/tasks/`.
+2. Point `todo_path` at that directory:
+
+```toml
+todo_path = "$HOME/.local/share/vdirsyncer/todos/tasks/"
+```
+
+3. Run vdirsyncer on a schedule (_cron, systemd timer_) to keep the local directory in sync with the server:
+
+```
+*/5 * * * * vdirsyncer sync
+```
