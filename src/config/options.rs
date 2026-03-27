@@ -39,10 +39,8 @@ pub enum SetFinalDateType {
 impl_display!(SetFinalDateType);
 
 /// Represents the possible sorting options for tasks.
-#[derive(Clone, Copy, Serialize, Deserialize, Default, ValueEnum, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Serialize, Deserialize, ValueEnum, Debug, PartialEq, Eq)]
 pub enum TaskSort {
-    #[default]
-    None,
     Reverse,
     Priority,
     Alphanumeric,
@@ -139,7 +137,6 @@ mod tests {
 
     #[test]
     fn task_sort_display() {
-        assert_eq!(format!("{}", TaskSort::None), "none");
         assert_eq!(format!("{}", TaskSort::Reverse), "reverse");
         assert_eq!(format!("{}", TaskSort::Priority), "priority");
         assert_eq!(format!("{}", TaskSort::Alphanumeric), "alphanumeric");

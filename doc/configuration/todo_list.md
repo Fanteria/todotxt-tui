@@ -14,15 +14,14 @@ Determines whether projects, contexts, and tags from completed tasks should be i
 <dt><b>Env:</b> <code>$TODOTXT_TUI_PENDING_SORT</code></dt>
 <dt><b>Conf:</b> <code>pending_sort</code></dt>
 <dd>
-Specifies the sorting option for pending tasks.  
+Sorting options to apply to pending tasks. Priority of sorting options is decreasing from left to right. If empty, tasks are not sorted.
 
-- **Possible Values (Flag):** `none`, `reverse`, `priority`, `alphanumeric`, `alphanumeric-reverse`  
-- **Possible Values (Config):** `None`, `Reverse`, `Priority`, `Alphanumeric`, `AlphanumericReverse`  
-- **Default:** `None`
+- **Possible Values (Flag):** `reverse`, `priority`, `alphanumeric`, `alphanumeric-reverse`  
+- **Possible Values (Config):** `Reverse`, `Priority`, `Alphanumeric`, `AlphanumericReverse`  
+- **Default:** `empty`
 
 **Sorting Options**:
 
-- **None:** No specific sorting; tasks appear in the order they were added.  
 - **Reverse:** Reverse the order of tasks.  
 - **Priority:** Sort tasks by priority.  
 - **Alphanumeric:** Sort tasks in alphanumeric order.  
@@ -34,11 +33,11 @@ Specifies the sorting option for pending tasks.
 <dt><b>Env:</b> <code>$TODOTXT_TUI_DONE_SORT</code></dt>
 <dt><b>Conf:</b> <code>done_sort</code></dt>
 <dd>
-Specifies the sorting option for completed tasks.  
+Sorting options to apply to completed tasks. Priority of sorting options is decreasing from left to right. If empty, tasks are not sorted.
 
-- **Possible Values (Flag):** `none`, `reverse`, `priority`, `alphanumeric`, `alphanumeric-reverse`  
-- **Possible Values (Config):** `None`, `Reverse`, `Priority`, `Alphanumeric`, `AlphanumericReverse`  
-- **Default:** `None`
+- **Possible Values (Flag):** `reverse`, `priority`, `alphanumeric`, `alphanumeric-reverse`  
+- **Possible Values (Config):** `Reverse`, `Priority`, `Alphanumeric`, `AlphanumericReverse`  
+- **Default:** `empty`
 </dd>
 <br>
 

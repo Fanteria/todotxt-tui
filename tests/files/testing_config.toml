@@ -7,8 +7,8 @@ archive_path = "invalid/path/to/archive.txt"
 file_watcher = false
 list_shift = 0
 use_done = true
-pending_sort = "Priority"
-done_sort = "Reverse"
+pending_sort = [ "Priority" ]
+done_sort = [ "Reverse" ]
 delete_final_date = false
 set_final_date = "Never"
 preview_format = "unimportant preview"
@@ -45,4 +45,3 @@ fg = "Green"
 
 [custom_category_style."+project"]
 fg = "Green"
-
