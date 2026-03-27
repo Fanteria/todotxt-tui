@@ -200,10 +200,14 @@ pub struct ToDoConfig {
     /// Determines whether projects, contexts, and tags from completed tasks
     /// should be included in the lists of available projects, contexts, and tags.
     pub use_done: bool,
-    /// Sorting option to apply to pending tasks.
-    pub pending_sort: TaskSort,
-    /// Sorting option to apply to completed tasks.
-    pub done_sort: TaskSort,
+    /// Sorting options to apply to pending tasks. Priority of sorting options is
+    /// decreasing from left to right. If empty, tasks are not sorted.
+    #[arg(num_args = 0..)]
+    pub pending_sort: Vec<TaskSort>,
+    /// Sorting options to apply to completed tasks. Priority of sorting options is
+    /// decreasing from left to right. If empty, tasks are not sorted.
+    #[arg(num_args = 0..)]
+    pub done_sort: Vec<TaskSort>,
     /// Specifies whether to delete the final date (if it exists) when a task is moved from completed back to pending.
     pub delete_final_date: bool,
     /// Configures how the final date is handled when a task is marked as completed.
@@ -219,8 +223,8 @@ impl Default for ToDoConfig {
     fn default() -> Self {
         Self {
             use_done: false,
-            pending_sort: TaskSort::default(),
-            done_sort: TaskSort::default(),
+            pending_sort: vec![],
+            done_sort: vec![],
             delete_final_date: true,
             set_final_date: SetFinalDateType::default(),
             set_created_date: true,
@@ -700,8 +704,8 @@ mod tests {
         expected.file_worker_config.file_watcher = false;
         expected.list_config.list_shift = 0;
         expected.todo_config.use_done = true;
-        expected.todo_config.pending_sort = TaskSort::Priority;
-        expected.todo_config.done_sort = TaskSort::Reverse;
+        expected.todo_config.pending_sort = vec![TaskSort::Priority];
+        expected.todo_config.done_sort = vec![TaskSort::Reverse];
         expected.todo_config.delete_final_date = false;
         expected.todo_config.set_final_date = SetFinalDateType::Never;
         expected.preview_config.preview_format = String::from("unimportant preview");
@@ -838,6 +842,7 @@ mod tests {
             "10",
             "--pending-sort",
             "reverse",
+            "alphanumeric",
             "--done-sort",
             "priority",
             "--delete-final-date",
@@ -869,8 +874,8 @@ mod tests {
         expected.file_worker_config.file_watcher = true;
         expected.list_config.list_shift = 10;
         expected.todo_config.use_done = true;
-        expected.todo_config.pending_sort = TaskSort::Reverse;
-        expected.todo_config.done_sort = TaskSort::Priority;
+        expected.todo_config.pending_sort = vec![TaskSort::Reverse, TaskSort::Alphanumeric];
+        expected.todo_config.done_sort = vec![TaskSort::Priority];
         expected.todo_config.delete_final_date = true;
         expected.todo_config.set_final_date = SetFinalDateType::Override;
         expected.preview_config.preview_format = String::from("extra important preview");

@@ -103,21 +103,19 @@ impl<'a> TaskList<'a> {
     /// # Arguments
     ///
     /// * `sort` - The sorting criteria to apply.
-    pub fn sort(&mut self, sort: TaskSort) {
-        use TaskSort::*;
-        match sort {
-            None => {}
-            Reverse => self.vec.reverse(),
-            Priority => self
+    pub fn sort(&mut self, sort: &[TaskSort]) {
+        sort.iter().rev().for_each(|sort| match sort {
+            TaskSort::Reverse => self.vec.reverse(),
+            TaskSort::Priority => self
                 .vec
                 .sort_by(|(_, a_task), (_, b_task)| b_task.priority.cmp(&a_task.priority)),
-            Alphanumeric => self
+            TaskSort::Alphanumeric => self
                 .vec
                 .sort_by(|(_, a_task), (_, b_task)| a_task.subject.cmp(&b_task.subject)),
-            AlphanumericReverse => self
+            TaskSort::AlphanumericReverse => self
                 .vec
                 .sort_by(|(_, a_task), (_, b_task)| b_task.subject.cmp(&a_task.subject)),
-        }
+        });
     }
 }
 
@@ -212,14 +210,14 @@ mod tests {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
         };
-        none.sort(TaskSort::None);
+        none.sort(&[]);
         compare(&tasklist, none);
 
         let mut reverse = TaskList {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
         };
-        reverse.sort(TaskSort::Reverse);
+        reverse.sort(&[TaskSort::Reverse]);
         compare(
             &TaskList {
                 vec: vec![(3, &task4), (2, &task3), (1, &task2), (0, &task1)],
@@ -232,7 +230,7 @@ mod tests {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
         };
-        priority.sort(TaskSort::Priority);
+        priority.sort(&[TaskSort::Priority]);
         compare(
             &TaskList {
                 vec: vec![(3, &task4), (0, &task1), (1, &task2), (2, &task3)],
@@ -245,7 +243,7 @@ mod tests {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
         };
-        alpha.sort(TaskSort::Alphanumeric);
+        alpha.sort(&[TaskSort::Alphanumeric]);
         compare(
             &TaskList {
                 vec: vec![(2, &task3), (0, &task1), (1, &task2), (3, &task4)],
@@ -258,13 +256,26 @@ mod tests {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
         };
-        alpha_reverse.sort(TaskSort::AlphanumericReverse);
+        alpha_reverse.sort(&[TaskSort::AlphanumericReverse]);
         compare(
             &TaskList {
                 vec: vec![(3, &task4), (1, &task2), (0, &task1), (2, &task3)],
                 styles: &styles,
             },
             alpha_reverse,
+        );
+
+        let mut multi_sort = TaskList {
+            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
+            styles: &styles,
+        };
+        multi_sort.sort(&[TaskSort::Priority, TaskSort::Alphanumeric]);
+        compare(
+            &TaskList {
+                vec: vec![(3, &task4), (0, &task1), (2, &task3), (1, &task2)],
+                styles: &styles,
+            },
+            multi_sort,
         );
     }
 }

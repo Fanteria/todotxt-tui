@@ -37,11 +37,11 @@ impl ToDoData {
         }
     }
 
-    pub fn get_sorting(&self, config: &ToDoConfig) -> TaskSort {
+    pub fn get_sorting<'a>(&self, config: &'a ToDoConfig) -> &'a [TaskSort] {
         use ToDoData::*;
         match self {
-            Pending => config.pending_sort,
-            Done => config.done_sort,
+            Pending => &config.pending_sort,
+            Done => &config.done_sort,
         }
     }
 }
