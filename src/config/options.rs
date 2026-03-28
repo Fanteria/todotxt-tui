@@ -45,6 +45,12 @@ pub enum TaskSort {
     Priority,
     Alphanumeric,
     AlphanumericReverse,
+    CreateDateAsc,
+    CreateDateDesc,
+    FinishDataAsc,
+    FinishDataDesc,
+    DueDateAsc,
+    DueDateDesc,
 }
 
 impl_display!(TaskSort);
