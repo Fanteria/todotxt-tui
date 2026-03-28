@@ -18,9 +18,9 @@ type Item<'a> = (usize, &'a Task);
 
 /// Represents a list of tasks, where each task is a tuple of `(usize, &'a Task)`.
 /// The `usize` value is the index of the task in the original list.
-pub struct TaskList<'a> {
+pub struct TaskList<'a, 'b> {
     vec: Vec<Item<'a>>,
-    styles: &'a Styles,
+    styles: &'b Styles,
 }
 
 pub struct TaskView<'a> {
@@ -31,9 +31,9 @@ pub struct TaskView<'a> {
     todo: &'a ToDo,
 }
 
-impl<'a> TaskList<'a> {
+impl<'a, 'b> TaskList<'a, 'b> {
     /// Creates a new `TaskList` instance.
-    pub fn new(vec: Vec<Item<'a>>, styles: &'a Styles) -> Self {
+    pub fn new(vec: Vec<Item<'a>>, styles: &'b Styles) -> Self {
         Self { vec, styles }
     }
 
@@ -108,25 +108,47 @@ impl<'a> TaskList<'a> {
             TaskSort::Reverse => self.vec.reverse(),
             TaskSort::Priority => self
                 .vec
-                .sort_by(|(_, a_task), (_, b_task)| b_task.priority.cmp(&a_task.priority)),
-            TaskSort::Alphanumeric => self
+                .sort_by(|(_, a), (_, b)| b.priority.cmp(&a.priority)),
+            TaskSort::Alphanumeric => self.vec.sort_by(|(_, a), (_, b)| a.subject.cmp(&b.subject)),
+            TaskSort::AlphanumericReverse => {
+                self.vec.sort_by(|(_, a), (_, b)| b.subject.cmp(&a.subject))
+            }
+            TaskSort::CreateDateAsc => self
                 .vec
-                .sort_by(|(_, a_task), (_, b_task)| a_task.subject.cmp(&b_task.subject)),
-            TaskSort::AlphanumericReverse => self
+                .sort_by_key(|(_, t)| (t.create_date.is_none(), t.create_date)),
+            TaskSort::CreateDateDesc => self.vec.sort_by_key(|(_, t)| {
+                (
+                    t.create_date.is_none(),
+                    t.create_date.map(std::cmp::Reverse),
+                )
+            }),
+            TaskSort::FinishDataAsc => self
                 .vec
-                .sort_by(|(_, a_task), (_, b_task)| b_task.subject.cmp(&a_task.subject)),
+                .sort_by_key(|(_, t)| (t.finish_date.is_none(), t.finish_date)),
+            TaskSort::FinishDataDesc => self.vec.sort_by_key(|(_, t)| {
+                (
+                    t.finish_date.is_none(),
+                    t.finish_date.map(std::cmp::Reverse),
+                )
+            }),
+            TaskSort::DueDateAsc => self
+                .vec
+                .sort_by_key(|(_, t)| (t.due_date.is_none(), t.due_date)),
+            TaskSort::DueDateDesc => self
+                .vec
+                .sort_by_key(|(_, t)| (t.due_date.is_none(), t.due_date.map(std::cmp::Reverse))),
         });
     }
 }
 
-impl<'a> Index<usize> for TaskList<'a> {
+impl<'a, 'b> Index<usize> for TaskList<'a, 'b> {
     type Output = Task;
-    fn index<'b>(&'b self, i: usize) -> &'a Task {
+    fn index<'c>(&'c self, i: usize) -> &'a Task {
         self.vec[i].1
     }
 }
 
-impl Searchable for TaskList<'_> {
+impl<'a, 'b> Searchable for TaskList<'a, 'b> {
     fn search_through(&self) -> impl DoubleEndedIterator + ExactSizeIterator<Item = &str> {
         self.vec.iter().map(|item| item.1.subject.as_str())
     }
@@ -160,15 +182,17 @@ impl<'a> From<TaskView<'a>> for List<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
+    use pretty_assertions::assert_eq;
     use std::str::FromStr;
 
     #[test]
-    fn task_slice() {
+    fn task_slice() -> Result<()> {
         let styles = Styles::default();
-        let task1 = Task::from_str("measure space for 1").unwrap();
-        let task2 = Task::from_str("measure space for 2").unwrap();
-        let task3 = Task::from_str("measure space for 3").unwrap();
-        let task4 = Task::from_str("measure space for 4").unwrap();
+        let task1 = Task::from_str("measure space for 1")?;
+        let task2 = Task::from_str("measure space for 2")?;
+        let task3 = Task::from_str("measure space for 3")?;
+        let task4 = Task::from_str("measure space for 4")?;
         let tasklist = TaskList {
             vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
             styles: &styles,
@@ -186,96 +210,66 @@ mod tests {
         assert_eq!(slice.vec[0], (1, &task2));
         assert_eq!(slice.vec[1], (2, &task3));
         assert_eq!(slice.vec[2], (3, &task4));
+
+        Ok(())
     }
 
     #[test]
-    fn sort_tasklist() {
-        let compare = |expected: &TaskList, real: TaskList| {
-            assert_eq!(expected.len(), real.len());
-            for i in 0..expected.len() {
-                assert_eq!(expected[i], real[i]);
-            }
-        };
-        let styles = Styles::default();
-        let task1 = Task::from_str("(C) 2 measure space for 1").unwrap();
-        let task2 = Task::from_str("    3 measure space for 2").unwrap();
-        let task3 = Task::from_str("    1 measure space for 3").unwrap();
-        let task4 = Task::from_str("(A) 4 measure space for 4").unwrap();
-        let tasklist = TaskList {
-            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
-            styles: &styles,
+    fn sort_tasklist() -> Result<()> {
+        let task0 = Task::from_str("(C) 2026-03-25 2 measure space for 1")?;
+        let task1 = Task::from_str("2026-03-24 3 measure space for 2")?;
+        let task2 = Task::from_str("1 measure space for 3")?;
+        let task3 = Task::from_str("(A) 2026-03-22 4 measure space for 4")?;
+
+        let get_sorted = |filters| {
+            let mut list = TaskList {
+                vec: vec![(0, &task0), (1, &task1), (2, &task2), (3, &task3)],
+                styles: &Styles::default(),
+            };
+            list.sort(filters);
+            list.vec
         };
 
-        let mut none = TaskList {
-            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
-            styles: &styles,
-        };
-        none.sort(&[]);
-        compare(&tasklist, none);
-
-        let mut reverse = TaskList {
-            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
-            styles: &styles,
-        };
-        reverse.sort(&[TaskSort::Reverse]);
-        compare(
-            &TaskList {
-                vec: vec![(3, &task4), (2, &task3), (1, &task2), (0, &task1)],
-                styles: &styles,
-            },
-            reverse,
+        assert_eq!(
+            vec![(0, &task0), (1, &task1), (2, &task2), (3, &task3)],
+            get_sorted(&[])
         );
 
-        let mut priority = TaskList {
-            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
-            styles: &styles,
-        };
-        priority.sort(&[TaskSort::Priority]);
-        compare(
-            &TaskList {
-                vec: vec![(3, &task4), (0, &task1), (1, &task2), (2, &task3)],
-                styles: &styles,
-            },
-            priority,
+        assert_eq!(
+            vec![(3, &task3), (2, &task2), (1, &task1), (0, &task0)],
+            get_sorted(&[TaskSort::Reverse])
         );
 
-        let mut alpha = TaskList {
-            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
-            styles: &styles,
-        };
-        alpha.sort(&[TaskSort::Alphanumeric]);
-        compare(
-            &TaskList {
-                vec: vec![(2, &task3), (0, &task1), (1, &task2), (3, &task4)],
-                styles: &styles,
-            },
-            alpha,
+        assert_eq!(
+            vec![(3, &task3), (0, &task0), (1, &task1), (2, &task2)],
+            get_sorted(&[TaskSort::Priority])
         );
 
-        let mut alpha_reverse = TaskList {
-            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
-            styles: &styles,
-        };
-        alpha_reverse.sort(&[TaskSort::AlphanumericReverse]);
-        compare(
-            &TaskList {
-                vec: vec![(3, &task4), (1, &task2), (0, &task1), (2, &task3)],
-                styles: &styles,
-            },
-            alpha_reverse,
+        assert_eq!(
+            vec![(2, &task2), (0, &task0), (1, &task1), (3, &task3)],
+            get_sorted(&[TaskSort::Alphanumeric])
         );
 
-        let mut multi_sort = TaskList {
-            vec: vec![(0, &task1), (1, &task2), (2, &task3), (3, &task4)],
-            styles: &styles,
-        };
-        multi_sort.sort(&[TaskSort::Priority, TaskSort::Alphanumeric]);
-        compare(
-            &TaskList {
-                vec: vec![(3, &task4), (0, &task1), (2, &task3), (1, &task2)],
-                styles: &styles,
-            },
-            multi_sort,
+        assert_eq!(
+            vec![(3, &task3), (1, &task1), (0, &task0), (2, &task2)],
+            get_sorted(&[TaskSort::AlphanumericReverse])
         );
+
+        assert_eq!(
+            vec![(3, &task3), (0, &task0), (2, &task2), (1, &task1)],
+            get_sorted(&[TaskSort::Priority, TaskSort::Alphanumeric])
+        );
+
+        assert_eq!(
+            vec![(3, &task3), (1, &task1), (0, &task0), (2, &task2)],
+            get_sorted(&[TaskSort::CreateDateAsc])
+        );
+
+        assert_eq!(
+            vec![(0, &task0), (1, &task1), (3, &task3), (2, &task2)],
+            get_sorted(&[TaskSort::CreateDateDesc])
+        );
+
+        Ok(())
     }
 }
