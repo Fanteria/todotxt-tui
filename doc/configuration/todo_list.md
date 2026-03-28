@@ -16,16 +16,22 @@ Determines whether projects, contexts, and tags from completed tasks should be i
 <dd>
 Sorting options to apply to pending tasks. Priority of sorting options is decreasing from left to right. If empty, tasks are not sorted.
 
-- **Possible Values (Flag):** `reverse`, `priority`, `alphanumeric`, `alphanumeric-reverse`  
-- **Possible Values (Config):** `Reverse`, `Priority`, `Alphanumeric`, `AlphanumericReverse`  
+- **Possible Values (Flag):** `reverse`, `priority`, `alphanumeric`, `alphanumeric-reverse`, `create-date-asc`, `create-date-desc`, `finish-date-asc`, `finish-date-desc`, `due-date-asc`, `due-date-desc`
+- **Possible Values (Config):** `Reverse`, `Priority`, `Alphanumeric`, `AlphanumericReverse`, `CreateDateAsc`, `CreateDateDesc`, `FinishDateAsc`, `FinishDateDesc`, `DueDateAsc`, `DueDateDesc`
 - **Default:** `empty`
 
 **Sorting Options**:
 
-- **Reverse:** Reverse the order of tasks.  
-- **Priority:** Sort tasks by priority.  
-- **Alphanumeric:** Sort tasks in alphanumeric order.  
-- **AlphanumericReverse:** Sort tasks in reverse alphanumeric order.  
+- **Reverse:** Reverse the order of tasks.
+- **Priority:** Sort tasks by priority.
+- **Alphanumeric:** Sort tasks in alphanumeric order.
+- **AlphanumericReverse:** Sort tasks in reverse alphanumeric order.
+- **CreateDateAsc:** Sort tasks by creation date, ascending. Tasks without a creation date are placed last.
+- **CreateDateDesc:** Sort tasks by creation date, descending. Tasks without a creation date are placed last.
+- **FinishDateAsc:** Sort tasks by finish date, ascending. Tasks without a finish date are placed last.
+- **FinishDateDesc:** Sort tasks by finish date, descending. Tasks without a finish date are placed last.
+- **DueDateAsc:** Sort tasks by due date, ascending. Tasks without a due date are placed last.
+- **DueDateDesc:** Sort tasks by due date, descending. Tasks without a due date are placed last.
 </dd>
 <br>
 
@@ -35,8 +41,8 @@ Sorting options to apply to pending tasks. Priority of sorting options is decrea
 <dd>
 Sorting options to apply to completed tasks. Priority of sorting options is decreasing from left to right. If empty, tasks are not sorted.
 
-- **Possible Values (Flag):** `reverse`, `priority`, `alphanumeric`, `alphanumeric-reverse`  
-- **Possible Values (Config):** `Reverse`, `Priority`, `Alphanumeric`, `AlphanumericReverse`  
+- **Possible Values (Flag):** `reverse`, `priority`, `alphanumeric`, `alphanumeric-reverse`, `create-date-asc`, `create-date-desc`, `finish-date-asc`, `finish-date-desc`, `due-date-asc`, `due-date-desc`
+- **Possible Values (Config):** `Reverse`, `Priority`, `Alphanumeric`, `AlphanumericReverse`, `CreateDateAsc`, `CreateDateDesc`, `FinishDateAsc`, `FinishDateDesc`, `DueDateAsc`, `DueDateDesc`
 - **Default:** `empty`
 </dd>
 <br>

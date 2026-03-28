@@ -45,6 +45,12 @@ pub enum TaskSort {
     Priority,
     Alphanumeric,
     AlphanumericReverse,
+    CreateDateAsc,
+    CreateDateDesc,
+    FinishDateAsc,
+    FinishDateDesc,
+    DueDateAsc,
+    DueDateDesc,
 }
 
 impl_display!(TaskSort);
@@ -144,6 +150,12 @@ mod tests {
             format!("{}", TaskSort::AlphanumericReverse),
             "alphanumeric-reverse"
         );
+        assert_eq!(format!("{}", TaskSort::CreateDateAsc), "create-date-asc");
+        assert_eq!(format!("{}", TaskSort::CreateDateDesc), "create-date-desc");
+        assert_eq!(format!("{}", TaskSort::FinishDateAsc), "finish-date-asc");
+        assert_eq!(format!("{}", TaskSort::FinishDateDesc), "finish-date-desc");
+        assert_eq!(format!("{}", TaskSort::DueDateAsc), "due-date-asc");
+        assert_eq!(format!("{}", TaskSort::DueDateDesc), "due-date-desc");
     }
 
     #[test]
