@@ -763,4 +763,102 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn edit_mode_strips_ignored_keys() -> Result<()> {
+        use crate::todo::ToDoData;
+
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        ui.data.lock().unwrap().pending[0]
+            .tags
+            .insert("test_key".to_string(), "testval".to_string());
+        ui.edit_ignore_keys = vec!["test_key".to_string()];
+        ui.data.lock().unwrap().set_active(ToDoData::Pending, 0);
+
+        handle_event!(ui, "S+e");
+        assert_eq!(ui.mode, Mode::Edit);
+        assert!(!ui.tinput.to_string().contains("test_key:testval"));
+        assert_eq!(
+            ui.edit_stripped_tags,
+            vec![("test_key".to_string(), "testval".to_string())]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn edit_mode_restores_ignored_keys_on_confirm() -> Result<()> {
+        use crate::todo::ToDoData;
+
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        ui.data.lock().unwrap().pending[0]
+            .tags
+            .insert("test_key".to_string(), "testval".to_string());
+        ui.edit_ignore_keys = vec!["test_key".to_string()];
+        ui.data.lock().unwrap().set_active(ToDoData::Pending, 0);
+
+        handle_event!(ui, "S+e");
+        handle_event!(ui, "Enter");
+
+        assert_eq!(ui.mode, Mode::Normal);
+        assert!(ui.edit_stripped_tags.is_empty());
+        let restored = ui.data.lock().unwrap().get_active().map(|t| {
+            t.tags.get("test_key").cloned()
+        });
+        assert_eq!(restored, Some(Some("testval".to_string())));
+
+        Ok(())
+    }
+
+    #[test]
+    fn edit_mode_clears_stripped_tags_on_cancel() -> Result<()> {
+        use crate::todo::ToDoData;
+
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        ui.data.lock().unwrap().pending[0]
+            .tags
+            .insert("test_key".to_string(), "testval".to_string());
+        ui.edit_ignore_keys = vec!["test_key".to_string()];
+        ui.data.lock().unwrap().set_active(ToDoData::Pending, 0);
+
+        handle_event!(ui, "S+e");
+        assert!(!ui.edit_stripped_tags.is_empty());
+
+        handle_event!(ui, "Esc");
+        assert_eq!(ui.mode, Mode::Normal);
+        assert!(ui.edit_stripped_tags.is_empty());
+        assert_eq!(
+            ui.data.lock().unwrap().pending[0].tags.get("test_key").cloned(),
+            Some("testval".to_string())
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn edit_mode_no_ignored_keys_shows_full_task() -> Result<()> {
+        use crate::todo::ToDoData;
+
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        ui.data.lock().unwrap().pending[0]
+            .tags
+            .insert("some_key".to_string(), "someval".to_string());
+        ui.edit_ignore_keys = vec![];
+        ui.data.lock().unwrap().set_active(ToDoData::Pending, 0);
+
+        handle_event!(ui, "S+e");
+        assert_eq!(ui.mode, Mode::Edit);
+        assert!(ui.tinput.to_string().contains("some_key:someval"));
+        assert!(ui.edit_stripped_tags.is_empty());
+
+        Ok(())
+    }
 }
