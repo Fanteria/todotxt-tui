@@ -19,7 +19,7 @@ use anyhow::Result;
 use crossterm::{
     event::{
         self, read, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
-        EnableMouseCapture, Event, KeyCode, MouseEvent,
+        EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseEvent,
     },
     execute,
     terminal::{
@@ -361,6 +361,11 @@ impl UI {
     ///   or `Mode::Normal`), handles input for task creation, editing, and general navigation
     ///   using specific keys.
     fn handle_event_window(&mut self, e: Event) {
+        if let Event::Key(key_event) = &e {
+            if key_event.kind != KeyEventKind::Press {
+                return;
+            }
+        }
         match (&e, &self.mode) {
             (Event::Resize(width, height), _) => {
                 log::debug!("Resize event: width {width}, height {height}");
