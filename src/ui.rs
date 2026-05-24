@@ -806,9 +806,12 @@ mod tests {
 
         assert_eq!(ui.mode, Mode::Normal);
         assert!(ui.edit_stripped_tags.is_empty());
-        let restored = ui.data.lock().unwrap().get_active().map(|t| {
-            t.tags.get("test_key").cloned()
-        });
+        let restored = ui
+            .data
+            .lock()
+            .unwrap()
+            .get_active()
+            .map(|t| t.tags.get("test_key").cloned());
         assert_eq!(restored, Some(Some("testval".to_string())));
 
         Ok(())
@@ -834,7 +837,10 @@ mod tests {
         assert_eq!(ui.mode, Mode::Normal);
         assert!(ui.edit_stripped_tags.is_empty());
         assert_eq!(
-            ui.data.lock().unwrap().pending[0].tags.get("test_key").cloned(),
+            ui.data.lock().unwrap().pending[0]
+                .tags
+                .get("test_key")
+                .cloned(),
             Some("testval".to_string())
         );
 
