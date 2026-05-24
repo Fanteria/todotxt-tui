@@ -217,6 +217,12 @@ pub struct ToDoConfig {
     /// If the user provides their own creation date, it will still be added
     /// regardless of this setting.
     pub set_created_date: bool,
+    /// List of `key:value` tag keys to hide from the task string when entering edit mode.
+    /// The hidden tags are preserved in the task data and restored transparently on save.
+    /// Useful for suppressing internal metadata (e.g. iCalendar fields) that should not
+    /// be manually edited.
+    #[arg(num_args = 0..)]
+    pub edit_ignore_keys: Vec<String>,
 }
 
 impl Default for ToDoConfig {
@@ -228,6 +234,7 @@ impl Default for ToDoConfig {
             delete_final_date: true,
             set_final_date: SetFinalDateType::default(),
             set_created_date: true,
+            edit_ignore_keys: vec!["_ical_uid".to_string(), "_ical_vtodo".to_string()],
         }
     }
 }

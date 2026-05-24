@@ -64,6 +64,8 @@ pub struct UI {
     border_type: WidgetBorderType,
     popup: Popup,
     help_text: String,
+    edit_ignore_keys: Vec<String>,
+    edit_stripped_tags: Vec<(String, String)>,
 }
 
 impl UI {
@@ -94,6 +96,8 @@ impl UI {
             border_type: config.widget_base_config.border_type,
             popup: Popup::new(config.widget_base_config.border_type),
             help_text: Self::build_help_text(config),
+            edit_ignore_keys: config.todo_config.edit_ignore_keys.clone(),
+            edit_stripped_tags: Vec::new(),
         }
     }
 
@@ -411,7 +415,14 @@ impl UI {
             },
             (Event::Key(event), Mode::Edit) => match event.code {
                 KeyCode::Enter => {
-                    if let Err(e) = self.data.lock().unwrap().update_active(self.tinput.value()) {
+                    let mut task = self.tinput.value().to_string();
+                    for (key, value) in self.edit_stripped_tags.drain(..) {
+                        task.push(' ');
+                        task.push_str(&key);
+                        task.push(':');
+                        task.push_str(&value);
+                    }
+                    if let Err(e) = self.data.lock().unwrap().update_active(&task) {
                         log::error!("Error while updating existing task: {e}");
                         self.popup.add_message(format!("Failed update task: {e}"));
                     }
@@ -421,6 +432,7 @@ impl UI {
                 }
                 KeyCode::Esc => {
                     self.tinput.reset();
+                    self.edit_stripped_tags.clear();
                     self.mode = Mode::Normal;
                     self.layout.focus(&self.data.lock().unwrap());
                 }
@@ -510,10 +522,23 @@ impl UI {
             }
             EditMode => {
                 if let Some(active) = self.data.lock().unwrap().get_active() {
-                    self.tinput = active.to_string().into();
+                    let mut task_str = active.to_string();
+                    let mut stripped = Vec::new();
+                    for key in &self.edit_ignore_keys {
+                        if let Some(value) = active.tags.get(key) {
+                            stripped.push((key.clone(), value.clone()));
+                            let token = format!("{key}:{value}");
+                            task_str = task_str
+                                .split_whitespace()
+                                .filter(|t| *t != token)
+                                .collect::<Vec<_>>()
+                                .join(" ");
+                        }
+                    }
+                    self.edit_stripped_tags = stripped;
+                    self.tinput = task_str.into();
                     self.mode = Mode::Edit;
                     self.layout.unfocus();
-                    // self.in
                 }
             }
             SearchMode => {
