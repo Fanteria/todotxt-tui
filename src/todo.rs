@@ -249,13 +249,10 @@ impl ToDo {
     pub fn remove_task(&mut self, data: ToDoData, index: usize) {
         let index = self.get_actual_index(data, index);
         if let Some(index) = index {
-            self.hooks.run_lazy(HookTypes::PreRemove, || {
-                data.get_data(self)[index].to_string()
-            });
+            let task_str = data.get_data(self)[index].to_string();
+            self.hooks.run(HookTypes::PreRemove, &task_str);
             data.get_data_mut(self).remove(index);
-            self.hooks.run_lazy(HookTypes::PostRemove, || {
-                data.get_data(self)[index].to_string()
-            });
+            self.hooks.run(HookTypes::PostRemove, &task_str);
             self.fix_active(index);
         } else {
             log::warn!("Layout::get_actual_index is None");
