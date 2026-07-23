@@ -143,6 +143,68 @@ impl Container {
         layout.act = find_actual(layout);
     }
 
+    /// Try to focus a widget in the subtree rooted at container `index`.
+    ///
+    /// The remembered active item is tried first, then the items after
+    /// it and finally the items before it.
+    pub fn focus_subtree(layout: &mut Layout, index: usize, todo: &ToDo) -> bool {
+        let act_index = layout.containers[index].act_index;
+        let len = layout.containers[index].items.len();
+        let order = std::iter::once(act_index)
+            .chain(act_index + 1..len)
+            .chain((0..act_index).rev());
+        for i in order {
+            if Self::focus_at(layout, index, i, todo) {
+                layout.containers[index].act_index = i;
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Try to focus the item at position `i` of container `index`, without changing the
+    /// container's active index.
+    fn focus_at(layout: &mut Layout, index: usize, i: usize, todo: &ToDo) -> bool {
+        match layout.containers[index].items.get(i) {
+            None => false,
+            Some(It::Cont(cont)) => {
+                let cont = *cont;
+                Self::focus_subtree(layout, cont, todo)
+            }
+            Some(It::Item(_)) => {
+                let focused = match layout.containers[index].get_widget_mut(i) {
+                    Some(widget) => widget.focus(todo),
+                    None => false,
+                };
+                if focused {
+                    layout.act = index;
+                }
+                focused
+            }
+        }
+    }
+
+    /// Focus the item that is active in container `index`.
+    ///
+    /// Widgets that refuse focus are skipped. Siblings are visited with `f` until one
+    /// of them can be focused. Nested containers are searched.
+    pub fn focus_item(
+        layout: &mut Layout,
+        index: usize,
+        f: &impl Fn(&mut Container) -> bool,
+        todo: &ToDo,
+    ) -> bool {
+        loop {
+            let act_index = layout.containers[index].act_index;
+            if Self::focus_at(layout, index, act_index, todo) {
+                return true;
+            }
+            if !f(&mut layout.containers[index]) {
+                return false;
+            }
+        }
+    }
+
     /// Updates the active index of each parent container in the hierarchy
     /// so that it points toward the currently active container.
     pub fn actualize_parents(layout: &mut Layout) {

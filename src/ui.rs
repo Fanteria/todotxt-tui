@@ -582,13 +582,14 @@ mod tests {
         };
     }
 
-    fn default_ui() -> Result<UI> {
+    fn ui_with_layout(layout: &str) -> Result<UI> {
         let config = Config::from_reader(
             format!(
                 r#"
             todo_path = "{}test_behaviour_todo.txt"
             save_state_path = "/this/path/does/not/exists"
             save_policy = "ManualOnly"
+            {layout}
 
             [list_keybind]
             E = "EditMode"
@@ -604,6 +605,10 @@ mod tests {
             .as_bytes(),
         )?;
         UI::build(&config)
+    }
+
+    fn default_ui() -> Result<UI> {
+        ui_with_layout("")
     }
 
     #[test]
@@ -628,6 +633,32 @@ mod tests {
 
         handle_event!(ui, "S+h");
         assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_moves_to_column_starting_with_preview() -> Result<()> {
+        let mut ui = ui_with_layout(
+            r#"layout = "[Direction: Horizontal, [Preview, Contexts, Projects, Preview], [List, Done]]""#,
+        )?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        handle_event!(ui, "S+h");
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Context);
+
+        handle_event!(ui, "S+j");
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Project);
+
+        handle_event!(ui, "S+l");
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        handle_event!(ui, "S+j");
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Done);
+
+        handle_event!(ui, "S+h");
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::Project);
 
         Ok(())
     }

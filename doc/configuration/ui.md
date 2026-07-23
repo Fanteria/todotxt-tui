@@ -6,8 +6,9 @@
 <dd>
 The widget that will be active when the application starts.  
 
-- **Possible values (flag, env):** `list`, `done`, `project`, `context`, `hashtag`, `preview`  
-- **Possible values (config):** `List`, `Done`, `Project`, `Context`, `Hashtag`, `Preview`  
+- **Possible values (flag, env):** `list`, `done`, `project`, `context`, `hashtag`  
+- **Possible values (config):** `List`, `Done`, `Project`, `Context`, `Hashtag`  
+- Preview widgets cannot be focused, so they cannot be used as an initial widget.  
 - **Default:** `List` 
 </dd>
 <br>

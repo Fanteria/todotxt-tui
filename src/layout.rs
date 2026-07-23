@@ -133,8 +133,7 @@ impl Layout {
         read_block(&mut containers, None, outer_block, config)?;
 
         let mut layout = Self { containers, act: 0 };
-        Container::actualize_layout(&mut layout);
-        layout.act_mut().actual_mut().unwrap().focus(todo);
+        Container::focus_subtree(&mut layout, 0, todo);
         Ok(layout)
     }
 
@@ -144,18 +143,6 @@ impl Layout {
 
     fn act_mut(&mut self) -> &mut Container {
         &mut self.containers[self.act]
-    }
-
-    fn walk_in_container(&mut self, f: &impl Fn(&mut Container) -> bool, todo: &ToDo) -> bool {
-        if f(self.act_mut()) {
-            Container::actualize_layout(self);
-            match self.act_mut().actual_mut() {
-                Some(widget) => widget.focus(todo) || self.walk_in_container(f, todo),
-                None => true,
-            }
-        } else {
-            false
-        }
     }
 
     /// Change the focus within the layout.
@@ -178,15 +165,15 @@ impl Layout {
         while *self.act().get_direction() != *direction {
             match self.act().parent {
                 Some(index) => self.act = index,
-                None => return false,
+                None => {
+                    old.set_old_back(self);
+                    return false;
+                }
             }
         }
         if f(self.act_mut()) {
-            Container::actualize_layout(self);
-            if match self.act_mut().actual_mut() {
-                Some(widget) => widget.focus(todo) || self.walk_in_container(f, todo),
-                None => true,
-            } {
+            let container = self.act;
+            if Container::focus_item(self, container, f, todo) {
                 old.unfocus(self);
                 true
             } else {
@@ -433,6 +420,101 @@ mod tests {
         assert!(l.left(&ToDo::default()));
         assert_eq!(l.get_active_widget(), WidgetType::List);
         assert!(!l.up(&ToDo::default()));
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+
+        Ok(())
+    }
+
+    fn layout_from(template: &str) -> Layout {
+        Layout::from_str(template, &ToDo::default(), &Config::default()).unwrap()
+    }
+
+    #[test]
+    fn test_initial_focus_skip_preview() {
+        // Preview cannot be focused, so the first focusable widget is used instead.
+        let l = layout_from("[Preview, List]");
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+    }
+
+    #[test]
+    fn test_move_to_column_starting_with_preview() -> Result<()> {
+        let todo = ToDo::default();
+        let mut l = layout_from(
+            "[Direction: Horizontal, [Preview, Contexts, Projects, Hashtags], [List, Done]]",
+        );
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+
+        assert!(l.right(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+
+        // Column starts with Preview, so moving back must skip it instead of failing.
+        assert!(l.left(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+
+        // Position in the column is remembered when leaving and entering it again.
+        assert!(l.down(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Project);
+        assert!(l.right(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+        assert!(l.left(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Project);
+
+        // Preview is still not a stop for movement inside the column.
+        assert!(l.up(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+        assert!(!l.up(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_to_column_starting_with_live_preview() -> Result<()> {
+        let todo = ToDo::default();
+        let mut l =
+            layout_from("[Direction: Horizontal, [live-preview-pending, Contexts], [List, Done]]");
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+
+        assert!(l.right(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+        assert!(l.left(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_over_preview_in_column() -> Result<()> {
+        let todo = ToDo::default();
+        let mut l = layout_from(
+            "[Direction: Horizontal, [Contexts, Projects, Hashtags], [Preview, List, Done]]",
+        );
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+
+        // Preview is the first widget of the column, so it is skipped.
+        assert!(l.right(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+        assert!(!l.up(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+
+        assert!(l.down(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Done);
+        assert!(l.left(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Context);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_over_container_with_preview_only() -> Result<()> {
+        let todo = ToDo::default();
+        let mut l = layout_from("[Direction: Horizontal, List, [Preview], Done]");
+        assert_eq!(l.get_active_widget(), WidgetType::List);
+
+        // Whole container cannot be focused, so it is skipped as well.
+        assert!(l.right(&todo));
+        assert_eq!(l.get_active_widget(), WidgetType::Done);
+        assert!(l.left(&todo));
         assert_eq!(l.get_active_widget(), WidgetType::List);
 
         Ok(())
