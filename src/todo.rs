@@ -136,11 +136,7 @@ impl ToDo {
             }
         };
 
-        let move_task_logic = |from: &mut Vec<Task>, to: &mut Vec<_>| {
-            if from.len() <= index {
-                return;
-            }
-            let mut task = from.remove(index);
+        let move_task_logic = |mut task: Task| -> Task {
             if task.finished && self.config.delete_final_date {
                 task.finish_date = None;
             }
@@ -154,18 +150,26 @@ impl ToDo {
                 }
             }
             task.finished = !task.finished;
-            to.push(task)
+            task
         };
-        self.hooks.run_lazy(HookTypes::PreMove, || {
-            data.get_data(self)[index].to_string()
-        });
-        match data {
-            ToDoData::Pending => move_task_logic(&mut self.pending, &mut self.done),
-            ToDoData::Done => move_task_logic(&mut self.done, &mut self.pending),
+        let pre_task_str = data.get_data(self)[index].to_string();
+        self.hooks.run(HookTypes::PreMove, &pre_task_str);
+        let pair = match data {
+            ToDoData::Pending => (&mut self.pending, &mut self.done),
+            ToDoData::Done => (&mut self.done, &mut self.pending),
         };
-        self.hooks.run_lazy(HookTypes::PostMove, || {
-            data.get_data(self)[index].to_string()
-        });
+
+        let (from, to) = pair;
+        if from.len() <= index {
+            // Rather low risk of getting here, but just in case.
+            self.fix_active(index);
+            return;
+        }
+        let task = from.remove(index);
+        let finalized = move_task_logic(task);
+        let finalized_str = finalized.to_string();
+        to.push(finalized);
+        self.hooks.run(HookTypes::PostMove, finalized_str);
         self.fix_active(index)
     }
 

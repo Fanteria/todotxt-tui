@@ -113,16 +113,6 @@ impl Hooks {
             &hook_type.to_string(),
         )
     }
-
-    /// Runs the hook for the given type, lazily evaluating the task string only
-    /// if the hook is configured. Returns `Some(stdout)` on success, `None` otherwise.
-    pub fn run_lazy(&self, hook_type: HookTypes, task: impl Fn() -> String) -> Option<String> {
-        Self::run_command_with_name(
-            self.get_path(&hook_type)?,
-            task().as_ref(),
-            &hook_type.to_string(),
-        )
-    }
 }
 
 #[cfg(test)]
@@ -190,73 +180,6 @@ mod tests {
             hooks.run(HookTypes::PostUpdate, "post update"),
             Some(String::from("hook: post update"))
         );
-
-        assert_eq!(
-            hooks.run_lazy(HookTypes::PreNew, || String::from("pre new")),
-            Some(String::from("hook: pre new"))
-        );
-        assert_eq!(
-            hooks.run_lazy(HookTypes::PostNew, || String::from("post new")),
-            Some(String::from("hook: post new"))
-        );
-        assert_eq!(
-            hooks.run_lazy(HookTypes::PreRemove, || String::from("pre remove")),
-            Some(String::from("hook: pre remove"))
-        );
-        assert_eq!(
-            hooks.run_lazy(HookTypes::PostRemove, || String::from("post remove")),
-            Some(String::from("hook: post remove"))
-        );
-        assert_eq!(
-            hooks.run_lazy(HookTypes::PreMove, || String::from("pre move")),
-            Some(String::from("hook: pre move"))
-        );
-        assert_eq!(
-            hooks.run_lazy(HookTypes::PostMove, || String::from("post move")),
-            Some(String::from("hook: post move"))
-        );
-        assert_eq!(
-            hooks.run_lazy(HookTypes::PreUpdate, || String::from("pre update")),
-            Some(String::from("hook: pre update"))
-        );
-        assert_eq!(
-            hooks.run_lazy(HookTypes::PostUpdate, || String::from("post update")),
-            Some(String::from("hook: post update"))
-        );
-    }
-
-    #[test]
-    fn run_lazy_skips_closure_when_no_path() {
-        let hooks = Hooks::new(HookPaths::default());
-        let called = std::cell::Cell::new(false);
-        let result = hooks.run_lazy(HookTypes::PreNew, || {
-            called.set(true);
-            String::from("should not be evaluated")
-        });
-        assert_eq!(result, None);
-        assert!(
-            !called.get(),
-            "closure should not be called when no hook path is configured"
-        );
-    }
-
-    #[test]
-    fn run_lazy_evaluates_closure_when_path_configured() {
-        let path = PathBuf::from(var("TODO_TUI_TEST_DIR").unwrap()).join("hook.sh");
-        let hooks = Hooks::new(HookPaths {
-            pre_new_task: Some(path),
-            ..HookPaths::default()
-        });
-        let called = std::cell::Cell::new(false);
-        let result = hooks.run_lazy(HookTypes::PreNew, || {
-            called.set(true);
-            String::from("lazy task")
-        });
-        assert!(
-            called.get(),
-            "closure should be called when hook path is configured"
-        );
-        assert_eq!(result, Some(String::from("hook: lazy task")));
     }
 
     #[test]
