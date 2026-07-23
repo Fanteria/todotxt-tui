@@ -233,6 +233,7 @@ impl ToDo {
         if task.create_date.is_none() && self.config.set_created_date {
             task.create_date = Some(Self::get_actual_date());
         }
+        let final_task_str = task.to_string();
         if task.finished {
             self.done.push(task);
             self.version.update(&ToDoData::Done);
@@ -240,7 +241,7 @@ impl ToDo {
             self.pending.push(task);
             self.version.update(&ToDoData::Pending);
         }
-        self.hooks.run(HookTypes::PostNew, &task_str);
+        self.hooks.run(HookTypes::PostNew, &final_task_str);
         Ok(())
     }
 
