@@ -160,11 +160,6 @@ impl ToDo {
         };
 
         let (from, to) = pair;
-        if from.len() <= index {
-            // Rather low risk of getting here, but just in case.
-            self.fix_active(index);
-            return;
-        }
         let task = from.remove(index);
         let finalized = move_task_logic(task);
         let finalized_str = finalized.to_string();
