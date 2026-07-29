@@ -366,8 +366,10 @@ impl ToDo {
             if let Some(new_task) = self.hooks.run(HookTypes::PreUpdate, &task) {
                 task = new_task;
             }
-            data.get_data_mut(self)[index] = Task::from_str(&task)?;
-            self.hooks.run(HookTypes::PostUpdate, &task);
+            let new_task = Task::from_str(&task)?;
+            let final_task_str = new_task.to_string();
+            data.get_data_mut(self)[index] = new_task;
+            self.hooks.run(HookTypes::PostUpdate, &final_task_str);
         }
         Ok(())
     }
