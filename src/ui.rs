@@ -39,7 +39,7 @@ use tui::{
     widgets::{Block, Borders, Paragraph},
     Terminal,
 };
-use tui_input::{backend::crossterm::EventHandler, Input};
+use tui_input::{backend::crossterm::EventHandler, Input, InputRequest};
 
 /// Enum representing the different modes of the UI.
 #[derive(Debug, PartialEq, Eq)]
@@ -381,7 +381,7 @@ impl UI {
                 _,
             ) => {
                 log::debug!("Mouse event: column {column}, row {row}");
-                self.layout.click(*column, *row, &self.data.lock().unwrap());
+                self.handle_click(*column, *row);
             }
             (Event::Paste(s), Mode::Normal) => {
                 if self.config.paste_behavior == PasteBehavior::Insert {
@@ -403,10 +403,7 @@ impl UI {
                     self.mode = Mode::Normal;
                     self.layout.focus(&self.data.lock().unwrap());
                 }
-                KeyCode::Esc => {
-                    self.mode = Mode::Normal;
-                    self.layout.focus(&self.data.lock().unwrap());
-                }
+                KeyCode::Esc => self.leave_text_mode(),
                 KeyCode::Tab => {
                     if let Some(input) =
                         autocomplete(&self.data.lock().unwrap(), self.tinput.value())
@@ -435,12 +432,7 @@ impl UI {
                     self.mode = Mode::Normal;
                     self.layout.focus(&self.data.lock().unwrap());
                 }
-                KeyCode::Esc => {
-                    self.tinput.reset();
-                    self.edit_stripped_tags.clear();
-                    self.mode = Mode::Normal;
-                    self.layout.focus(&self.data.lock().unwrap());
-                }
+                KeyCode::Esc => self.leave_text_mode(),
                 KeyCode::Tab => {
                     if let Some(input) =
                         autocomplete(&self.data.lock().unwrap(), self.tinput.value())
@@ -458,12 +450,7 @@ impl UI {
                     self.layout.focus(&self.data.lock().unwrap());
                     self.tinput.reset();
                 }
-                KeyCode::Esc => {
-                    self.tinput.reset();
-                    self.mode = Mode::Normal;
-                    self.layout.clean_search();
-                    self.layout.focus(&self.data.lock().unwrap());
-                }
+                KeyCode::Esc => self.leave_text_mode(),
                 _ => {
                     self.tinput.handle_event(&e);
                     self.layout.search(self.tinput.to_string())
@@ -480,6 +467,51 @@ impl UI {
             }
             _ => {}
         }
+    }
+
+    /// Handles a left button click on the given position.
+    ///
+    /// Click into the input bar focuses it and moves the text cursor to the
+    /// clicked position. Click anywhere else leaves the actual text mode (in
+    /// the same way as `Esc` does) and passes the click to the layout.
+    fn handle_click(&mut self, column: u16, row: u16) {
+        if self.input_chunk.contains(Position::new(column, row)) {
+            if self.mode == Mode::Normal {
+                self.mode = Mode::Input;
+                self.layout.unfocus();
+            }
+            self.set_input_cursor(column);
+        } else {
+            self.leave_text_mode();
+            self.layout.click(column, row, &self.data.lock().unwrap());
+        }
+    }
+
+    /// Moves the input cursor to the character rendered on the given column.
+    fn set_input_cursor(&mut self, column: u16) {
+        let width = self.input_chunk.width.max(3) - 3;
+        let scroll = self.tinput.visual_scroll(width as usize);
+        let offset = usize::from(column.saturating_sub(self.input_chunk.x + 1)) + scroll;
+        self.tinput.handle(InputRequest::SetCursor(offset));
+    }
+
+    /// Returns from input, edit or search mode back to the normal mode and
+    /// gives the focus back to the layout. Does nothing in the normal mode.
+    fn leave_text_mode(&mut self) {
+        match self.mode {
+            Mode::Normal => return,
+            Mode::Input => {}
+            Mode::Edit => {
+                self.tinput.reset();
+                self.edit_stripped_tags.clear();
+            }
+            Mode::Search => {
+                self.tinput.reset();
+                self.layout.clean_search();
+            }
+        }
+        self.mode = Mode::Normal;
+        self.layout.focus(&self.data.lock().unwrap());
     }
 
     fn handle(&mut self, event: &event::KeyEvent) -> bool {
@@ -578,6 +610,18 @@ mod tests {
         ($ui:expr, $code:expr) => {
             let key_shortcut = KeyShortcut::from_str($code)?;
             let event = Event::Key(KeyEvent::new(key_shortcut.key, key_shortcut.modifiers));
+            $ui.handle_event_window(event);
+        };
+    }
+
+    macro_rules! click {
+        ($ui:expr, $column:expr, $row:expr) => {
+            let event = Event::Mouse(MouseEvent {
+                kind: event::MouseEventKind::Up(event::MouseButton::Left),
+                column: $column,
+                row: $row,
+                modifiers: event::KeyModifiers::NONE,
+            });
             $ui.handle_event_window(event);
         };
     }
@@ -900,6 +944,111 @@ mod tests {
         assert_eq!(ui.mode, Mode::Edit);
         assert!(ui.tinput.to_string().contains("some_key:someval"));
         assert!(ui.edit_stripped_tags.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn click_input_enters_input_mode() -> Result<()> {
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        click!(ui, 5, 1);
+        assert_eq!(ui.mode, Mode::Input);
+
+        Ok(())
+    }
+
+    #[test]
+    fn click_input_keeps_edit_mode() -> Result<()> {
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        handle_event!(ui, "Enter");
+        handle_event!(ui, "S+e");
+        assert_eq!(ui.mode, Mode::Edit);
+        let edited = ui.tinput.to_string();
+
+        click!(ui, 5, 1);
+        assert_eq!(ui.mode, Mode::Edit);
+        assert_eq!(ui.tinput.to_string(), edited);
+
+        Ok(())
+    }
+
+    #[test]
+    fn click_input_sets_cursor() -> Result<()> {
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        handle_event!(ui, "S+i");
+        handle_event!(ui, "a");
+        handle_event!(ui, "b");
+        handle_event!(ui, "c");
+        assert_eq!(ui.tinput.visual_cursor(), 3);
+
+        click!(ui, 1, 1);
+        assert_eq!(ui.tinput.visual_cursor(), 0);
+
+        click!(ui, 2, 1);
+        assert_eq!(ui.tinput.visual_cursor(), 1);
+
+        // Cursor cannot go behind the end of the value.
+        click!(ui, 18, 1);
+        assert_eq!(ui.tinput.visual_cursor(), 3);
+
+        Ok(())
+    }
+
+    #[test]
+    fn click_widget_leaves_input_mode() -> Result<()> {
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        handle_event!(ui, "S+i");
+        handle_event!(ui, "a");
+        assert_eq!(ui.mode, Mode::Input);
+
+        click!(ui, 3, 6);
+        assert_eq!(ui.mode, Mode::Normal);
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        Ok(())
+    }
+
+    #[test]
+    fn click_widget_leaves_search_mode() -> Result<()> {
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        handle_event!(ui, "/");
+        handle_event!(ui, "a");
+        assert_eq!(ui.mode, Mode::Search);
+
+        click!(ui, 3, 6);
+        assert_eq!(ui.mode, Mode::Normal);
+        assert_eq!(ui.tinput.to_string(), "");
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        Ok(())
+    }
+
+    #[test]
+    fn click_widget_selects_item() -> Result<()> {
+        use crate::todo::ToDoData;
+
+        let mut ui = default_ui()?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        // Layout starts under the input bar, so the second item is on row 5.
+        click!(ui, 3, 5);
+        handle_event!(ui, "Enter");
+
+        let data = ui.data.lock().unwrap();
+        let expected = data.get_filtered_and_sorted(ToDoData::Pending)[1]
+            .subject
+            .clone();
+        assert_eq!(data.get_active().map(|t| t.subject.clone()), Some(expected));
 
         Ok(())
     }

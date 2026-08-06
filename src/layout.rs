@@ -312,8 +312,8 @@ impl Layout {
         self.find_widget(
             |w| {
                 let chunk = &w.get_base().chunk;
-                let x = chunk.x < column && column < chunk.x + chunk.width;
-                let y = chunk.y < row && row < chunk.y + chunk.height;
+                let x = chunk.x < column && column + 1 < chunk.x + chunk.width;
+                let y = chunk.y < row && row + 1 < chunk.y + chunk.height;
                 x && y
             },
             |w| w.click(column.into(), row.into(), todo),
