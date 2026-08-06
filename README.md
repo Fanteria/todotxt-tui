@@ -11,3 +11,11 @@ For detailed instructions on [installation](https://fanteria.github.io/todotxt-t
 ## Feedback and Bug Reporting
 
 As this application is still in development, your feedback is greatly appreciated. If you encounter any issues or have suggestions for improvement, please open an issue on the GitHub repository to assist me in making Todo.txt TUI better.
+
+## Contributing
+
+This repository ships its Git hooks in the `hooks` directory. After cloning, enable them by:
+
+```bash
+git config core.hooksPath hooks
+```

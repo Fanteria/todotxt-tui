@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+echo "Running cargo fmt check..."
+cargo fmt --all -- --check
+echo "Running cargo clippy..."
+cargo clippy --all-targets --all-features -- -D warnings
+echo "Running cargo fmt check for macros..."
+(cd todotxt-tui-macros && cargo fmt --all -- --check)
+echo "Running cargo clippy for macros..."
+(cd todotxt-tui-macros && cargo clippy --all-targets --all-features -- -D warnings)
