@@ -214,7 +214,7 @@ impl WidgetList {
     /// Selects the list item at the given screen row on mouse click.
     pub fn click(&mut self, _column: usize, row: usize, len: usize) {
         let index = row - usize::from(self.base.chunk.y) - 1;
-        if index < len {
+        if index + self.first < len {
             log::debug!("Click on item with index {index}.");
             self.state.select(Some(index));
         }

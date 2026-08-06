@@ -54,3 +54,5 @@ The task input bar allows you to add or edit tasks. Press `Enter` to confirm the
 - `Ctrl+u`: Delete from the cursor to the beginning of the line.
 
 It is also possible to use `tab` key to autocomplete existing projects, contexts or hashtags.
+
+If mouse support is enabled, clicking the input bar focuses it and moves the cursor to the clicked position. Clicking any other widget while the input bar is focused behaves like pressing `Esc` and selects the clicked widget.
