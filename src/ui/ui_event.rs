@@ -177,6 +177,10 @@ pub enum UIEvent {
     RemoveItem,
     /// Moves the selected task between pending and done lists.
     MoveItem,
+    /// Copies the selected task to the system clipboard.
+    CopyTask,
+    /// Copies the text selected with the mouse to the system clipboard.
+    CopySelection,
     /// Selects the current item (toggles filter in categories, selects task in lists).
     Select,
     /// Toggles the remove filter state for the selected category.
@@ -211,6 +215,8 @@ impl Display for UIEvent {
             UIEvent::SwapDownItem => "Swap down",
             UIEvent::RemoveItem => "Remove",
             UIEvent::MoveItem => "Move to done/pending",
+            UIEvent::CopyTask => "Copy task to clipboard",
+            UIEvent::CopySelection => "Copy selection to clipboard",
             UIEvent::Select => "Select / toggle filter",
             UIEvent::Remove => "Remove filter",
             UIEvent::ShowHelp => "Show keybindings help",
@@ -248,6 +254,8 @@ impl FromStr for UIEvent {
             "swapdownitem" => SwapDownItem,
             "removeitem" => RemoveItem,
             "moveitem" => MoveItem,
+            "copytask" => CopyTask,
+            "copyselection" => CopySelection,
             "select" => Select,
             "remove" => Remove,
             "showhelp" => ShowHelp,

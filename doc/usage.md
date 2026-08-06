@@ -17,6 +17,7 @@ Todo.txt TUI is a powerful and flexible terminal-based interface designed to sim
 - `D`: Move the currently selected task down in the list.
 - `x`: Remove the selected task permanently from the list.
 - `d`: Toggle a task's status between pending and done.
+- `y`: Copy the selected task to the system clipboard.
 - `I`: Input a new task into the list.
 - `E`: Edit the currently selected task to update its details.
 
@@ -56,3 +57,9 @@ The task input bar allows you to add or edit tasks. Press `Enter` to confirm the
 It is also possible to use `tab` key to autocomplete existing projects, contexts or hashtags.
 
 If mouse support is enabled, clicking the input bar focuses it and moves the cursor to the clicked position. Clicking any other widget while the input bar is focused behaves like pressing `Esc` and selects the clicked widget.
+
+## Copying Text
+
+Press `y` to copy the active task, as a plain todo.txt line, to the system clipboard. The task is handed over to the terminal emulator with the OSC 52 escape sequence.
+
+To copy an arbitrary part of the screen, hold the left mouse button and drag over it. Releasing the button copies the selection right away. The selection is not limited to a single widget, so a task or a piece of the preview can be copied as well. Because the selection is taken from the rendered screen, it contains what is actually visible, including borders of the widgets when the selection crosses them.

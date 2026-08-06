@@ -314,6 +314,10 @@ impl Default for UiConfig {
                 ),
                 (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
                 (KeyShortcut::from(KeyCode::Char('?')), UIEvent::ShowHelp),
+                (
+                    KeyShortcut::from(KeyCode::Char('y')),
+                    UIEvent::CopySelection,
+                ),
             ]),
             list_refresh_rate: Duration::from_secs(5),
             save_state_path: None,
@@ -382,6 +386,7 @@ impl Default for WidgetBaseConfig {
                 ),
                 (KeyShortcut::from(KeyCode::Char('x')), UIEvent::RemoveItem),
                 (KeyShortcut::from(KeyCode::Char('d')), UIEvent::MoveItem),
+                (KeyShortcut::from(KeyCode::Char('y')), UIEvent::CopyTask),
                 (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
                 (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
                 (
@@ -751,6 +756,10 @@ mod tests {
             ),
             (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
             (KeyShortcut::from(KeyCode::Char('?')), UIEvent::ShowHelp),
+            (
+                KeyShortcut::from(KeyCode::Char('y')),
+                UIEvent::CopySelection,
+            ),
         ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(10);
         expected.active_color_config.list_active_color = TextStyle::default().bg(Color::green());
@@ -777,6 +786,7 @@ mod tests {
             ),
             (KeyShortcut::from(KeyCode::Char('x')), UIEvent::RemoveItem),
             (KeyShortcut::from(KeyCode::Char('d')), UIEvent::MoveItem),
+            (KeyShortcut::from(KeyCode::Char('y')), UIEvent::CopyTask),
             (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
             (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
             (
@@ -921,6 +931,10 @@ mod tests {
             ),
             (KeyShortcut::from(KeyCode::Char('/')), UIEvent::SearchMode),
             (KeyShortcut::from(KeyCode::Char('?')), UIEvent::ShowHelp),
+            (
+                KeyShortcut::from(KeyCode::Char('y')),
+                UIEvent::CopySelection,
+            ),
         ]);
         expected.ui_config.list_refresh_rate = Duration::from_secs(15);
         expected.active_color_config.list_active_color =
@@ -948,6 +962,7 @@ mod tests {
             ),
             (KeyShortcut::from(KeyCode::Char('x')), UIEvent::RemoveItem),
             (KeyShortcut::from(KeyCode::Char('d')), UIEvent::MoveItem),
+            (KeyShortcut::from(KeyCode::Char('y')), UIEvent::CopyTask),
             (KeyShortcut::from(KeyCode::Enter), UIEvent::Select),
             (KeyShortcut::from(KeyCode::Char('n')), UIEvent::NextSearch),
             (

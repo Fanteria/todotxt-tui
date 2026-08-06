@@ -42,6 +42,8 @@ u  = "Load"
 H  = "MoveLeft"
 J  = "MoveDown"
 E  = "EditMode"
+y  = "CopySelection"
+"?" = "ShowHelp"
 ```
 </dd>
 <br>
