@@ -36,12 +36,12 @@ var_priority      = { ^"Priority" }
 var_create_date   = { ^"CreateDate" | ^"create_date" }
 var_finish_date   = { ^"FinishDate" }
 var_finished      = { ^"Finished" }
-var_treshold_date = { ^"TresholdDate" }
+var_treshold_date = { ^"ThresholdDate" | ^"TresholdDate" }
 var_due_date      = { ^"DueDate" }
 var_contexts      = { ^"Contexts" }
 var_projects      = { ^"Projects" }
 var_hashtags      = { ^"Hashtags" }
-var_any           = { (!(WHITESPACE | "{" | "}" | "]") ~ ANY)+ }
+var_any           = { (!(WHITESPACE | NEWLINE | "$" | "{" | "}" | "[" | "]" | "(" | ")") ~ ANY)+ }
 
 WHITESPACE = _{ " " | "\t" }
 NEWLINE    = _{ "\r\n" | "\n" }
