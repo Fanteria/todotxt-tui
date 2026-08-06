@@ -180,7 +180,7 @@ impl From<String> for Parts {
             "create_date" => CreateDate,
             "finish_date" => FinishDate,
             "finished" => Finished,
-            "treshold_date" => TresholdDate,
+            "threshold_date" | "treshold_date" => TresholdDate,
             "due_date" => DueDate,
             "contexts" => Contexts,
             "projects" => Projects,

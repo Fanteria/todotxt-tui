@@ -73,7 +73,7 @@ impl FromStr for Lines {
                 Rule::var_contexts => block_parts.push(Parts::Contexts),
                 Rule::var_projects => block_parts.push(Parts::Projects),
                 Rule::var_hashtags => block_parts.push(Parts::Hashtags),
-                Rule::var_any => block_parts.push(Parts::Special(part.as_str().to_string())),
+                Rule::var_any => block_parts.push(Parts::from(part.as_str().to_string())),
                 Rule::block => {
                     let mut inner = part.into_inner();
                     if !block_parts.is_empty() {
@@ -147,6 +147,45 @@ mod tests {
         Ok(())
     }
 
+    /// Multi line format from https://github.com/Fanteria/todotxt-tui/issues/80.
+    /// The due date must be rendered and it must not swallow the lines below it.
+    #[test]
+    fn line_fill_dates() -> Result<()> {
+        let styles = Styles::default();
+        let todo = ToDo::default();
+        let task = Task::from_str("2023-11-11 task due:2023-11-12 t:2023-11-13")?;
+
+        let lines = Lines::from_str("$create_date\n$due_date\n$threshold_date\n$finish_date")?;
+        let filled = lines
+            .iter()
+            .map(|line| line.fill(&task, &todo, &styles))
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            filled,
+            vec![
+                Some(vec![(String::from("2023-11-11"), Style::default())]),
+                Some(vec![(String::from("2023-11-12"), Style::default())]),
+                Some(vec![(String::from("2023-11-13"), Style::default())]),
+                None,
+            ]
+        );
+
+        assert_eq!(
+            Lines::from_str("[$create_date] [$due_date] [$subject]")?[0]
+                .fill(&task, &todo, &styles),
+            Some(vec![
+                (String::from("2023-11-11"), Style::default()),
+                (String::from(" "), Style::default()),
+                (String::from("2023-11-12"), Style::default()),
+                (String::from(" "), Style::default()),
+                (String::from("task"), Style::default()),
+            ])
+        );
+
+        Ok(())
+    }
+
     #[test]
     fn parse_variables() -> Result<()> {
         assert_eq!(Lines::from_str("")?[0][0].parts, vec![]);
@@ -198,6 +237,65 @@ mod tests {
                 Parts::Text(" Done: ".into()),
                 Parts::Done
             ]
+        );
+
+        Ok(())
+    }
+
+    /// Date variables are documented in snake case, but they are also accepted
+    /// in the camel case form.
+    #[test]
+    fn parse_date_variables() -> Result<()> {
+        for (variable, expected) in [
+            ("$create_date", Parts::CreateDate),
+            ("$CreateDate", Parts::CreateDate),
+            ("$finish_date", Parts::FinishDate),
+            ("$FinishDate", Parts::FinishDate),
+            ("$due_date", Parts::DueDate),
+            ("$DueDate", Parts::DueDate),
+            ("$threshold_date", Parts::TresholdDate),
+            ("$ThresholdDate", Parts::TresholdDate),
+            ("$treshold_date", Parts::TresholdDate),
+            ("$TresholdDate", Parts::TresholdDate),
+        ] {
+            let expected = vec![expected];
+            assert_eq!(
+                Lines::from_str(variable)?[0][0].parts,
+                expected,
+                "Variable {variable} is not parsed correctly"
+            );
+            assert_eq!(
+                Lines::from_str(&format!("[{variable}]"))?[0][0].parts,
+                expected,
+                "Variable {variable} is not parsed correctly inside a block"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// An unknown variable must end on the first delimiter, otherwise it eats
+    /// the rest of the format string including the following lines.
+    #[test]
+    fn parse_unknown_variable_does_not_eat_rest() -> Result<()> {
+        let lines = Lines::from_str("$unknown\n$subject\n$pending")?;
+        assert_eq!(lines.len(), 3);
+        assert_eq!(lines[0][0].parts, vec![Parts::Special("unknown".into())]);
+        assert_eq!(lines[1][0].parts, vec![Parts::Subject]);
+        assert_eq!(lines[2][0].parts, vec![Parts::Pending]);
+
+        assert_eq!(
+            Lines::from_str("$unknown $subject")?[0][0].parts,
+            vec![
+                Parts::Special("unknown".into()),
+                Parts::Text(" ".into()),
+                Parts::Subject
+            ]
+        );
+
+        assert_eq!(
+            Lines::from_str("$unknown$subject")?[0][0].parts,
+            vec![Parts::Special("unknown".into()), Parts::Subject]
         );
 
         Ok(())

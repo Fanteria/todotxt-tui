@@ -158,7 +158,7 @@ impl Layout {
     ) -> bool {
         log::trace!(
             "Layout::change_focus: direction {:?}, act {}",
-            &direction,
+            direction,
             self.act
         );
         let old = Holder::new(self);

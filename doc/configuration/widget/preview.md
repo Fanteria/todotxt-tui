@@ -4,7 +4,7 @@ Defines the format string used to generate the preview pane, which provides a de
 
 **Formatting Rules**
 
-Text Colors: Enclose text in `[...]` and specify the style in parentheses. As style you can use any color definition from [Colors](../colors.md). Additionally, you can use `skip_projects`, `skip_contexts`, or `skip_hashtags` to remove projects, contexts, or hashtags from the content.
+Text Colors: Enclose text in `[...]` and specify the style in parentheses. As style you can use any color definition from [Colors](../colors.md). Additionally, you can use `priority` (optionally as `priority:A` for a particular priority), `custom_category`, `projects`, `contexts`, `hashtags`, `category`, or `skip_projects`, `skip_contexts`, `skip_hashtags` to remove projects, contexts, or hashtags from the content.
 
 **Examples:**
 
@@ -15,22 +15,29 @@ Text Colors: Enclose text in `[...]` and specify the style in parentheses. As st
 
 Dynamic Variables: Insert task-specific values using $name. You can use the following variables to represent task attributes:
 
-| Variable         | Description                                                                                                                                                           |
-| :--------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $pending         | The number of pending tasks.                                                                                                                                          |
-| $done            | The number of completed tasks.                                                                                                                                        |
-| $subject         | The subject of the task.                                                                                                                                              |
-| $priority        | The task's priority. If used as `priority:A`, it specifies a particular priority. If omitted, it uses the task's default priority.                                    |
-| $custom_category | The task's custom category. If used as `custom_category:+project`, it specifies a particular custom category. If omitted, it uses the task's default custom category. |
-| $create_date     | The creation date of the task.                                                                                                                                        |
-| $finish_date     | The finish date of the task.                                                                                                                                          |
-| $finished        | Indicates whether the task is finished (true or false).                                                                                                               |
-| $threshold_date  | The threshold date of the task.                                                                                                                                       |
-| $due_date        | The due date of the task.                                                                                                                                             |
-| $contexts        | The contexts associated with the task.                                                                                                                                |
-| $projects        | The projects associated with the task.                                                                                                                                |
-| $hashtags        | The hashtags associated with the task.                                                                                                                                |
-| other            | Special values for custom key-value pairs in the todo.txt format.                                                                                                     |
+| Variable        | Description                                                       |
+| :-------------- | :---------------------------------------------------------------- |
+| $pending        | The number of pending tasks.                                      |
+| $done           | The number of completed tasks.                                    |
+| $subject        | The subject of the task.                                          |
+| $priority       | The task's priority.                                              |
+| $create_date    | The creation date of the task.                                    |
+| $finish_date    | The finish date of the task.                                      |
+| $finished       | Indicates whether the task is finished (true or false).           |
+| $threshold_date | The threshold date of the task.                                   |
+| $due_date       | The due date of the task.                                         |
+| $contexts       | The contexts associated with the task.                            |
+| $projects       | The projects associated with the task.                            |
+| $hashtags       | The hashtags associated with the task.                            |
+| other           | Special values for custom key-value pairs in the todo.txt format. |
+
+Variable names are case insensitive and the multi-word ones are also accepted in the camel case
+form, so `$due_date` and `$DueDate` are equivalent. A name that matches none of the variables above
+is looked up among the task's custom key-value pairs, so `$link` renders the value of `link:` tag.
+
+A variable name ends on the first whitespace, newline or one of `$`, `{`, `}`, `[`, `]`, `(`, `)`.
+Use the braced form `${name}` when the variable is directly followed by another character, for
+example `${due_date}!`.
 
 It is also possible to use `!` to enforce category colors.
 
