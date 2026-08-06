@@ -2,7 +2,7 @@ use super::{widget_base::WidgetBase, widget_list::WidgetList, widget_trait::Stat
 use crate::{
     config::Config,
     todo::{search::Searchable, Parser, ToDo, ToDoData},
-    ui::UIEvent,
+    ui::{copy_to_clipboard, UIEvent},
 };
 use anyhow::Result;
 use crossterm::event::KeyEvent;
@@ -61,6 +61,14 @@ impl StateList {
             self.base.up();
         }
     }
+
+    /// Returns the todo.txt line of the currently active task, or `None` when
+    /// the list is empty.
+    fn active_task(&self, todo: &ToDo) -> Option<String> {
+        let index = self.base.index();
+        let filtered = todo.get_filtered_and_sorted(self.data_type);
+        (index < filtered.len()).then(|| filtered[index].to_string())
+    }
 }
 
 impl State for StateList {
@@ -87,6 +95,15 @@ impl State for StateList {
                 log::trace!("Set item on index {} active.", self.base.index());
                 todo.set_active(self.data_type, self.base.index());
             }
+            UIEvent::CopyTask => match self.active_task(todo) {
+                Some(task) => {
+                    log::info!("Copy actual task to the clipboard.");
+                    if let Err(e) = copy_to_clipboard(&task) {
+                        log::error!("Cannot copy task to the clipboard: {e}");
+                    }
+                }
+                None => log::debug!("There is no task to copy."),
+            },
             UIEvent::NextSearch => {
                 if let Some(to_search) = &self.base.to_search {
                     if let Some(next) = todo
@@ -260,6 +277,50 @@ mod tests {
             "│                  │",
             "╰──────────────────╯",
         ]);
+        Ok(())
+    }
+
+    #[test]
+    fn selected_task_is_copied_as_todo_txt_line() -> Result<()> {
+        let (mut list, _) = make_list(ToDoData::Pending);
+        list.update_chunk(Rect::new(0, 0, 20, 10));
+
+        let mut todo = ToDo::default();
+        assert_eq!(list.active_task(&todo), None, "Empty list has no task");
+
+        todo.new_task("2023-11-11 Alpha +project @context due:2023-11-12")?;
+        todo.new_task("(A) 2023-11-11 Beta")?;
+
+        assert_eq!(
+            list.active_task(&todo),
+            Some(String::from(
+                "2023-11-11 Alpha +project @context due:2023-11-12"
+            ))
+        );
+
+        list.handle_event_state(UIEvent::ListDown, &mut todo);
+        assert_eq!(
+            list.active_task(&todo),
+            Some(String::from("(A) 2023-11-11 Beta"))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn selected_task_respects_done_list() -> Result<()> {
+        let (mut list, _) = make_list(ToDoData::Done);
+        list.update_chunk(Rect::new(0, 0, 20, 10));
+
+        let mut todo = ToDo::default();
+        todo.new_task("Pending one")?;
+        todo.new_task("x 2023-11-12 Finished one")?;
+
+        assert_eq!(
+            list.active_task(&todo),
+            Some(String::from("x 2023-11-12 Finished one"))
+        );
+
         Ok(())
     }
 

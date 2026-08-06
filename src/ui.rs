@@ -1,10 +1,14 @@
+mod clipboard;
 mod handle_event_trait;
 mod popup;
+mod selection;
 mod ui_event;
 mod ui_state;
 
 use popup::Popup;
+use selection::Selection;
 
+pub use clipboard::copy_to_clipboard;
 pub use handle_event_trait::HandleEvent;
 pub use ui_event::*;
 pub use ui_state::UIState;
@@ -19,7 +23,7 @@ use anyhow::Result;
 use crossterm::{
     event::{
         self, read, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste,
-        EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseEvent,
+        EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseButton, MouseEvent, MouseEventKind,
     },
     execute,
     terminal::{
@@ -66,6 +70,9 @@ pub struct UI {
     help_text: String,
     edit_ignore_keys: Vec<String>,
     edit_stripped_tags: Vec<(String, String)>,
+    selection: Option<Selection>,
+    selected_text: String,
+    copy_on_release: bool,
 }
 
 impl UI {
@@ -98,6 +105,9 @@ impl UI {
             help_text: Self::build_help_text(config),
             edit_ignore_keys: config.todo_config.edit_ignore_keys.clone(),
             edit_stripped_tags: Vec::new(),
+            selection: None,
+            selected_text: String::new(),
+            copy_on_release: false,
         }
     }
 
@@ -277,6 +287,13 @@ impl UI {
                 }
                 versions = self.data.lock().unwrap().get_version().get_version_all();
                 self.draw(terminal)?;
+                // The text of the selection is known after the draw only, so
+                // the copy on the button release has to wait for it.
+                if std::mem::take(&mut self.copy_on_release) {
+                    self.copy_selection();
+                    // Redraw to show the popup when the copy failed.
+                    self.draw(terminal)?;
+                }
             } else if !self
                 .data
                 .lock()
@@ -308,6 +325,8 @@ impl UI {
         if self.mode == Mode::Input || self.mode == Mode::Edit || self.mode == Mode::Search {
             block = block.border_style(Style::default().fg(self.active_color));
         }
+        let selection = self.selection.filter(|selection| !selection.is_empty());
+        let mut selected_text = None;
         terminal
             .draw(|f| {
                 f.render_widget(
@@ -327,9 +346,19 @@ impl UI {
                     });
                 }
 
+                // Highlight the selection over the widgets, but before the
+                // popup, so the popup is not covered by it and its borders do
+                // not end up in the copied text.
+                if let Some(selection) = selection {
+                    selected_text = Some(selection.highlight(f.buffer_mut()));
+                }
+
                 self.popup.render_popup(f);
             })
             .map_err(|e| anyhow::anyhow!("{e}"))?;
+        if let Some(text) = selected_text {
+            self.selected_text = text;
+        }
         Ok(())
     }
 
@@ -365,6 +394,10 @@ impl UI {
             if key_event.kind != KeyEventKind::Press {
                 return;
             }
+            // Any key but the one copying the selection drops it.
+            if self.config.window_keybinds.get_event(key_event) != UIEvent::CopySelection {
+                self.selection = None;
+            }
         }
         match (&e, &self.mode) {
             (Event::Resize(width, height), _) => {
@@ -373,15 +406,12 @@ impl UI {
             }
             (
                 Event::Mouse(MouseEvent {
-                    kind: event::MouseEventKind::Up(event::MouseButton::Left),
-                    column,
-                    row,
-                    modifiers: _,
+                    kind, column, row, ..
                 }),
                 _,
             ) => {
-                log::debug!("Mouse event: column {column}, row {row}");
-                self.handle_click(*column, *row);
+                log::debug!("Mouse event: {kind:?}, column {column}, row {row}");
+                self.handle_mouse(*kind, Position::new(*column, *row));
             }
             (Event::Paste(s), Mode::Normal) => {
                 if self.config.paste_behavior == PasteBehavior::Insert {
@@ -467,6 +497,63 @@ impl UI {
             }
             _ => {}
         }
+    }
+
+    /// Handles a mouse event on the given position.
+    fn handle_mouse(&mut self, kind: MouseEventKind, position: Position) {
+        match kind {
+            MouseEventKind::Down(MouseButton::Left) => {
+                if !self.input_chunk.contains(position) {
+                    // The selection is also copied by a key bind handled in the
+                    // normal mode only, so the text modes are left right away.
+                    self.leave_text_mode();
+                }
+                self.selection = Some(Selection::new(position));
+                self.selected_text.clear();
+            }
+            MouseEventKind::Drag(MouseButton::Left) => {
+                if let Some(selection) = &mut self.selection {
+                    selection.set_head(position);
+                }
+            }
+            MouseEventKind::Up(MouseButton::Left) => {
+                if let Some(selection) = &mut self.selection {
+                    // The pointer can move between the last drag event and the
+                    // release, so the final position counts too. It can also
+                    // return back to the anchor, which makes the selection
+                    // empty again, so it has to be checked afterwards.
+                    selection.set_head(position);
+                }
+                if self.selection.is_none_or(|selection| selection.is_empty()) {
+                    self.selection = None;
+                    self.selected_text.clear();
+                    self.copy_on_release = false;
+                    self.handle_click(position.x, position.y);
+                } else {
+                    self.copy_on_release = true;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Copies the text of the actual selection to the clipboard.
+    ///
+    /// Returns false when there is nothing to copy, so the caller can handle
+    /// the event in another way.
+    fn copy_selection(&mut self) -> bool {
+        if self.selected_text.is_empty() {
+            return false;
+        }
+        match copy_to_clipboard(&self.selected_text) {
+            Ok(()) => log::info!("Copy selection to the clipboard"),
+            Err(e) => {
+                log::error!("Error while copying the selection: {e}");
+                self.popup
+                    .add_message(format!("Failed copy selection: {e}"));
+            }
+        }
+        true
     }
 
     /// Handles a left button click on the given position.
@@ -583,6 +670,14 @@ impl UI {
                 self.mode = Mode::Search;
                 self.layout.unfocus();
             }
+            CopySelection => {
+                // Without any selection the event falls through to the widget
+                // key binds, where the same key can copy the whole task.
+                if self.selection.is_none() || !self.copy_selection() {
+                    return false;
+                }
+                self.selection = Option::None;
+            }
             ShowHelp => {
                 if self.popup.is_help_visible() {
                     self.popup.hide_help();
@@ -605,6 +700,7 @@ mod tests {
     use crossterm::event::KeyEvent;
     use std::{env, str::FromStr};
     use test_log::test;
+    use tui::{backend::TestBackend, style::Modifier};
 
     macro_rules! handle_event {
         ($ui:expr, $code:expr) => {
@@ -614,15 +710,34 @@ mod tests {
         };
     }
 
-    macro_rules! click {
-        ($ui:expr, $column:expr, $row:expr) => {
+    macro_rules! mouse {
+        ($ui:expr, $kind:expr, $column:expr, $row:expr) => {
             let event = Event::Mouse(MouseEvent {
-                kind: event::MouseEventKind::Up(event::MouseButton::Left),
+                kind: $kind,
                 column: $column,
                 row: $row,
                 modifiers: event::KeyModifiers::NONE,
             });
             $ui.handle_event_window(event);
+        };
+    }
+
+    macro_rules! click {
+        ($ui:expr, $column:expr, $row:expr) => {
+            mouse!($ui, MouseEventKind::Up(MouseButton::Left), $column, $row);
+        };
+    }
+
+    macro_rules! drag {
+        ($ui:expr, $from:expr, $to:expr) => {
+            mouse!(
+                $ui,
+                MouseEventKind::Down(MouseButton::Left),
+                $from.0,
+                $from.1
+            );
+            mouse!($ui, MouseEventKind::Drag(MouseButton::Left), $to.0, $to.1);
+            mouse!($ui, MouseEventKind::Up(MouseButton::Left), $to.0, $to.1);
         };
     }
 
@@ -944,6 +1059,103 @@ mod tests {
         assert_eq!(ui.mode, Mode::Edit);
         assert!(ui.tinput.to_string().contains("some_key:someval"));
         assert!(ui.edit_stripped_tags.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn drag_selects_rendered_text() -> Result<()> {
+        let mut ui = default_ui()?;
+        let mut terminal = Terminal::new(TestBackend::new(20, 20))?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        // The title of the input bar is rendered right behind its left border.
+        drag!(ui, (1, 0), (5, 0));
+        ui.draw(&mut terminal)?;
+        assert_eq!(ui.selected_text, "Input");
+
+        let reversed = |x, y| {
+            terminal
+                .backend()
+                .buffer()
+                .cell(Position::new(x, y))
+                .unwrap()
+                .modifier
+                .contains(Modifier::REVERSED)
+        };
+        assert!(reversed(1, 0), "selected cell is not highlighted");
+        assert!(!reversed(6, 0), "cell behind the selection is highlighted");
+
+        // The drag itself must not select the clicked widget.
+        assert_eq!(ui.mode, Mode::Normal);
+
+        // Any other key drops the selection.
+        handle_event!(ui, "S+j");
+        assert!(ui.selection.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn release_after_drag_asks_for_copy() -> Result<()> {
+        let mut ui = default_ui()?;
+        let mut terminal = Terminal::new(TestBackend::new(20, 20))?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        // A plain click is not a selection, so it copies nothing.
+        click!(ui, 3, 6);
+        assert!(!ui.copy_on_release);
+
+        drag!(ui, (1, 0), (5, 0));
+        assert!(ui.copy_on_release, "release after drag does not copy");
+
+        // The text is known after the draw only.
+        assert!(!ui.copy_selection(), "empty selection was copied");
+        ui.draw(&mut terminal)?;
+        assert_eq!(ui.selected_text, "Input");
+
+        Ok(())
+    }
+
+    #[test]
+    fn release_on_the_anchor_is_a_click() -> Result<()> {
+        let mut ui = default_ui()?;
+        let mut terminal = Terminal::new(TestBackend::new(20, 20))?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        // Leave a text of a previous selection behind.
+        drag!(ui, (1, 0), (5, 0));
+        ui.draw(&mut terminal)?;
+        assert_eq!(ui.selected_text, "Input");
+
+        // Drag away from the anchor and return back to it before the release.
+        mouse!(ui, MouseEventKind::Down(MouseButton::Left), 3, 6);
+        mouse!(ui, MouseEventKind::Drag(MouseButton::Left), 8, 6);
+        mouse!(ui, MouseEventKind::Up(MouseButton::Left), 3, 6);
+
+        assert!(ui.selection.is_none(), "collapsed selection was kept");
+        assert!(!ui.copy_on_release, "collapsed selection was copied");
+        assert!(
+            ui.selected_text.is_empty(),
+            "text of the previous selection was kept"
+        );
+        // The release has to behave as a plain click.
+        assert_eq!(ui.layout.get_active_widget(), WidgetType::List);
+
+        Ok(())
+    }
+
+    #[test]
+    fn drag_over_more_lines_joins_them() -> Result<()> {
+        let mut ui = default_ui()?;
+        let mut terminal = Terminal::new(TestBackend::new(20, 20))?;
+        ui.update_chunk(Rect::new(0, 0, 20, 20));
+
+        drag!(ui, (1, 0), (1, 1));
+        ui.draw(&mut terminal)?;
+        let (first, second) = ui.selected_text.split_once('\n').unwrap();
+        assert_eq!(first, "Input─────────────╮");
+        assert_eq!(second, "│");
 
         Ok(())
     }
